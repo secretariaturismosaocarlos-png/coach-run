@@ -1640,17 +1640,17 @@ function renderPlano(){
   };
 
   const defaultDet=[
-    {obj:'Base aeróbica',dur:'30–40 min',dist_:'4–5 km',e:`Zona 2: ${ep}.`+suf},
-    {obj:'Qualidade e velocidade',dur:'35–45 min',dist_:'5–7 km',e:`10 min fácil → 5×3 min em ${fp} (desc: 90 seg) → 10 min fácil.`+suf},
-    {obj:'Resistência aeróbica',dur:'45–60 min',dist_:'6–9 km',e:`Pace uniforme: ${lp}.`+suf},
+    {tipo:'Treino E — Base aeróbica',    obj:'Base aeróbica — 70% do volume aqui',      dur:'30–40 min',dist_:'4–5 km', pill:'pg', e:`Corrida contínua em ritmo E: ${E}. Conversa normal o tempo todo.`+suf},
+    {tipo:'Treino T — Tempo Run',        obj:'Qualidade — limiar anaeróbico',           dur:'35–45 min',dist_:'5–7 km', pill:'pr', e:`10 min E (${E}) → 20 min T (${T}) → 10 min E. "Comfortably hard."` +suf},
+    {tipo:'Treino L — Longão',           obj:'Resistência aeróbica fundamental',        dur:'45–60 min',dist_:'6–9 km', pill:'pa', e:`Ritmo E uniforme: ${E}. Adicione +1km por semana.`+suf},
   ];
   const cols={easy:'plan-easy',mod:'plan-mod',hard:'plan-hard',long:'plan-long'};
   const plnCols=PLANS[obj.id]?PLANS[obj.id][0]:[{d:'L',col:'easy'},{d:'M',col:'hard'},{d:'F',col:'long'}];
   const dets=detalhes[obj.id]||defaultDet;
   const extras=[
-    {tipo:'Moderado — volume extra',col:'plan-mod',obj:'Volume adicional sem sobrecarga',dur:'30–40 min',dist_:'4–6 km',e:`Trote em ${mp}. Uniforme, sem forçar.`},
-    {tipo:'Tiros curtos — neuromusculares',col:'plan-hard',obj:'Economia de corrida e velocidade',dur:'30–35 min',dist_:'4–5 km',e:`15 min fácil → 8×100m rápido + caminhada de retorno → 10 min fácil.`},
-    {tipo:'Leve — mobilidade',col:'plan-easy',obj:'Manutenção sem carga',dur:'25 min',dist_:'3 km',e:`Trote muito leve (${rp}) + 10 min mobilidade articular.`},
+    {tipo:'Treino M — Volume moderado', col:'plan-mod', obj:'Volume extra sem sobrecarga',           dur:'30–40 min',dist_:'4–6 km', pill:'pa', e:`Trote em ritmo M: ${z.m?sp(z.m.min)+'–'+sp(z.m.max)+'/km':E}. Uniforme, sem forçar.`},
+    {tipo:'Treino R — Strides',         col:'plan-hard',obj:'Economia de corrida e velocidade neuromuscular', dur:'30–35 min',dist_:'4–5 km', pill:'pr', e:`15 min E (${E}) → 8×100m em ritmo R (${R}) com retorno caminhando → 10 min E.`},
+    {tipo:'Treino E — Mobilidade',      col:'plan-easy',obj:'Recuperação ativa e mobilidade',       dur:'25 min',   dist_:'3 km',  pill:'pg', e:`Trote bem leve E (${E}) + 10 min mobilidade articular ao final.`},
   ];
 
   const dias=USER_GOAL.dias_semana||3;
