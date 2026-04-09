@@ -1217,13 +1217,13 @@ function computeAnalise(){
     z = calcZonesFromTest(USER_GOAL.test_time, USER_GOAL.test_fcmax);
   }
   if(!z){
-    // Fallback: estimate from basePace (conservative)
+    // Fallback: estimate from basePace using Daniels percentages
     z={
-      rec:   {min:Math.round(basePace*1.35),max:Math.round(basePace*1.50),label:'Super leve',emoji:'😌',desc:'Caminhada ou trote suave — recuperação',color:'var(--tx2)',bg:'rgba(255,255,255,.04)'},
-      easy:  {min:Math.round(basePace*1.18),max:Math.round(basePace*1.32),label:'Leve',      emoji:'🟢',desc:'Você consegue conversar normalmente',  color:'var(--neon)', bg:'var(--neon-dim)'},
-      tempo: {min:Math.round(basePace*0.97),max:Math.round(basePace*1.08),label:'Moderado',  emoji:'🟡',desc:'Fala frases curtas, mas não conversa', color:'var(--orange)',bg:'var(--orange-dim)'},
-      inter: {min:Math.round(basePace*0.87),max:Math.round(basePace*0.96),label:'Forte',     emoji:'🔴',desc:'Difícil falar, respira fundo',          color:'var(--red)',  bg:'var(--red-dim)'},
-      rep:   {min:Math.round(basePace*0.80),max:Math.round(basePace*0.86),label:'Máximo',    emoji:'💀',desc:'Sprints curtos — sem conseguir falar',  color:'var(--purple)',bg:'var(--purple-dim)'},
+      e: {min:Math.round(basePace*1.35),max:Math.round(basePace*1.69),label:'E — Fácil',           emoji:'🟢',desc:'Conversa normal. Base aeróbica. 70–80% dos treinos.',       color:'var(--neon)',   bg:'var(--neon-dim)',   daniel:'Easy'},
+      m: {min:Math.round(basePace*1.19),max:Math.round(basePace*1.33),label:'M — Maratona',         emoji:'🔵',desc:'Fala frases curtas. Ritmo de provas longas.',                color:'var(--blue)',   bg:'var(--bdim)',       daniel:'Marathon'},
+      t: {min:Math.round(basePace*1.14),max:Math.round(basePace*1.20),label:'T — Limiar',           emoji:'🟡',desc:'Difícil mas sustentável por 20 min. Limiar anaeróbico.',     color:'var(--orange)', bg:'var(--orange-dim)', daniel:'Threshold'},
+      i: {min:Math.round(basePace*1.00),max:Math.round(basePace*1.05),label:'I — Intervalo VO2max', emoji:'🔴',desc:'Muito difícil. Máximo 10–15 min acumulados por treino.',     color:'var(--red)',    bg:'var(--red-dim)',    daniel:'Interval'},
+      r: {min:Math.round(basePace*0.83),max:Math.round(basePace*0.95),label:'R — Repetição',        emoji:'💀',desc:'Sprint. Máximo por rep: 400m ou 2 min.',                    color:'var(--purple)', bg:'var(--purple-dim)', daniel:'Repetition'},
     };
   }
 
@@ -1519,8 +1519,8 @@ function renderAnalise(){
   html+=`</div>`;
 
   // Zones — Daniels methodology display
-  const zEntries = Object.entries(a.z).filter(([k])=>k!=='_vam');
-  const vamData = a.z._vam;
+  const zEntries = Object.entries(a.z).filter(([k])=>k!=='_vam' && a.z[k].label);
+  const vamData = a.z._vam || null;
   html+=`<div class="card">
     <div class="clabel">🏃 Suas zonas de treino — Método Jack Daniels</div>
     ${vamData ? `<div style="background:var(--neon-dim);border:1px solid rgba(232,255,0,.2);border-radius:var(--r);padding:8px 12px;margin-bottom:10px;font-size:12px">
