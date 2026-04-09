@@ -372,7 +372,8 @@ select option{background:var(--bg3)}
 const SUPABASE_URL    = 'https://stmkmocdhyhcfouearap.supabase.co';
 const SUPABASE_ANON   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0bWttb2NkaHloY2ZvdWVhcmFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2OTY1MDksImV4cCI6MjA5MTI3MjUwOX0.OiFJJPAEJCRnSjk8OBprr7-KTKvzdx9yuikLbB8BvMg';
 const ADMIN_EMAIL     = 'fabianafnascimento13@gmail.com'; // seu email de admin
-const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const { createClient } = window.supabase;
+const db = createClient(SUPABASE_URL, SUPABASE_ANON);
 
 // ═══════════════════════════════════════════════════
 //  STATE
