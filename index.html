@@ -432,8 +432,12 @@ async function doLogin(){
   const pass  = document.getElementById('l-pass').value;
   if(!email||!pass){ showAuthMsg('Preencha e-mail e senha.'); return; }
   showAuthMsg('Entrando...','ok');
-  const {error} = await db.auth.signInWithPassword({email, password:pass});
-  if(error){ showAuthMsg(error.message==='Invalid login credentials'?'E-mail ou senha incorretos.':error.message); }
+  const {data, error} = await db.auth.signInWithPassword({email, password:pass});
+  if(error){ showAuthMsg(error.message==='Invalid login credentials'?'E-mail ou senha incorretos.':error.message); return; }
+  if(data?.user){
+    CU = data.user;
+    await loadUserProfile();
+  }
 }
 
 async function doRegister(){
@@ -599,6 +603,8 @@ function goTab(n){
     const nb=document.getElementById('nb-'+t);
     if(nb) nb.classList.toggle('active',t===n);
   });
+  if(n==='home')     renderHome();
+  if(n==='treino')   renderTreino();
   if(n==='analise')  renderAnalise();
   if(n==='plano')    renderPlano();
   if(n==='evolucao') renderEvolucao();
