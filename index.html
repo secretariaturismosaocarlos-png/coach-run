@@ -372,7 +372,7 @@ select option{background:var(--bg3)}
 const SUPABASE_URL    = 'https://stmkmocdhyhcfouearap.supabase.co';
 const SUPABASE_ANON   = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN0bWttb2NkaHloY2ZvdWVhcmFwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU2OTY1MDksImV4cCI6MjA5MTI3MjUwOX0.OiFJJPAEJCRnSjk8OBprr7-KTKvzdx9yuikLbB8BvMg';
 const ADMIN_EMAIL     = 'fabianafnascimento13@gmail.com'; // seu email de admin
-const supabase        = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
+const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON);
 
 // ═══════════════════════════════════════════════════
 //  STATE
@@ -431,7 +431,7 @@ async function doLogin(){
   const pass  = document.getElementById('l-pass').value;
   if(!email||!pass){ showAuthMsg('Preencha e-mail e senha.'); return; }
   showAuthMsg('Entrando...','ok');
-  const {error} = await supabase.auth.signInWithPassword({email, password:pass});
+  const {error} = await db.auth.signInWithPassword({email, password:pass});
   if(error){ showAuthMsg(error.message==='Invalid login credentials'?'E-mail ou senha incorretos.':error.message); }
 }
 
@@ -442,20 +442,20 @@ async function doRegister(){
   if(!name||!email||!pass){ showAuthMsg('Preencha todos os campos.'); return; }
   if(pass.length<6){ showAuthMsg('Senha deve ter no mínimo 6 caracteres.'); return; }
   showAuthMsg('Criando conta...','ok');
-  const {data, error} = await supabase.auth.signUp({email, password:pass, options:{data:{name}}});
+  const {data, error} = await db.auth.signUp({email, password:pass, options:{data:{name}}});
   if(error){ showAuthMsg(error.message); return; }
   // Create profile with pending status
-  await supabase.from('profiles').insert({id:data.user.id, email, name, status:'pending', is_admin:false});
+  await db.from('profiles').insert({id:data.user.id, email, name, status:'pending', is_admin:false});
   showAuthMsg('Conta criada! Aguarde a aprovação da administradora.','ok');
 }
 
 function doLogout(){
   if(!confirm('Sair da conta?')) return;
-  supabase.auth.signOut();
+  db.auth.signOut();
 }
 
 // Auth state listener
-supabase.auth.onAuthStateChange(async (event, session)=>{
+db.auth.onAuthStateChange(async (event, session)=>{
   if(session?.user){
     CU = session.user;
     await loadUserProfile();
@@ -466,7 +466,7 @@ supabase.auth.onAuthStateChange(async (event, session)=>{
 });
 
 async function loadUserProfile(){
-  const {data} = await supabase.from('profiles').select('*').eq('id', CU.id).single();
+  const {data} = await db.from('profiles').select('*').eq('id', CU.id).single();
   PROFILE = data;
   IS_ADMIN = data?.is_admin || CU.email === ADMIN_EMAIL;
 
@@ -502,9 +502,9 @@ function setupUI(){
 //  DATA LAYER (Supabase)
 // ═══════════════════════════════════════════════════
 async function loadData(){
-  const {data:workouts} = await supabase.from('workouts').select('*').eq('user_id', CU.id).order('created_at');
+  const {data:workouts} = await db.from('workouts').select('*').eq('user_id', CU.id).order('created_at');
   HIST = (workouts||[]).map(w=>({...w, paceSec:ps(w.pace)}));
-  const {data:prof} = await supabase.from('user_goals').select('*').eq('user_id', CU.id).single();
+  const {data:prof} = await db.from('user_goals').select('*').eq('user_id', CU.id).single();
   if(prof) USER_GOAL = prof;
 }
 
@@ -512,11 +512,11 @@ let USER_GOAL = null; // {obj_id, nivel, dias_semana, target_pace_sec, target_da
 
 async function saveGoal(g){
   USER_GOAL = g;
-  await supabase.from('user_goals').upsert({user_id:CU.id, ...g, updated_at:new Date()});
+  await db.from('user_goals').upsert({user_id:CU.id, ...g, updated_at:new Date()});
 }
 
 async function saveWorkout(t){
-  const {data} = await supabase.from('workouts').insert({
+  const {data} = await db.from('workouts').insert({
     user_id:CU.id, data:t.data, dist:t.dist, tempo:t.tempo,
     pace:t.pace, fcmed:t.fcmed||null, fcmax:t.fcmax||null,
     cad:t.cad||null, splits:t.splits||null
@@ -525,7 +525,7 @@ async function saveWorkout(t){
 }
 
 async function deleteWorkout(id){
-  await supabase.from('workouts').delete().eq('id',id).eq('user_id',CU.id);
+  await db.from('workouts').delete().eq('id',id).eq('user_id',CU.id);
   HIST = HIST.filter(t=>t.id!==id);
 }
 
@@ -533,7 +533,7 @@ async function deleteWorkout(id){
 //  ADMIN FUNCTIONS
 // ═══════════════════════════════════════════════════
 async function loadAdminPanel(){
-  const {data:users} = await supabase.from('profiles').select('*').order('created_at');
+  const {data:users} = await db.from('profiles').select('*').order('created_at');
   const el = document.getElementById('pn-admin');
   if(!users||!users.length){el.innerHTML='<div class="empty"><div class="empty-icon">👥</div><div class="empty-title">Nenhum usuário</div></div>';return;}
 
@@ -584,7 +584,7 @@ function adminUserRow(u){
 }
 
 async function setUserStatus(uid, status){
-  await supabase.from('profiles').update({status}).eq('id',uid);
+  await db.from('profiles').update({status}).eq('id',uid);
   loadAdminPanel();
 }
 
