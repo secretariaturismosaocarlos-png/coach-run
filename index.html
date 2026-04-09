@@ -469,15 +469,14 @@ function doLogout(){
 
 // Auth state listener
 db.auth.onAuthStateChange(async (event, session)=>{
-  if(event === 'SIGNED_OUT' || !session?.user){
+  if(event === 'SIGNED_OUT'){
     CU = null; PROFILE = null;
     showScreen('auth');
-  } else if(event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED'){
-    // Only auto-login on page load if session exists
-    if(session.user && !CU){
-      CU = session.user;
-      await loadUserProfile();
-    }
+  }
+  // INITIAL_SESSION handles page reload with existing session
+  if(event === 'INITIAL_SESSION' && session?.user){
+    CU = session.user;
+    await loadUserProfile();
   }
 });
 
