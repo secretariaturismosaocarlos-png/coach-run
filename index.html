@@ -433,7 +433,12 @@ async function doLogin(){
   if(!email||!pass){ showAuthMsg('Preencha e-mail e senha.'); return; }
   showAuthMsg('Entrando...','ok');
   const {data, error} = await db.auth.signInWithPassword({email, password:pass});
-  if(error){ showAuthMsg(error.message==='Invalid login credentials'?'E-mail ou senha incorretos.':error.message); return; }
+  if(error){
+    if(error.message==='Invalid login credentials') showAuthMsg('E-mail ou senha incorretos.');
+    else if(error.message.includes('Email not confirmed')) showAuthMsg('E-mail não confirmado. Use o link mágico enviado ao seu e-mail, ou contate a administradora.');
+    else showAuthMsg(error.message);
+    return;
+  }
   if(data?.user){
     CU = data.user;
     await loadUserProfile();
@@ -449,9 +454,12 @@ async function doRegister(){
   showAuthMsg('Criando conta...','ok');
   const {data, error} = await db.auth.signUp({email, password:pass, options:{data:{name}}});
   if(error){ showAuthMsg(error.message); return; }
-  // Create profile with pending status
-  await db.from('profiles').insert({id:data.user.id, email, name, status:'pending', is_admin:false});
-  showAuthMsg('Conta criada! Aguarde a aprovação da administradora.','ok');
+  if(data?.user){
+    try {
+      await db.from('profiles').insert({id:data.user.id, email, name, status:'pending', is_admin:false});
+    } catch(e) { /* profile may already exist */ }
+  }
+  showAuthMsg('✓ Conta criada! Aguarde a aprovação da administradora para acessar.','ok');
 }
 
 function doLogout(){
@@ -461,12 +469,15 @@ function doLogout(){
 
 // Auth state listener
 db.auth.onAuthStateChange(async (event, session)=>{
-  if(session?.user){
-    CU = session.user;
-    await loadUserProfile();
-  } else {
+  if(event === 'SIGNED_OUT' || !session?.user){
     CU = null; PROFILE = null;
     showScreen('auth');
+  } else if(event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED'){
+    // Only auto-login on page load if session exists
+    if(session.user && !CU){
+      CU = session.user;
+      await loadUserProfile();
+    }
   }
 });
 
@@ -953,7 +964,7 @@ function computeAnalise(){
   const h=HIST, n=h.length, last=h[n-1];
   const obj=OBJS.find(o=>o.id===USER_GOAL.obj_id)||OBJS[0];
 
-  // Weighted base pace (recent = more weight)
+  // Weighted base pace
   const recent=h.slice(-3);
   const W=[0.2,0.35,0.45].slice(3-recent.length);
   const wSum=W.reduce((a,b)=>a+b,0);
@@ -971,24 +982,26 @@ function computeAnalise(){
     }
   }
 
-  // Zones (Jack Daniels)
+  // Zones based on athlete's REAL pace (not inverted)
+  // Easy = 20-30% SLOWER than base pace (comfortable)
+  // Tempo = 5-10% FASTER than base pace (hard but doable)
+  // Interval = 15-20% FASTER than base pace (fast)
   const zf=evoSt==='evolucao'?0.97:evoSt==='regressao'?1.04:1.0;
   const z={
-    rec:   {min:Math.round(basePace*1.30*zf),max:Math.round(basePace*1.45*zf),label:'Recuperação', color:'var(--tx2)',  bg:'rgba(255,255,255,.04)'},
-    easy:  {min:Math.round(basePace*1.15*zf),max:Math.round(basePace*1.28*zf),label:'Fácil Z2',    color:'var(--neon)', bg:'var(--neon-dim)'},
-    tempo: {min:Math.round(basePace*1.03*zf),max:Math.round(basePace*1.10*zf),label:'Limiar Z3',   color:'var(--orange)',bg:'var(--orange-dim)'},
-    inter: {min:Math.round(basePace*0.90*zf),max:Math.round(basePace*0.97*zf),label:'Intervalo Z4',color:'var(--red)',  bg:'var(--red-dim)'},
-    rep:   {min:Math.round(basePace*0.82*zf),max:Math.round(basePace*0.90*zf),label:'Repetição Z5',color:'var(--purple)',bg:'var(--purple-dim)'},
+    rec:   {min:Math.round(basePace*1.30*zf),max:Math.round(basePace*1.45*zf),label:'Super leve',    emoji:'😌', desc:'Caminhada ou trote bem suave — recuperação',  color:'var(--tx2)',   bg:'rgba(255,255,255,.04)'},
+    easy:  {min:Math.round(basePace*1.15*zf),max:Math.round(basePace*1.28*zf),label:'Leve',          emoji:'🟢', desc:'Você consegue conversar normalmente',            color:'var(--neon)',  bg:'var(--neon-dim)'},
+    tempo: {min:Math.round(basePace*0.95*zf),max:Math.round(basePace*1.05*zf),label:'Moderado',      emoji:'🟡', desc:'Fala frases curtas, mas não conversa',           color:'var(--orange)',bg:'var(--orange-dim)'},
+    inter: {min:Math.round(basePace*0.85*zf),max:Math.round(basePace*0.94*zf),label:'Forte',         emoji:'🔴', desc:'Difícil falar, respira fundo',                   color:'var(--red)',   bg:'var(--red-dim)'},
+    rep:   {min:Math.round(basePace*0.78*zf),max:Math.round(basePace*0.84*zf),label:'Máximo',        emoji:'💀', desc:'Sprints curtos — sem conseguir falar',           color:'var(--purple)',bg:'var(--purple-dim)'},
   };
 
   // Score
-  let score=60;
-  if(n>=3){const paces=h.slice(-5).map(t=>t.paceSec),std=Math.sqrt(paces.reduce((a,b)=>a+Math.pow(b-basePace,2),0)/paces.length);if(std<15)score+=15;else if(std<30)score+=8;else score-=5;}
-  if(last.cad>=170&&last.cad<=185)score+=10;else if(last.cad>0&&last.cad<165)score-=5;
+  let score=65;
+  if(n>=3){const paces=h.slice(-5).map(t=>t.paceSec),std=Math.sqrt(paces.reduce((a,b)=>a+Math.pow(b-basePace,2),0)/paces.length);if(std<15)score+=12;else if(std<30)score+=6;else score-=5;}
   if(last.fcmed>0&&last.fcmed<155)score+=8;else if(last.fcmed>168)score-=5;
-  if(evoSt==='evolucao')score+=10;if(evoSt==='regressao')score-=10;
-  if(last.dist>=5)score+=5;else if(last.dist>=3)score+=2;
-  if(obj.dist>0&&last.dist>=obj.dist*0.5)score+=5;
+  if(evoSt==='evolucao')score+=10;if(evoSt==='regressao')score-=8;
+  if(last.dist>=5)score+=5;else if(last.dist>=3)score+=3;
+  if(obj.dist>0&&last.dist>=obj.dist*0.4)score+=5;
   score=Math.min(100,Math.max(15,Math.round(score)));
 
   // Goal ETA
@@ -998,8 +1011,9 @@ function computeAnalise(){
   const wkImprove=basePace*(lvlF[USER_GOAL.nivel]||.012);
   let weeksETA=tp>0&&gapSec>0?Math.ceil(gapSec/wkImprove):Math.round((obj.weeks||10)*({iniciante:1.4,iniciante_ativo:1.2,intermediario:1.0,avancado:.85,competidor:.75}[USER_GOAL.nivel]||1));
   weeksETA=Math.max(obj.weeks||6,weeksETA);
-  if(n>=4&&evoSt==='evolucao'&&tp>0&&evoMag>0){const obsr=gapSec/evoMag;weeksETA=Math.round(weeksETA*.4+obsr*.6);weeksETA=Math.max(4,weeksETA);}
-  if(evoSt==='evolucao')weeksETA=Math.round(weeksETA*.88);if(evoSt==='regressao')weeksETA=Math.round(weeksETA*1.2);
+  if(n>=4&&evoSt==='evolucao'&&tp>0&&evoMag>0){const obsr=gapSec/Math.max(1,evoMag);weeksETA=Math.round(weeksETA*.4+obsr*.6);weeksETA=Math.max(4,weeksETA);}
+  if(evoSt==='evolucao')weeksETA=Math.round(weeksETA*.88);
+  if(evoSt==='regressao')weeksETA=Math.round(weeksETA*1.2);
   if(tp>0&&gapSec===0)weeksETA=0;
 
   let etaDate='';
@@ -1012,82 +1026,183 @@ function computeAnalise(){
 
   const raceEst=obj.dist>0?s2t(tp>0?tp*obj.dist:basePace*obj.dist):'';
 
-  // Technical
-  let fcEff='',cadNote='',splitNote='';
-  if(last.fcmed>0){
-    if(last.fcmed<135)fcEff='Excelente eficiência aeróbica. FC baixa indica ótima adaptação cardiovascular.';
-    else if(last.fcmed<150)fcEff='Boa eficiência. Zona aeróbica de desenvolvimento.';
-    else if(last.fcmed<165)fcEff='FC moderadamente alta. Confira se o pace condiz com o esforço percebido.';
-    else fcEff='FC muito elevada. Risco de overtraining. Reduza volume nos próximos dias.';
-  }
-  if(last.cad>0){
-    if(last.cad<165)cadNote=`Cadência baixa (${last.cad} spm). Aumentar 5–10% reduz carga no joelho em até 30% (Heiderscheit et al.). Meta progressiva: +5 spm/semana.`;
-    else if(last.cad<=185)cadNote=`Cadência de ${last.cad} spm — faixa ideal (170–185 spm). Mantém baixa carga articular.`;
-    else cadNote=`Cadência de ${last.cad} spm — levemente acima. Normal em ritmos fortes.`;
-  }
-  if(last.splits&&last.splits.length>2){
-    const sv=last.splits.map(ps);const mean=sv.reduce((a,b)=>a+b,0)/sv.length;
-    const cv=Math.sqrt(sv.reduce((a,b)=>a+Math.pow(b-mean,2),0)/sv.length)/mean*100;
-    if(cv<2)splitNote=`Ritmo extremamente uniforme (CV ${cv.toFixed(1)}%). Controle de esforço excepcional.`;
-    else if(cv<4)splitNote=`Boa consistência de ritmo (CV ${cv.toFixed(1)}%). Pequenas variações são saudáveis.`;
-    else if(cv<7)splitNote=`Variação moderada (CV ${cv.toFixed(1)}%). Tente sair mais conservador.`;
-    else splitNote=`Alta variação (CV ${cv.toFixed(1)}%). Possível saída rápida demais. Treine o negative split.`;
-  }
+  // Human-friendly analysis
+  const analysis = buildHumanAnalysis(last, basePace, evoSt, evoMag, obj, n, h);
 
-  // Alerts
-  const alerts=[];
-  if(last.fcmed>168&&last.fcmed>0)alerts.push({c:'alert-red',m:`FC muito elevada (${last.fcmed} bpm). Risco de overtraining. Reduza intensidade por 3–4 dias.`});
-  if(evoSt==='regressao')alerts.push({c:'alert-orange',m:`Regressão detectada (${sp(Math.abs(evoMag))}/km). Causas: fadiga, sono ruim ou volume excessivo. Reduza 20% esta semana.`});
-  if(last.cad>0&&last.cad<165)alerts.push({c:'alert-orange',m:`Cadência abaixo de 165 spm aumenta risco de lesão. Meta: +5 spm/semana até 170–180.`});
-  if(evoSt==='evolucao')alerts.push({c:'alert-neon',m:`Evolução de ${sp(Math.abs(evoMag))}/km detectada! O treinamento está funcionando — mantenha a estrutura.`});
-  if(gapSec>0&&gapSec<30)alerts.push({c:'alert-teal',m:`Faltam apenas ${sp(gapSec)}/km para o pace alvo! Você pode atingir antes do prazo estimado.`});
-  if(!alerts.length)alerts.push({c:'alert-neon',m:`Treino dentro dos parâmetros ideais para o objetivo. Continue!`});
-
-  const insight=getInsight(obj,USER_GOAL,evoSt,evoMag);
-  return{last,basePace,evoSt,evoMag,z,score,alerts,gapSec,weeksETA,etaDate,progPct,raceEst,tp,obj,insight,fcEff,cadNote,splitNote,h};
+  return{last,basePace,evoSt,evoMag,z,score,gapSec,weeksETA,etaDate,progPct,raceEst,tp,obj,analysis,h};
 }
 
-function getInsight(obj,g,evoSt,evoMag){
-  const m={
-    'primeiro5k':'O método run-walk (corrida/caminhada intercalada) é clinicamente comprovado para iniciantes. A meta não é o ritmo — é chegar ao final. Aumente 1 min de corrida por semana até correr os 5km sem parar.',
-    'melhorar5k':'Melhorar o 5km depende do limiar anaeróbico. 1 sessão de tempo run semanal (20 min em 85–90% FCmax) é o principal motor de melhoria. Combine com tiros curtos para desenvolver velocidade.',
-    'primeiro10k':'A transição 5km → 10km exige construção progressiva de volume. A regra dos 10% (nunca aumentar mais de 10%/semana) é fundamental para evitar lesões de sobrecarga. O treino longo é o mais importante da semana.',
-    'melhorar10k':'O 10km exige equilíbrio entre base aeróbica (longas Z2) e velocidade (intervalados). Proporção ideal: 80% fácil / 20% intenso. 2 sessões de tempo run/semana são o maior motor de melhoria.',
-    'primeiro15k':'Para os 15km, base sólida de 8–10km é pré-requisito. Longas semanais progressivas (+1–2km/semana) são o coração do plano. A partir de 10km, nutrição durante o treino (gel ou banana) é importante.',
-    'meia':'Meia maratona é 80% resistência, 20% velocidade. Longas progressivas terminando os últimos 30% no pace alvo + 1 tempo run quinzenal são os treinos mais específicos. Sono é onde acontece a adaptação.',
-    'maratona':'A maratona é a prova da consistência. Volume semanal importa mais que qualquer treino isolado. Longas em pace 60–75s/km mais lento que o alvo. Pratique nutrição e hidratação em cada longa.',
-    'emagrecimento':'Zona 2 (60–70% FCmax) maximiza oxidação de gordura. O maior aliado do emagrecimento é o volume total, não a intensidade. Mais dias correndo em ritmo confortável supera 1 dia intenso por semana.',
-    'condicionamento':'Zona 2 é a mais eficiente para saúde cardiovascular e longevidade. A maioria treina rápido demais e não obtém esses benefícios. Respire pelo nariz como referência de zona 2 correta.',
-    'volta':'Retorno após pausa: músculos se adaptam mais rápido que tendões. Comece com 50% do volume anterior, aumente 10%/semana. Dor articular = pare; fadiga muscular = continue.',
-    'trail10k':'Trail exige trabalho de força (glúteos, core), técnica de descida e economia em subidas. Use walk-run em subidas >8% — é mais econômico que correr. Pacing por esforço, não por pace.',
-    'velocidade':'Economia de corrida é o maior diferencial entre atletas de mesmo VO2max. Tiros de 100–200m em ritmo de 1500m + cadência >175 spm + força reativa (skipping, pliometria) 2×/semana.',
+function buildHumanAnalysis(last, basePace, evoSt, evoMag, obj, n, h){
+  const pace = last.pace;
+  const dist = last.dist;
+  const tempo = last.tempo;
+
+  // Classify effort in human terms
+  let esforcoLabel, esforcoDesc, esforcoEmoji;
+  if(basePace > 480){ // > 8min/km
+    esforcoLabel='Trote leve / caminhada acelerada';
+    esforcoDesc='Um ritmo bem confortável. Você provavelmente conseguia conversar normalmente durante o treino.';
+    esforcoEmoji='😌';
+  } else if(basePace > 390){ // 6:30–8:00
+    esforcoLabel='Corrida leve';
+    esforcoDesc='Um ritmo tranquilo de corrida. Conseguia falar frases curtas, mas não conversar à vontade.';
+    esforcoEmoji='🟢';
+  } else if(basePace > 330){ // 5:30–6:30
+    esforcoLabel='Corrida moderada';
+    esforcoDesc='Ritmo médio — exige esforço, mas dá pra manter por bastante tempo.';
+    esforcoEmoji='🟡';
+  } else if(basePace > 270){ // 4:30–5:30
+    esforcoLabel='Corrida forte';
+    esforcoDesc='Ritmo forte — difícil de manter por muito tempo. Bom para treinos específicos.';
+    esforcoEmoji='🔴';
+  } else {
+    esforcoLabel='Ritmo de competição';
+    esforcoDesc='Ritmo muito forte. Só sustentável por distâncias curtas.';
+    esforcoEmoji='💀';
+  }
+
+  // What went well
+  const pontosBons = [];
+  pontosBons.push({
+    titulo: 'Você treinou! 👏',
+    texto: `${dist}km em ${tempo||'—'} é um ótimo trabalho. O maior passo é sair de casa — você fez isso.`,
+    dica: 'Consistência semana a semana é o que transforma iniciantes em corredores.'
+  });
+
+  if(basePace > 420){
+    pontosBons.push({
+      titulo: 'Ritmo confortável ✅',
+      texto: 'Correr no ritmo certo (sem se matar) é a coisa mais importante para quem está começando.',
+      dica: 'Esse ritmo leve ajuda o corpo a se adaptar, evita lesões e constrói a base que você vai precisar depois.'
+    });
+  }
+
+  if(dist >= 4){
+    pontosBons.push({
+      titulo: `Boa distância — ${dist}km! 📏`,
+      texto: 'Para o seu objetivo, o tempo em movimento importa mais que a velocidade nesse momento.',
+      dica: 'Seu corpo está aprendendo a ser eficiente. Continue aumentando a distância aos poucos.'
+    });
+  }
+
+  if(last.fcmed > 0 && last.fcmed < 155){
+    pontosBons.push({
+      titulo: 'Coração trabalhando bem 💚',
+      texto: `Frequência cardíaca de ${last.fcmed} bpm é ótima para esse ritmo.`,
+      dica: 'Isso mostra que você está na zona certa de esforço — nem fácil demais, nem pesado demais.'
+    });
+  }
+
+  if(evoSt === 'evolucao'){
+    pontosBons.push({
+      titulo: 'Você está evoluindo! 📈',
+      texto: `Seu ritmo melhorou ${sp(Math.abs(evoMag))}/km em relação aos últimos treinos.`,
+      dica: 'O treino está funcionando. Mantenha a frequência e os resultados vão continuar aparecendo.'
+    });
+  }
+
+  // What to improve
+  const melhorar = [];
+
+  if(basePace > 480){
+    melhorar.push({
+      titulo: 'Inclua trechos de corrida contínua 🏃',
+      problema: 'No ritmo atual, seu corpo não está sendo estimulado o suficiente para evoluir na corrida.',
+      solucao: 'No próximo treino, tente: 2 minutos correndo + 2 minutos caminhando, repetindo por 20–30 min. A cada semana, aumente 1 minuto na corrida.',
+      icon: '💡'
+    });
+  }
+
+  if(evoSt === 'regressao'){
+    melhorar.push({
+      titulo: 'Seu ritmo piorou um pouco ⚠️',
+      problema: `Comparado com os treinos anteriores, você correu ${sp(Math.abs(evoMag))}/km mais devagar.`,
+      solucao: 'Isso é normal e acontece com todo mundo! Pode ser cansaço, sono ruim ou estresse. Descanse bem, beba água e não force essa semana.',
+      icon: '😴'
+    });
+  }
+
+  if(last.cad > 0 && last.cad < 165){
+    melhorar.push({
+      titulo: 'Experimente dar passos mais curtos e rápidos 👣',
+      problema: `Você está dando passos longos (${last.cad} passos por minuto). Passos muito longos forçam mais os joelhos.`,
+      solucao: 'Pense em "pisar leve, como se o chão estivesse quente". Passos curtos e rápidos são mais econômicos e reduzem muito o risco de lesão. Não precisa de sensor — só preste atenção.',
+      icon: '💡'
+    });
+  }
+
+  if(last.splits && last.splits.length > 2){
+    const sv = last.splits.map(ps);
+    const maxS = Math.max(...sv), minS = Math.min(...sv);
+    const diff = maxS - minS;
+    if(diff > 60){
+      melhorar.push({
+        titulo: 'Saia mais devagar no começo 🐢➡️🐇',
+        problema: `Sua velocidade variou muito — ${sp(minS)}/km no mais rápido e ${sp(maxS)}/km no mais lento. Provavelmente saiu muito rápido e foi diminuindo.`,
+        solucao: 'Na próxima corrida: saia mais devagar do que acha que deveria. Nos últimos km, acelere. Esse é o segredo dos corredores experientes.',
+        icon: '🎯'
+      });
+    }
+  }
+
+  if(melhorar.length === 0){
+    melhorar.push({
+      titulo: 'Aumente a distância gradualmente 📈',
+      problema: 'Para continuar evoluindo, o corpo precisa de novos estímulos.',
+      solucao: `Na próxima semana, tente correr mais ${Math.round(dist * 0.1 * 10) / 10}km do que hoje. Nunca aumente mais de 10% por semana — isso protege seus joelhos e tornozelos.`,
+      icon: '💡'
+    });
+  }
+
+  // Main coaching message
+  const coachMsg = getCoachMsg(obj, evoSt, basePace, dist, n);
+
+  return { esforcoLabel, esforcoDesc, esforcoEmoji, pontosBons, melhorar, coachMsg };
+}
+
+function getCoachMsg(obj, evoSt, basePace, dist, n){
+  const msgs = {
+    'primeiro5k': n < 3
+      ? 'Você está nos primeiros passos! O objetivo agora é criar o hábito. Não se preocupe com velocidade — foque em aparecer para treinar 3x por semana.'
+      : `Você já tem ${n} treinos! Continue assim. Quando conseguir correr 20 minutos sem parar, o 5km vai estar bem perto.`,
+    'primeiro10k': `Para chegar nos 10km, o segredo é aumentar a distância devagar — máximo 10% por semana. O treino mais importante é o "treino longo" do final de semana. Sem pressa!`,
+    'primeiro15k': `15km é uma ótima meta! Você vai chegar lá aumentando seu treino longo gradualmente. Quando os 10km ficarem confortáveis, os 15km virão naturalmente.`,
+    'melhorar5k': `Para melhorar o 5km, você precisa treinar em ritmos diferentes. Não só correr "normal" — inclua momentos mais rápidos e momentos de recuperação. O plano vai te guiar.`,
+    'melhorar10k': `Para bater seu tempo no 10km, 80% dos seus treinos devem ser leves (parece fácil demais, mas funciona!) e 20% fortes. Isso é o que os melhores corredores fazem.`,
+    'meia': `Meia maratona é um objetivo incrível! O treino longo semanal é o coração do plano. Durma bem — é dormindo que o corpo se adapta.`,
+    'maratona': `Maratona é uma jornada longa. Consistência supera intensidade — apareça para treinar toda semana, mesmo que devagar.`,
+    'emagrecimento': `Para emagrecer com corrida, o segredo não é correr rápido — é correr por mais tempo, em ritmo confortável. Quanto mais tempo você passa se movendo, mais calorias queima.`,
+    'condicionamento': `Correr regularmente em ritmo confortável é uma das melhores coisas que você pode fazer pela saúde. Você está no caminho certo!`,
+    'volta': `Voltar a correr depois de uma pausa exige paciência. Seu fôlego volta rápido, mas músculos e articulações precisam de mais tempo. Comece devagar e aumente gradualmente.`,
+    'trail10k': `Trail é divertido e desafiador! Em subidas, caminhe rápido — é mais econômico que correr. Nas descidas, passos curtos e rápidos para proteger os joelhos.`,
+    'velocidade': `Para ficar mais rápido, paradoxalmente você precisa correr mais devagar na maioria dos treinos. Reserve apenas 1-2 dias por semana para treinos fortes.`,
   };
-  let t=m[obj.id]||'Consistência supera intensidade. 80% do volume em zona 2 e 20% em alta intensidade é a distribuição ótima (princípio 80/20, Seiler 2010).';
-  if(evoSt==='evolucao')t+=` O plano está funcionando — evolução de ${sp(Math.abs(evoMag))}/km detectada.`;
-  if(evoSt==='regressao')t+=' Atenção: tendência de regressão. Priorize recuperação antes de retomar carga.';
-  return t;
+  let msg = msgs[obj.id] || 'Continue treinando com consistência — é o que faz a diferença no longo prazo.';
+  if(evoSt === 'evolucao') msg += ' 🔥 Você está evoluindo — continue!';
+  if(evoSt === 'regressao') msg += ' Descanse bem essa semana antes de retomar.';
+  return msg;
 }
 
 // ═══════════════════════════════════════════════════
-//  RENDER ANALYSIS
+//  RENDER ANALYSIS — HUMAN FRIENDLY
 // ═══════════════════════════════════════════════════
 function renderAnalise(){
   const a=computeAnalise();const el=document.getElementById('pn-analise');
   if(!a){el.innerHTML=`<div class="empty"><div class="empty-icon">📊</div><div class="empty-title">Sem dados</div><div class="empty-sub">Adicione treinos para ver a análise.</div></div>`;return;}
+
   const sc=a.score>=90?{c:'var(--neon)',l:'EXCELENTE'}:a.score>=70?{c:'var(--teal)',l:'BOM'}:a.score>=50?{c:'var(--orange)',l:'ATENÇÃO'}:{c:'var(--red)',l:'REVISAR'};
   const ecBadge=a.evoSt==='evolucao'?'badge-neon':a.evoSt==='regressao'?'badge-red':'badge-orange';
-  const ecLabel=a.evoSt==='evolucao'?'↑ Evoluindo':a.evoSt==='regressao'?'↓ Regressão':'→ Estável';
+  const ecLabel=a.evoSt==='evolucao'?'↑ Melhorando':a.evoSt==='regressao'?'↓ Caiu um pouco':'→ Estável';
 
-  // SVG ring for score
   const r=34,cx=40,cy=40,circ=2*Math.PI*r,offset=circ-(a.score/100)*circ;
   const ring=`<svg width="80" height="80" viewBox="0 0 80 80"><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="var(--bg3)" stroke-width="6"/><circle cx="${cx}" cy="${cy}" r="${r}" fill="none" stroke="${sc.c}" stroke-width="6" stroke-dasharray="${circ}" stroke-dashoffset="${offset}" stroke-linecap="round"/></svg>`;
 
   let html=`<div style="padding-top:8px;margin-bottom:14px">
     <div style="font-size:18px;font-weight:700;letter-spacing:-.3px">📊 Análise do Treino</div>
-    <div style="font-size:12px;color:var(--tx2);margin-top:2px">Baseado nos seus ${a.h.length} treino${a.h.length!==1?'s':''} registrados</div>
+    <div style="font-size:12px;color:var(--tx2);margin-top:2px">${a.h.length} treino${a.h.length!==1?'s':''} registrados</div>
   </div>`;
 
-  // Score + status
+  // Score card
   html+=`<div class="card card-accent">
     <div class="score-wrap">
       <div class="score-ring-wrap">${ring}
@@ -1095,77 +1210,89 @@ function renderAnalise(){
       </div>
       <div style="flex:1">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-          <span style="font-size:14px;font-weight:700">Treino atual</span>
-          <span class="badge ${ecBadge}">${ecLabel}</span>
+          <span style="font-size:14px;font-weight:700">${a.analysis.esforcoEmoji} ${a.analysis.esforcoLabel}</span>
         </div>
-        <div style="font-size:12px;color:var(--tx2);line-height:1.6">
-          Pace base: <strong style="color:var(--neon);font-family:var(--mono)">${sp(a.basePace)}/km</strong>
-          ${a.evoSt!=='neutro'?` · variação: <strong style="color:${a.evoSt==='evolucao'?'var(--neon)':'var(--red)'}">${a.evoSt==='evolucao'?'−':'+'} ${sp(Math.abs(a.evoMag))}/km</strong>`:''}
-        </div>
+        <div style="font-size:12px;color:var(--tx2);line-height:1.6">${a.analysis.esforcoDesc}</div>
+        <div style="margin-top:6px"><span class="badge ${ecBadge}">${ecLabel}</span></div>
       </div>
     </div>
   </div>`;
 
   // Metrics
   html+=`<div class="metrics">
-    <div class="metric metric-neon"><div class="mlabel">Pace</div><div class="mval" style="color:var(--neon)">${a.last.pace}</div><div class="msub">min/km</div></div>
+    <div class="metric metric-neon"><div class="mlabel">Ritmo</div><div class="mval" style="color:var(--neon)">${a.last.pace}</div><div class="msub">min por km</div></div>
     <div class="metric metric-orange"><div class="mlabel">Distância</div><div class="mval">${a.last.dist}</div><div class="msub">km</div></div>
-    <div class="metric metric-teal"><div class="mlabel">${a.last.fcmed?'FC média':'Tempo'}</div><div class="mval" style="font-size:${a.last.fcmed?20:16}px">${a.last.fcmed||a.last.tempo||'—'}</div><div class="msub">${a.last.fcmed?'bpm':''}</div></div>
+    <div class="metric metric-teal"><div class="mlabel">${a.last.fcmed?'Freq. cardíaca':'Duração'}</div><div class="mval" style="font-size:${a.last.fcmed?20:15}px">${a.last.fcmed?a.last.fcmed:a.last.tempo||'—'}</div><div class="msub">${a.last.fcmed?'batimentos/min':''}</div></div>
   </div>`;
 
   // Goal box
-  const gb=a.tp>0?'gb-neon':a.gapSec===0&&a.tp>0?'gb-neon':'gb-teal';
   html+=`<div class="goal-box ${a.tp>0?'gb-neon':'gb-teal'}">
     <div style="font-size:13px;font-weight:700;margin-bottom:8px">🎯 ${a.obj.t}</div>
-    ${a.tp>0?`<div class="grow"><span class="gkey">Pace base atual</span><span class="gval">${sp(a.basePace)}/km</span></div>
-    <div class="grow"><span class="gkey">Pace alvo</span><span class="gval" style="color:var(--neon)">${sp(a.tp)}/km</span></div>
-    <div class="grow"><span class="gkey">Diferença</span><span class="gval" style="color:${a.gapSec===0?'var(--neon)':a.gapSec<30?'var(--orange)':'var(--tx)'}">${a.gapSec===0?'✓ Atingido!':sp(a.gapSec)+'/km restantes'}</span></div>`:
-    `<div class="grow"><span class="gkey">Prazo estimado</span><span class="gval" style="color:var(--neon)">${a.weeksETA} semanas</span></div>`}
+    ${a.tp>0?`
+    <div class="grow"><span class="gkey">Seu ritmo atual</span><span class="gval">${sp(a.basePace)}/km</span></div>
+    <div class="grow"><span class="gkey">Ritmo que você quer chegar</span><span class="gval" style="color:var(--neon)">${sp(a.tp)}/km</span></div>
+    <div class="grow"><span class="gkey">Diferença</span><span class="gval" style="color:${a.gapSec===0?'var(--neon)':a.gapSec<30?'var(--orange)':'var(--tx)'}">${a.gapSec===0?'✓ Meta atingida!':sp(a.gapSec)+'/km para chegar lá'}</span></div>`:''}
     ${a.raceEst?`<div class="grow"><span class="gkey">Tempo estimado na prova</span><span class="gval" style="color:var(--teal)">${a.raceEst}</span></div>`:''}
-    <div class="grow"><span class="gkey">Prazo estimado</span><span class="gval" style="color:var(--orange)">${a.weeksETA===0?'✓ Atingido':a.weeksETA+' semanas ('+a.etaDate+')'}</span></div>
-    ${a.progPct>0?`<div class="prog-wrap"><div class="prog-header"><span style="color:var(--tx2)">Progresso</span><span style="color:var(--neon);font-weight:700">${a.progPct}%</span></div>
+    <div class="grow"><span class="gkey">Prazo estimado para o objetivo</span><span class="gval" style="color:var(--orange)">${a.weeksETA===0?'✓ Já atingido':a.weeksETA+' semanas (até '+a.etaDate+')'}</span></div>
+    ${a.progPct>0?`<div class="prog-wrap"><div class="prog-header"><span style="color:var(--tx2)">Progresso rumo ao objetivo</span><span style="color:var(--neon);font-weight:700">${a.progPct}%</span></div>
     <div class="prog-bg"><div class="prog-fill" style="width:${a.progPct}%;background:${a.progPct>=100?'var(--neon)':a.progPct>=50?'var(--orange)':'var(--teal)'}"></div></div></div>`:''}
   </div>`;
 
-  // Expert insight
+  // Coach message
   html+=`<div class="card card-teal">
-    <div class="clabel">🧠 Análise do Treinador</div>
-    <div style="font-size:13px;line-height:1.7;color:var(--tx)">${a.insight}</div>
+    <div class="clabel">💬 Mensagem do treinador</div>
+    <div style="font-size:14px;line-height:1.8;color:var(--tx)">${a.analysis.coachMsg}</div>
   </div>`;
 
-  // Technical
-  const techItems=[[a.fcEff,'FC'],[a.cadNote,'Cadência'],[a.splitNote,'Splits']].filter(x=>x[0]);
-  if(techItems.length){
-    html+=`<div class="card"><div class="clabel">Análise Técnica</div>`;
-    techItems.forEach(([text,label])=>{
-      html+=`<div style="padding:8px 0;border-bottom:1px solid var(--bd);display:flex;gap:10px;align-items:flex-start">
-        <span class="badge badge-gray" style="flex-shrink:0;margin-top:1px">${label}</span>
-        <span style="font-size:12px;color:var(--tx2);line-height:1.6">${text}</span>
-      </div>`;
-    });
-    html+=`</div>`;
-  }
-
-  // Zones
-  html+=`<div class="card"><div class="clabel">Zonas de Treino — Jack Daniels</div>`;
-  Object.values(a.z).forEach(zv=>{
-    html+=`<div class="zone-row" style="background:${zv.bg};border-color:${zv.color}22">
-      <div><div class="zone-label" style="color:${zv.color}">${zv.label}</div></div>
-      <div class="zone-pace" style="color:${zv.color}">${sp(zv.min)} – ${sp(zv.max)}</div>
+  // O que você fez bem
+  html+=`<div class="card">
+    <div class="clabel" style="color:var(--neon)">👍 O que você fez bem</div>`;
+  a.analysis.pontosBons.forEach((p,i)=>{
+    html+=`<div style="padding:10px 0;border-bottom:1px solid var(--bd)">
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px">${i+1}. ${p.titulo}</div>
+      <div style="font-size:13px;color:var(--tx);margin-bottom:4px;line-height:1.6">${p.texto}</div>
+      <div style="font-size:12px;color:var(--neon);line-height:1.5">➡️ ${p.dica}</div>
     </div>`;
   });
   html+=`</div>`;
 
-  // Alerts
-  html+=`<div class="card"><div class="clabel">Alertas Inteligentes</div>`;
-  a.alerts.forEach(al=>{ html+=`<div class="alert ${al.c}">${al.m}</div>`; });
+  // O que melhorar
+  html+=`<div class="card">
+    <div class="clabel" style="color:var(--orange)">⚠️ O que melhorar</div>`;
+  a.analysis.melhorar.forEach((m,i)=>{
+    html+=`<div style="padding:10px 0;border-bottom:1px solid var(--bd)">
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px">${i+1}. ${m.titulo}</div>
+      <div style="font-size:13px;color:var(--tx2);margin-bottom:6px;line-height:1.6">${m.problema}</div>
+      <div style="background:var(--bg3);border-radius:var(--r);padding:8px 12px;font-size:12px;color:var(--tx);line-height:1.6;border-left:3px solid var(--neon)">
+        ${m.icon} <strong>Como fazer:</strong> ${m.solucao}
+      </div>
+    </div>`;
+  });
   html+=`</div>`;
 
-  // Splits
+  // Zones — simple version
+  html+=`<div class="card">
+    <div class="clabel">🏃 Seus ritmos de treino</div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:10px">Use esses ritmos como referência nos próximos treinos:</div>`;
+  Object.values(a.z).forEach(zv=>{
+    html+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--r);margin-bottom:5px;background:${zv.bg}">
+      <span style="font-size:16px">${zv.emoji}</span>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:${zv.color}">${zv.label}</div>
+        <div style="font-size:11px;color:var(--tx2)">${zv.desc}</div>
+      </div>
+      <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:${zv.color}">${sp(zv.min)}–${sp(zv.max)}</div>
+    </div>`;
+  });
+  html+=`</div>`;
+
+  // Splits if available
   if(a.last.splits&&a.last.splits.length>1){
     const sv=a.last.splits.map(ps),mn=Math.min(...sv);
-    html+=`<div class="card"><div class="clabel">Splits km a km</div><div style="display:flex;gap:5px;flex-wrap:wrap">`;
-    a.last.splits.forEach((s,i)=>{const f=ps(s)===mn;html+=`<div style="padding:5px 11px;border-radius:20px;background:${f?'var(--neon-dim)':'var(--bg3)'};border:1px solid ${f?'rgba(232,255,0,.3)':'var(--bd)'};font-family:var(--mono);font-size:11px;font-weight:700;color:${f?'var(--neon)':'var(--tx)'}">km${i+1} ${s}</div>`;});
+    html+=`<div class="card"><div class="clabel">⏱ Ritmo por km</div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:8px">Como você correu cada km — o mais rápido está em verde:</div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap">`;
+    a.last.splits.forEach((s,i)=>{const f=ps(s)===mn;html+=`<div style="padding:6px 12px;border-radius:20px;background:${f?'var(--neon-dim)':'var(--bg3)'};border:1px solid ${f?'rgba(232,255,0,.3)':'var(--bd)'};font-family:var(--mono);font-size:11px;font-weight:700;color:${f?'var(--neon)':'var(--tx)'}">km${i+1} ${s}</div>`;});
     html+=`</div></div>`;
   }
 
