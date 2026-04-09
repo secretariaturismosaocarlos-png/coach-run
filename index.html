@@ -655,7 +655,7 @@ function renderHome(){
     </div>
   </div>`;
 
-  if(n===0){
+  if(n===0 && !USER_GOAL.test_time){
     html+=`<div class="card card-orange">
       <div style="font-size:14px;font-weight:700;color:var(--orange);margin-bottom:6px">📋 Insira seu primeiro treino</div>
       <div style="font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:12px">Suas zonas já estão definidas pelo teste de 3km. Agora insira seus treinos para acompanhar sua evolução e receber análises personalizadas.</div>
@@ -887,17 +887,39 @@ async function obFinish(){
   const testFcmax = parseInt(document.getElementById('ob-test-fcmax')?.value) || OB_TEST_FCMAX || 0;
   OB_TEST_TIME = testTime;
   OB_TEST_FCMAX = testFcmax;
-  // Calculate VAM-based zones from test
   const testSecs = t2s(testTime);
   const vam_ms = testSecs > 0 ? 3000 / testSecs : 0;
   const vam_pace = vam_ms > 0 ? Math.round(1000 / vam_ms) : 0;
+
   await saveGoal({
     obj_id:OB_OBJ.id, nivel:OB_NIVEL, nivel_label:OB_NIVEL_LABEL||OB_NIVEL,
     dias_semana:OB_DIAS, target_pace_sec:ps(OB_TARGET_PACE)||0,
     target_date:OB_TARGET_DATE||null, onboard_done:true,
     test_time:testTime, test_fcmax:testFcmax, vam_pace:vam_pace
   });
-  OB_STEP=1;renderHome();
+
+  // Auto-save test as first workout if not already saved
+  if(testTime && HIST.length === 0){
+    const testPaceSec = vam_pace > 0 ? vam_pace : ps(testTime);
+    const t = {
+      data: new Date().toLocaleDateString('pt-BR'),
+      ts: Date.now(),
+      dist: 3.0,
+      tempo: testTime,
+      pace: sp(testPaceSec),
+      fcmed: Math.round(testFcmax * 0.93) || 0,
+      fcmax: testFcmax || 0,
+      cad: 0,
+      splits: [],
+      paceSec: testPaceSec,
+      isTeste: true
+    };
+    await saveWorkout(t);
+  }
+
+  OB_STEP=1;
+  renderHome();
+  goTab('analise');
 }
 function resetGoal(){
   if(!confirm('Redefinir objetivo e perfil?'))return;
@@ -1352,6 +1374,9 @@ function renderAnalise(){
     <div style="font-size:12px;color:var(--tx2);margin-top:2px">${a.h.length} treino${a.h.length!==1?'s':''} registrados</div>
   </div>`;
 
+  // Test badge if this is the fitness test
+  const isTestWorkout = a.last.isTeste || (USER_GOAL.test_time && a.h.length === 1);
+  
   // Score card
   html+=`<div class="card card-accent">
     <div class="score-wrap">
@@ -1360,9 +1385,9 @@ function renderAnalise(){
       </div>
       <div style="flex:1">
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-          <span style="font-size:14px;font-weight:700">${a.analysis.esforcoEmoji} ${a.analysis.esforcoLabel}</span>
+          <span style="font-size:14px;font-weight:700">${a.analysis.esforcoEmoji} ${isTestWorkout?'🏁 Treino diagnóstico':a.analysis.esforcoLabel}</span>
         </div>
-        <div style="font-size:12px;color:var(--tx2);line-height:1.6">${a.analysis.esforcoDesc}</div>
+        <div style="font-size:12px;color:var(--tx2);line-height:1.6">${isTestWorkout?'Teste de 3km de avaliação. Este treino define suas zonas e serve como base de comparação para toda a sua evolução.':a.analysis.esforcoDesc}</div>
         <div style="margin-top:6px"><span class="badge ${ecBadge}">${ecLabel}</span></div>
       </div>
     </div>
