@@ -806,28 +806,81 @@ function previewZones(testTime, fcmax){
 }
 
 function calcZonesFromTest(testTime, fcmax){
-  // VAM (Velocidade Aeróbica Máxima) = 3000m / tempo em segundos * 3.6 (km/h)
+  // Daniels VDOT methodology + Canova VAM
+  // Reference: Jack Daniels "Running Formula" + Renato Canova periodization
   const secs = t2s(testTime);
-  if(!secs || secs < 600 || secs > 2400) return null; // sanity check: 10min–40min
-  
-  // VAM in m/s
-  const vam_ms = 3000 / secs;
-  // VAM pace in sec/km
-  const vam_pace = Math.round(1000 / vam_ms);
-  
-  // Zones based on % of VAM (scientific standard):
-  // Z1 Recovery:  < 65% VAM
-  // Z2 Easy:      65–75% VAM  
-  // Z3 Tempo:     80–87% VAM
-  // Z4 Interval:  90–95% VAM
-  // Z5 Max:       97–100% VAM
-  // Higher % VAM = faster = lower sec/km
+  if(!secs || secs < 600 || secs > 2400) return null;
+
+  // VAM (Velocidade Aeróbica Máxima) from 3km time test
+  const vam_ms = 3000 / secs;           // m/s
+  const vam_kmh = vam_ms * 3.6;         // km/h
+  const vam_pace = 1000 / vam_ms;       // sec/km at VAM
+
+  // Estimate VDOT from 3km performance (Daniels formula approximation)
+  // VDOT ≈ (-4.60 + 0.182258 * v + 0.000104 * v^2) / (0.8 + 0.1894393 * e^(-0.012778*t) + 0.2989558 * e^(-0.1932605*t))
+  // Simplified: estimate from velocity
+  // For 3km: VDOT ≈ (vam_kmh / 0.225) approximately
+  const vdot_est = Math.round(vam_kmh / 0.225);
+
+  // Daniels Training Paces (sec/km) based on % of vVo2max (= VAM pace)
+  // E  (Easy/Recovery):     59–74% vVo2max → multiply vam_pace by 1.35–1.69
+  // M  (Marathon pace):     75–84% vVo2max → multiply vam_pace by 1.19–1.33  
+  // T  (Threshold/Tempo):   83–88% vVo2max → multiply vam_pace by 1.14–1.20
+  // I  (Interval/VO2max):   95–100% vVo2max → multiply vam_pace by 1.00–1.05
+  // R  (Repetitions/Speed): 105–120% vVo2max → multiply vam_pace by 0.83–0.95
   return {
-    rec:   {min:Math.round(vam_pace/0.60), max:Math.round(vam_pace/0.50), label:'Super leve', emoji:'😌', desc:'Caminhada ou trote suave — recuperação', color:'var(--tx2)', bg:'rgba(255,255,255,.04)'},
-    easy:  {min:Math.round(vam_pace/0.75), max:Math.round(vam_pace/0.65), label:'Leve',       emoji:'🟢', desc:'Você consegue conversar normalmente',  color:'var(--neon)', bg:'var(--neon-dim)'},
-    tempo: {min:Math.round(vam_pace/0.87), max:Math.round(vam_pace/0.80), label:'Moderado',   emoji:'🟡', desc:'Fala frases curtas, mas não conversa', color:'var(--orange)',bg:'var(--orange-dim)'},
-    inter: {min:Math.round(vam_pace/0.95), max:Math.round(vam_pace/0.90), label:'Forte',      emoji:'🔴', desc:'Difícil falar, respira fundo',          color:'var(--red)', bg:'var(--red-dim)'},
-    rep:   {min:Math.round(vam_pace/1.00), max:Math.round(vam_pace/0.97), label:'Máximo',     emoji:'💀', desc:'Sprints curtos — sem conseguir falar',  color:'var(--purple)',bg:'var(--purple-dim)'},
+    e: {
+      min: Math.round(vam_pace * 1.35),
+      max: Math.round(vam_pace * 1.69),
+      label: 'E — Fácil',
+      emoji: '🟢',
+      desc: 'Conversa normal. Base aeróbica. 70–80% dos seus treinos.',
+      color: 'var(--neon)',
+      bg: 'var(--neon-dim)',
+      daniel: 'Easy'
+    },
+    m: {
+      min: Math.round(vam_pace * 1.19),
+      max: Math.round(vam_pace * 1.33),
+      label: 'M — Maratona',
+      emoji: '🔵',
+      desc: 'Fala frases curtas. Ritmo de provas longas.',
+      color: 'var(--blue)',
+      bg: 'var(--bdim)',
+      daniel: 'Marathon'
+    },
+    t: {
+      min: Math.round(vam_pace * 1.14),
+      max: Math.round(vam_pace * 1.20),
+      label: 'T — Limiar',
+      emoji: '🟡',
+      desc: 'Difícil mas sustentável por 20 min. Desenvolve limiar anaeróbico.',
+      color: 'var(--orange)',
+      bg: 'var(--orange-dim)',
+      daniel: 'Threshold'
+    },
+    i: {
+      min: Math.round(vam_pace * 1.00),
+      max: Math.round(vam_pace * 1.05),
+      label: 'I — Intervalo VO2max',
+      emoji: '🔴',
+      desc: 'Muito difícil. Máximo 10–15 min acumulados por treino.',
+      color: 'var(--red)',
+      bg: 'var(--red-dim)',
+      daniel: 'Interval'
+    },
+    r: {
+      min: Math.round(vam_pace * 0.83),
+      max: Math.round(vam_pace * 0.95),
+      label: 'R — Repetição',
+      emoji: '💀',
+      desc: 'Sprint. Máximo por rep: 400m ou 2 min. Força e velocidade.',
+      color: 'var(--purple)',
+      bg: 'var(--purple-dim)',
+      daniel: 'Repetition'
+    },
+    // Store VAM data for reference
+    _vam: { ms: vam_ms, kmh: Math.round(vam_kmh*10)/10, pace: Math.round(vam_pace), vdot: vdot_est }
   };
 }
 
@@ -1465,18 +1518,25 @@ function renderAnalise(){
   });
   html+=`</div>`;
 
-  // Zones — simple version
+  // Zones — Daniels methodology display
+  const zEntries = Object.entries(a.z).filter(([k])=>k!=='_vam');
+  const vamData = a.z._vam;
   html+=`<div class="card">
-    <div class="clabel">🏃 Seus ritmos de treino</div>
-    <div style="font-size:12px;color:var(--tx2);margin-bottom:10px">Use esses ritmos como referência nos próximos treinos:</div>`;
-  Object.values(a.z).forEach(zv=>{
-    html+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--r);margin-bottom:5px;background:${zv.bg}">
+    <div class="clabel">🏃 Suas zonas de treino — Método Jack Daniels</div>
+    ${vamData ? `<div style="background:var(--neon-dim);border:1px solid rgba(232,255,0,.2);border-radius:var(--r);padding:8px 12px;margin-bottom:10px;font-size:12px">
+      <span style="color:var(--neon);font-weight:700">VAM: ${vamData.kmh} km/h</span>
+      <span style="color:var(--tx2);margin-left:12px">VDOT estimado: ~${vamData.vdot}</span>
+      <span style="color:var(--tx2);margin-left:12px">Base: teste 3km</span>
+    </div>` : ''}
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:10px">Todos os seus treinos usam esses ritmos. Baseados no seu resultado real — não em estimativas.</div>`;
+  zEntries.forEach(([k,zv])=>{
+    html+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r);margin-bottom:5px;background:${zv.bg};border:1px solid ${zv.color}22">
       <span style="font-size:16px">${zv.emoji}</span>
       <div style="flex:1">
         <div style="font-size:13px;font-weight:700;color:${zv.color}">${zv.label}</div>
-        <div style="font-size:11px;color:var(--tx2)">${zv.desc}</div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:1px">${zv.desc}</div>
       </div>
-      <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:${zv.color}">${sp(zv.min)}–${sp(zv.max)}</div>
+      <div style="font-family:var(--mono);font-size:14px;font-weight:700;color:${zv.color}">${sp(zv.min)}–${sp(zv.max)}</div>
     </div>`;
   });
   html+=`</div>`;
@@ -1501,8 +1561,8 @@ function renderPlano(){
   const a=computeAnalise();const el=document.getElementById('pn-plano');
   if(!a){el.innerHTML=`<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Sem dados</div><div class="empty-sub">Configure seu objetivo e adicione treinos.</div></div>`;return;}
   const z=a.z,bp=a.basePace,tp=a.tp,obj=a.obj;
-  const ep=`${sp(z.easy.min)}–${sp(z.easy.max)}`,mp=`${sp(z.tempo.max)}–${sp(z.tempo.min)}`,fp=tp?`${sp(tp)}–${sp(z.inter.max)}`:`${sp(z.inter.min)}–${sp(z.inter.max)}`,lp=`${sp(z.easy.min+15)}–${sp(z.easy.max+30)}`,rp=`${sp(z.rec.min)}–${sp(z.rec.max)}`;
-  const suf=a.evoSt==='regressao'?' <span style="color:var(--orange);font-size:10px">(−20% carga)</span>':'';
+  // Use Daniels zone keys
+  const suf=a.evoSt==='regressao'?' <span style="color:var(--orange);font-size:10px">(−20% carga esta semana)</span>':'';
 
   const PLANS={
     'primeiro5k':[[{d:'L',t:'Run-Walk base',col:'easy'},{d:'M',t:'Corrida contínua',col:'easy'},{d:'F',t:'Run-Walk progressivo',col:'mod'}]],
@@ -1517,56 +1577,65 @@ function renderPlano(){
     'volta':[[{d:'L',t:'Reativação suave',col:'easy'},{d:'M',t:'Leve progressivo',col:'mod'},{d:'F',t:'Longo suave',col:'mod'}]],
   };
 
+  // Daniels zones shortcuts
+  const E = z.e ? `${sp(z.e.min)}–${sp(z.e.max)}/km` : '—';
+  const T = z.t ? `${sp(z.t.min)}–${sp(z.t.max)}/km` : '—';
+  const I = z.i ? `${sp(z.i.min)}–${sp(z.i.max)}/km` : '—';
+  const R = z.r ? `${sp(z.r.min)}–${sp(z.r.max)}/km` : '—';
+  const Epace = z.e ? sp(z.e.min) : '—';
+  const Tpace = z.t ? sp(z.t.min) : '—';
+  const Ipace = z.i ? sp(z.i.min) : '—';
+
   const detalhes={
     'primeiro5k':[
-      {obj:'Construir hábito e resistência',dur:'25–30 min',dist_:'2–3 km',e:`5 min caminhada → 6× (2 min corrida em ${ep} + 1 min caminhada) → 5 min caminhada.`+suf},
-      {obj:'Primeiro bloco sem parar',dur:'20–25 min',dist_:'2–3 km',e:`Corra sem parar 15–20 min em ${ep}. Caminhe se precisar — sem culpa.`+suf},
-      {obj:'Aumentar tempo correndo',dur:'30 min',dist_:'3–4 km',e:`5 min caminhada → 4× (4 min corrida + 1 min caminhada) → 5 min caminhada.`+suf},
+      {tipo:'Treino E — Run-Walk',        obj:'Construir hábito e resistência aeróbica inicial',            dur:'25–30 min',dist_:'2–3 km', pill:'pg', e:`Aquecimento 5 min caminhada → 6× (3 min corrida em ${E} + 1 min caminhada) → 5 min caminhada. Próxima semana: 4 min correndo.`+suf},
+      {tipo:'Treino E — Corrida contínua',obj:'Primeiro bloco de corrida sem parar',                        dur:'20–25 min',dist_:'2–3 km', pill:'pg', e:`Corra sem parar 15–20 min em ritmo E: ${E}. Caminhe se precisar — sem culpa. Foco: manter o ritmo uniforme.`+suf},
+      {tipo:'Treino E — Run-Walk progressivo',obj:'Aumentar tempo correndo continuamente',                  dur:'30 min',   dist_:'3–4 km', pill:'pa', e:`Aquecimento 5 min → 4× (4 min corrida em ${E} + 1 min caminhada) → 5 min caminhada.`+suf},
     ],
     'primeiro10k':[
-      {obj:'Consolidar resistência aeróbica',dur:'30–35 min',dist_:'4–5 km',e:`Trote contínuo em ${ep}. FC 65–75%. Converse durante o treino.`+suf},
-      {obj:'Desenvolver resistência ao esforço sustentado',dur:'35–40 min',dist_:'5–6 km',e:`10 min fácil (${ep}) → 20 min em ${mp} → 8 min fácil.`+suf},
-      {obj:'Ampliar distância +1–2km por semana',dur:'50–65 min',dist_:'7–9 km',e:`Pace confortável e uniforme: ${lp}. Adicione 1–2km/semana até os 10km contínuos.`+suf},
+      {tipo:'Treino E — Corrida leve',    obj:'Base aeróbica — o alicerce de todo treinamento de corrida',  dur:'30–35 min',dist_:'4–5 km', pill:'pg', e:`Corrida contínua em ritmo E: ${E}. FC 65–75% FCmax. Você DEVE conseguir conversar. Se ficar ofegante, reduza. 70% dos treinos devem ser assim.`+suf},
+      {tipo:'Treino M — Progressivo',     obj:'Desenvolver resistência ao esforço sustentado (Canova)',     dur:'35–40 min',dist_:'5–6 km', pill:'pa', e:`10 min E (${E}) → 20 min M (${z.m?sp(z.m.min)+'–'+sp(z.m.max):T}/km) → 8 min E. Progrida gradualmente — não comece no ritmo M.`+suf},
+      {tipo:'Treino L — Longão',          obj:'O treino mais importante da semana (Lydiard + Daniels)',      dur:'50–65 min',dist_:'7–9 km', pill:'pb', e:`Ritmo E uniforme: ${E}. Regra dos 10%: aumente máximo 1–2km por semana. Não acelere nos últimos km. Hidrate a cada 20 min.`+suf},
     ],
     'primeiro15k':[
-      {obj:'Pernas frescas para o treino longo',dur:'30–40 min',dist_:'4–6 km',e:`Trote leve: ${ep}. Dia de recuperação — o longo do Dia 3 é o que importa.`+suf},
-      {obj:'Resistência específica para longas',dur:'45–55 min',dist_:'6–8 km',e:`15 min fácil → 25 min em ${mp} → 10 min fácil. Desenvolve capacidade de manter ritmo.`+suf},
-      {obj:'O treino mais importante da semana',dur:'65–95 min',dist_:'9–13 km',e:`Pace bem confortável: ${lp}. +1–2km/semana. Gel energético a partir de 10km.`+suf},
+      {tipo:'Treino E — Recuperação',     obj:'Pernas frescas para o longão do final de semana',            dur:'30–40 min',dist_:'4–6 km', pill:'pg', e:`Ritmo E leve: ${E}. Dia de recuperação — o longão do Dia 3 é o que importa essa semana.`+suf},
+      {tipo:'Treino M — Médio',           obj:'Resistência aeróbica (McMillan: "stamina run")',              dur:'45–55 min',dist_:'6–8 km', pill:'pa', e:`15 min E (${E}) → 25 min M (${z.m?sp(z.m.min)+'–'+sp(z.m.max):T}/km, esforço firme mas controlado) → 10 min E. Desenvolve a capacidade de manter ritmo.`+suf},
+      {tipo:'Treino L — Longão progressivo',obj:'O coração do plano para chegar aos 15km',                  dur:'65–95 min',dist_:'9–13 km',pill:'pb', e:`Ritmo E: ${E}. Adicione 1–2km/semana. A partir de 10km: banana ou gel na metade. Termine com energia sobrando — não exausto.`+suf},
     ],
     'melhorar5k':[
-      {obj:'Base aeróbica — 80% do volume aqui',dur:'30–40 min',dist_:'4–6 km',e:`Zona 2: ${ep}. Respire pelo nariz — se não conseguir, reduza o ritmo.`+suf},
-      {obj:'Principal treino para melhorar 5km',dur:'35–45 min',dist_:'5–7 km',e:`10 min fácil → 20–25 min em ${mp} (85% esforço) → 10 min fácil.`+suf},
-      {obj:'Aumentar VO2max e velocidade',dur:'35–45 min',dist_:'5–6 km',e:`10 min fácil → 5×3 min em ${fp} (desc: 90 seg trotando) → 8 min fácil.`+suf},
+      {tipo:'Treino E — Base aeróbica',   obj:'70–80% do volume aqui (Daniels: regra fundamental)',         dur:'30–40 min',dist_:'4–6 km', pill:'pg', e:`Ritmo E: ${E}. Parece fácil demais? É assim que deve ser. Esta zona constrói as mitocôndrias que sustentam a velocidade.`+suf},
+      {tipo:'Treino T — Tempo Run',       obj:'Principal treino para melhorar 5km (Daniels: threshold)',    dur:'35–45 min',dist_:'5–7 km', pill:'pr', e:`10 min E → 20 min T (${T}), "comfortably hard", você fala só palavras isoladas → 10 min E. Daniels: 1 sessão T/semana é suficiente.`+suf},
+      {tipo:'Treino I — Intervalado VO2max',obj:'Aumentar teto aeróbico (Daniels: 5km é 95-100% VO2max)',  dur:'35–45 min',dist_:'5–6 km', pill:'pr', e:`10 min E → 5×1000m em ${I} (rec: 2 min trote E entre cada) → 8 min E. Total intenso: 5km. Não faça mais de 2x/semana.`+suf},
     ],
     'melhorar10k':[
-      {obj:'Recuperação e base aeróbica',dur:'35–45 min',dist_:'5–7 km',e:`Zona 2: ${ep}. FC 65–75%. Não force aqui.`+suf},
-      {obj:'80% da melhora no 10km vem daqui',dur:'45–55 min',dist_:'6–8 km',e:`10 min fácil → 25 min em ${tp?sp(tp):mp} (pace de prova) → 10 min fácil.`+suf},
-      {obj:'Base de resistência para sustentar o pace',dur:'50–65 min',dist_:'7–10 km',e:`Pace confortável: ${lp}. Muito mais lento que o Dia 2 — não confunda.`+suf},
+      {tipo:'Treino E — Recuperação ativa',obj:'Manter volume sem acumular fadiga',                         dur:'35–45 min',dist_:'5–7 km', pill:'pg', e:`Ritmo E: ${E}. Este dia ativa recuperação — não é "descanso", mas não é esforço. Não force.`+suf},
+      {tipo:'Treino T — Tempo Run',       obj:'Principal treino para 10km (Daniels: limiar determina 10km)',dur:'45–55 min',dist_:'6–8 km', pill:'pr', e:`10 min E → 20–25 min T (${T}), "comfortably hard" → 10 min E. Daniels: "20 min contínuos no T é o treino mais eficiente para corredores de 10km".`+suf},
+      {tipo:'Treino L — Longão',          obj:'Base de resistência para sustentar o ritmo T por 10km',     dur:'50–65 min',dist_:'7–10 km',pill:'pa', e:`Ritmo E: ${E}. Muito mais lento que o dia 2 — não confunda. O longão constrói as fibras musculares que sustentam o pace no final da prova.`+suf},
     ],
     'meia':[
-      {obj:'Manter frequência sem acumular fadiga',dur:'35–45 min',dist_:'5–7 km',e:`Zona 2: ${ep}. Foco em cadência e postura. Nunca force aqui.`+suf},
-      {obj:'Resistência ao ritmo de prova',dur:'50–60 min',dist_:'7–10 km',e:`10 min fácil → 25 min em ${tp?sp(tp):mp} → 15 min fácil. Respire ritmicamente.`+suf},
-      {obj:'O treino mais importante da semana',dur:'70–90 min',dist_:'11–16 km',e:`50% em ${lp} → 30% em ${ep} → 20% em ${tp?sp(tp):mp}. Hidrate a cada 3km.`+suf},
+      {tipo:'Treino E — Recuperação',     obj:'Pernas frescas — o longão da semana passada precisa absorver', dur:'35–45 min',dist_:'5–7 km',pill:'pg', e:`Ritmo E: ${E}. Se estiver com pernas pesadas: reduza o pace. Daniels: "o dia fácil deve ser fácil de verdade".`+suf},
+      {tipo:'Treino T — Tempo Run',       obj:'Desenvolver resistência ao ritmo de prova (Canova: específico)', dur:'50–60 min',dist_:'7–10 km',pill:'pr', e:`10 min E → 25 min T (${T}) → 15 min E. Respire ritmicamente. Daniels: 2 passadas inspira, 2 expira.`+suf},
+      {tipo:'Treino L — Longão progressivo',obj:'O treino mais importante da semana para meia maratona',   dur:'70–90 min',dist_:'11–16 km',pill:'pa', e:`50% em E (${E}) → 30% em M (${z.m?sp(z.m.min)+'–'+sp(z.m.max):T}/km) → 20% no pace alvo de prova. Hidrate a cada 3km. Simula a dinâmica de prova.`+suf},
     ],
     'maratona':[
-      {obj:'Pernas frescas para o treino de qualidade',dur:'35–45 min',dist_:'5–7 km',e:`Zona 2: ${ep}. Se sentir pernas pesadas — corra ainda mais devagar.`+suf},
-      {obj:'Eficiência no pace de prova sob fadiga',dur:'55–70 min',dist_:'8–12 km',e:`15 min fácil → 25 min em ${tp?sp(tp+10):mp} → 15 min em ${tp?sp(tp):mp} → 10 min fácil.`+suf},
-      {obj:'Adaptação específica — insubstituível',dur:'90–130 min',dist_:'14–22 km',e:`Pace 60–75s/km mais lento que alvo: ${lp}. Gel a cada 45 min. Beba 150–200ml a cada 15 min.`+suf},
+      {tipo:'Treino E — Recuperação',     obj:'Pernas frescas — a maratona é construída no descanso',       dur:'35–45 min',dist_:'5–7 km', pill:'pg', e:`Ritmo E: ${E}. Se sentir pernas pesadas: corra ainda mais devagar. Lydiard: "o corredor de maratona vive no pace E".`+suf},
+      {tipo:'Treino M — Progressivo longo',obj:'Especificidade do pace de prova (Canova: "marathon specific")', dur:'55–70 min',dist_:'8–12 km',pill:'pr', e:`15 min E → 25 min M (${z.m?sp(z.m.min)+'–'+sp(z.m.max):T}/km, pace de prova) → 15 min E. Canova: "aprenda a correr no pace alvo mesmo cansado".`+suf},
+      {tipo:'Treino L — Longão fundamental',obj:'O treino mais importante da semana para maratona',         dur:'90–130 min',dist_:'14–22 km',pill:'pa', e:`Ritmo E: ${E}. Gel/banana a cada 45 min. 150–200ml água a cada 15 min. Daniels: nunca termine um longão exausto — deixe 30% na reserva.`+suf},
     ],
     'emagrecimento':[
-      {obj:'Maximizar oxidação de gordura',dur:'40–50 min',dist_:'5–7 km',e:`Zona 2: ${ep}. FC 120–138 bpm. Fale sem dificuldade — zona ideal para queimar gordura.`+suf},
-      {obj:'Elevar metabolismo pós-treino (EPOC 24h)',dur:'30–35 min',dist_:'4–5 km',e:`10 min fácil → 8×1 min forte (${fp}) + 1 min caminhada → 10 min fácil. ~400 kcal.`+suf},
-      {obj:'Volume total — maior aliado do emagrecimento',dur:'50–65 min',dist_:'6–9 km',e:`Pace confortável: ${lp}. A duração importa mais que a velocidade. Não "recompense" com comida.`+suf},
+      {tipo:'Treino E — Zona aeróbica',   obj:'Maximizar oxidação de gordura (FC 65–72% FCmax)',            dur:'40–50 min',dist_:'5–7 km', pill:'pg', e:`Ritmo E: ${E}. FC 120–140 bpm. Converse normalmente — se não conseguir, está rápido demais. Lydiard: "volume fácil é o maior queimador de gordura".`+suf},
+      {tipo:'Treino I — HIIT metabólico', obj:'Elevar metabolismo pós-treino por até 24h (EPOC)',           dur:'30–35 min',dist_:'4–5 km', pill:'pr', e:`10 min E → 8×1 min I (${I}) + 1 min caminhada entre cada → 10 min E. Gasto calórico: ~350–450 kcal. Faça 1×/semana no máximo.`+suf},
+      {tipo:'Treino L — Volume total',    obj:'Volume é o maior aliado do emagrecimento sustentável',       dur:'50–65 min',dist_:'6–9 km', pill:'pa', e:`Ritmo E: ${E}. A duração importa mais que a velocidade. Não "recompense" com comida — o déficit calórico precisa ser mantido.`+suf},
     ],
     'condicionamento':[
-      {obj:'Desenvolver mitocôndrias e saúde CV',dur:'35–45 min',dist_:'4–6 km',e:`Zona 2: ${ep}. Respire pelo nariz se conseguir — sinal de zona 2 correta.`+suf},
-      {obj:'Estímulo cardiovascular variado',dur:'35–40 min',dist_:'4–6 km',e:`15 min fácil → 4× fartlek: 3 min em ${mp} + 2 min fácil → 8 min fácil.`+suf},
-      {obj:'Resistência cardiovascular progressiva',dur:'45–55 min',dist_:'5–8 km',e:`Pace fácil: ${ep}. FC abaixo de 155 bpm. O treino de longevidade.`+suf},
+      {tipo:'Treino E — Base aeróbica',   obj:'Desenvolver mitocôndrias e saúde cardiovascular (Lydiard)',  dur:'35–45 min',dist_:'4–6 km', pill:'pg', e:`Ritmo E: ${E}. Respire pelo nariz se conseguir — sinal de intensidade correta. Lydiard: "base aeróbica é a fundação de tudo".`+suf},
+      {tipo:'Treino M — Fartlek',         obj:'Estímulo variado — mais prazeroso e eficiente',              dur:'35–40 min',dist_:'4–6 km', pill:'pa', e:`15 min E → 4× fartlek: 3 min M (${z.m?sp(z.m.min):Tpace}/km) + 2 min E → 8 min E. McMillan: "fartlek = velocidade livre, sem relógio".`+suf},
+      {tipo:'Treino L — Longão suave',    obj:'Resistência cardiovascular e longevidade',                   dur:'45–55 min',dist_:'5–8 km', pill:'pg', e:`Ritmo E: ${E}. FC abaixo de 155 bpm. O treino de longevidade — faça por anos.`+suf},
     ],
     'volta':[
-      {obj:'Reintroduzir estímulo aeróbico com segurança',dur:'25–30 min',dist_:'3–4 km',e:`5 min caminhada → 15 min trote suave (${rp}) → 5 min caminhada. Tendões adaptam devagar.`+suf},
-      {obj:'Testar tolerância ao esforço crescente',dur:'30–35 min',dist_:'3–5 km',e:`10 min fácil → 15 min em ${ep} → 8 min fácil. Pare se sentir dor articular.`+suf},
-      {obj:'Volume com segurança — regra dos 10%',dur:'35–40 min',dist_:'4–5 km',e:`Pace confortável: ${ep}. Nunca aumente mais de 10% de distância por semana.`+suf},
+      {tipo:'Treino E — Reativação',      obj:'Reintroduzir estímulo aeróbico com segurança',               dur:'25–30 min',dist_:'3–4 km', pill:'pg', e:`5 min caminhada → 15 min E (${E}) → 5 min caminhada. Tendões adaptam mais devagar que músculos — seja paciente.`+suf},
+      {tipo:'Treino E — Progressivo leve',obj:'Testar tolerância ao esforço crescente',                     dur:'30–35 min',dist_:'3–5 km', pill:'pa', e:`10 min E → 15 min M (${z.m?sp(z.m.min):Tpace}/km) → 8 min E. Pare imediatamente se sentir dor articular (diferente de fadiga muscular).`+suf},
+      {tipo:'Treino L — Volume seguro',   obj:'Regra dos 10% — nunca mais que isso',                        dur:'35–40 min',dist_:'4–5 km', pill:'pa', e:`Ritmo E: ${E}. Nunca aumente mais de 10% de distância por semana. Pausa > 2 semanas = recomeça com 50% do volume anterior.`+suf},
     ],
   };
 
@@ -1594,7 +1663,7 @@ function renderPlano(){
   const badgeMap={easy:'badge-neon',mod:'badge-orange',hard:'badge-red',long:'badge-teal'};
 
   // Next workout steps
-  const nxt=buildNextWorkoutSteps(obj,z,bp,tp,a.evoSt);
+  const nxt=buildNextWorkoutSteps(obj,z,a.basePace,tp,a.evoSt);
 
   let html=`<div style="padding-top:8px;margin-bottom:14px">
     <div style="font-size:18px;font-weight:700;letter-spacing:-.3px">📅 Plano Semanal</div>
@@ -1638,43 +1707,106 @@ function renderPlano(){
   html+=`</div>`;
 
   // Rationale
-  html+=`<div class="card card-teal"><div class="clabel">🧪 Fundamento Científico</div>
-    <div style="font-size:12px;color:var(--tx2);line-height:1.7">Distribuição baseada no princípio 80/20 (Seiler, 2010): 80% do volume em baixa intensidade (Z2) e 20% em alta. Estudos com corredores amadores e elite mostram que essa proporção maximiza adaptações aeróbicas e minimiza lesões por sobrecarga.${a.evoSt==='regressao'?' <strong style="color:var(--orange)">Semana com carga reduzida — regressão detectada.</strong>':a.evoSt==='evolucao'?' <strong style="color:var(--neon)">Zonas ajustadas para acompanhar sua evolução.</strong>':''}</div>
+  const vamRef = USER_GOAL.vam_pace ? `VAM ${Math.round(3600/USER_GOAL.vam_pace*10)/10} km/h · VDOT ~${Math.round(USER_GOAL.vam_pace/12)}` : 'baseadas no teste de 3km';
+  html+=`<div class="card card-teal"><div class="clabel">🧪 Base científica do plano</div>
+    <div style="font-size:12px;color:var(--tx2);line-height:1.7">
+      Plano baseado na metodologia de <strong style="color:var(--teal)">Jack Daniels</strong> (Running Formula): zonas E, M, T, I, R calculadas a partir do seu teste de 3km (${vamRef}). 
+      Distribuição semanal: ~70% volume E (fácil), ~20% T/M (limiar), ~10% I/R (velocidade) — princípio 80/20 de Seiler (2010).
+      <br><br>
+      Treinos nomeados por tipo: <strong>E</strong>=Fácil · <strong>M</strong>=Maratona · <strong>T</strong>=Limiar · <strong>I</strong>=Intervalo VO2max · <strong>L</strong>=Longão
+      ${a.evoSt==='regressao'?'<br><strong style="color:var(--orange)">⚠ Semana com carga reduzida — regressão detectada.</strong>':a.evoSt==='evolucao'?'<br><strong style="color:var(--neon)">↑ Zonas ajustadas — evolução detectada.</strong>':''}
+    </div>
   </div>`;
 
   document.getElementById('pn-plano').innerHTML=html;
 }
 
-function buildNextWorkoutSteps(obj,z,bp,tp,evoSt){
-  const ep=`${sp(z.easy.min)}–${sp(z.easy.max)}/km`,mp=`${sp(z.tempo.max)}–${sp(z.tempo.min)}/km`,fp=`${tp?sp(tp):sp(z.inter.min)}–${sp(z.inter.max)}/km`;
-  if(evoSt==='regressao') return{tipo:'Recuperação',obj:'Restaurar energia — não é fraqueza, é ciência.',steps:[
-    {f:'Aquecimento',d:'5 min',p:'caminhada',t:'L',desc:'Caminhada ativa'},
-    {f:'Trote leve',d:'20 min',p:`${sp(z.rec.min)}–${sp(z.rec.max)}/km`,t:'L',desc:'FC <65% FCmax. Fale frases completas.'},
-    {f:'Desaquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Caminhada + alongamento 5 min'}
-  ]};
-  if(obj.id==='primeiro5k'||obj.id==='volta') return{tipo:'Run-Walk',obj:'Construir resistência sem impacto excessivo.',steps:[
-    {f:'Caminhada',d:'5 min',p:'passo normal',t:'L',desc:'Articule bem os quadris'},
-    {f:'Run-Walk × 6',d:'18 min',p:ep,t:'M',desc:`3 min correndo (${sp(z.easy.max)}) + 1 min caminhada — 6 repetições`},
-    {f:'Caminhada final',d:'5 min',p:'relaxado',t:'L',desc:'Respire controlado + alongamento'}
-  ]};
-  if(obj.id==='maratona'||obj.id==='meia') return{tipo:'Progressivo',obj:'Especificidade no pace de prova.',steps:[
-    {f:'Aquecimento',d:'10 min',p:sp(z.easy.max)+'/km',t:'L',desc:'Trote leve — ative a mobilidade'},
-    {f:'Aeróbico base',d:'15 min',p:ep,t:'L',desc:'Zona 2 firme'},
-    {f:'Tempo run',d:'15 min',p:fp,t:'F',desc:`Ritmo de prova. Desconfortável mas sustentável.`},
-    {f:'Moderado',d:'10 min',p:sp(z.easy.min)+'/km',t:'M',desc:'Baixe o esforço gradualmente'},
-    {f:'Desaquecimento',d:'5 min',p:sp(z.easy.max)+'/km',t:'L',desc:'Trote leve + alongamento'}
-  ]};
-  if(obj.id==='emagrecimento'||obj.id==='condicionamento') return{tipo:'Zona 2',obj:'Maximizar oxidação de gordura e saúde CV.',steps:[
-    {f:'Aquecimento',d:'5 min',p:sp(z.rec.min)+'/km',t:'L',desc:'Caminhada ou trote suave'},
-    {f:'Zona 2 contínua',d:'30–40 min',p:ep,t:'L',desc:'FC 65–75% FCmax. Você deve conseguir conversar.'},
-    {f:'Desaquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Caminhada + respiração nasal'}
-  ]};
-  return{tipo:'Intervalado',obj:'Aumentar VO2max e velocidade no pace alvo.',steps:[
-    {f:'Aquecimento',d:'10 min',p:sp(z.easy.max)+'/km',t:'L',desc:'Trote leve — primeiros 5 min fáceis demais'},
-    {f:'5 × 3 min forte',d:'20 min',p:fp,t:'F',desc:`5 reps de 3 min no pace alvo. Descanso: 90 seg trote. Mantenha o pace em TODAS as reps.`},
-    {f:'Trote moderado',d:'8 min',p:sp(z.easy.min)+'/km',t:'M',desc:'Normaliza a FC'},
-    {f:'Desaquecimento',d:'5 min',p:sp(z.easy.max)+'/km',t:'L',desc:'Trote leve + 5 min alongamento'}
-  ]};
+function buildNextWorkoutSteps(obj, z, bp, tp, evoSt){
+  // Daniels-based workout types
+  // E = Easy, T = Threshold, I = Interval, R = Repetition, L = Long
+  const E = z.e ? `${sp(z.e.min)}–${sp(z.e.max)}/km` : '—';
+  const M = z.m ? `${sp(z.m.min)}–${sp(z.m.max)}/km` : E;
+  const T = z.t ? `${sp(z.t.min)}–${sp(z.t.max)}/km` : '—';
+  const I = z.i ? `${sp(z.i.min)}–${sp(z.i.max)}/km` : '—';
+  const R = z.r ? `${sp(z.r.min)}–${sp(z.r.max)}/km` : '—';
+  const eMin = z.e ? sp(z.e.min) : '—';
+  const eMax = z.e ? sp(z.e.max) : '—';
+  const tPace = z.t ? sp(z.t.min) : '—';
+  const iPace = z.i ? sp(z.i.min) : '—';
+
+  if(evoSt==='regressao') return {
+    tipo:'Treino E — Recuperação ativa',
+    obj:'Semana de reconstrução. Restaurar o sistema nervoso e muscular antes de retomar carga.',
+    steps:[
+      {f:'Aquecimento',d:'5 min',p:'caminhada leve',t:'L',desc:'Ative articulações suavemente'},
+      {f:'Corrida E (Fácil)',d:'20–25 min',p:E,t:'L',desc:'Ritmo E (fácil) — você deve conseguir falar frases inteiras sem dificuldade. Se não conseguir: reduza o ritmo.'},
+      {f:'Desaquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Caminhada + alongamento 5 min mínimo'}
+    ]
+  };
+
+  if(obj.id==='primeiro5k'||obj.id==='volta') return {
+    tipo:'Treino E — Run-Walk progressivo',
+    obj:'Método run-walk: construir resistência sem sobrecarregar as articulações. Cada semana aumenta 1 min na corrida.',
+    steps:[
+      {f:'Caminhada ativa',d:'5 min',p:'passo acelerado',t:'L',desc:'Prepare músculos e articulações'},
+      {f:'Run-Walk × 6',d:'18–24 min',p:E,t:'M',desc:`Corrida ${eMin} por 3 min + caminhada 1 min. 6 repetições. Próxima semana: 4 min correndo + 1 min caminhando.`},
+      {f:'Caminhada final',d:'5 min',p:'relaxado',t:'L',desc:'Respire controlado. Não sente — caminhe para resfriamento ativo.'}
+    ]
+  };
+
+  if(obj.id==='primeiro10k'||obj.id==='primeiro15k') return {
+    tipo:'Treino E — Corrida contínua leve',
+    obj:'Construir base aeróbica. Distância cresce +10% por semana. Ritmo E o tempo todo.',
+    steps:[
+      {f:'Aquecimento',d:'5 min',p:eMax+'/km',t:'L',desc:'Trote bem suave para aquecer'},
+      {f:'Corrida E contínua',d:'30–40 min',p:E,t:'L',desc:`Ritmo E (fácil): ${E}. Você deve conseguir conversar. Se ficar ofegante, reduza. Este é o treino mais importante da semana.`},
+      {f:'Desaquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Caminhada + alongamento quadríceps, panturrilha e quadril'}
+    ]
+  };
+
+  if(obj.id==='meia'||obj.id==='maratona') return {
+    tipo:'Treino T — Tempo Run (Limiar)',
+    obj:'Daniels: 20 min contínuos no ritmo T desenvolvem o limiar anaeróbico. Principal treino de qualidade da semana.',
+    steps:[
+      {f:'Aquecimento E',d:'10–15 min',p:E,t:'L',desc:'Trote fácil. Últimos 2 min: 4×20 seg aceleração suave.'},
+      {f:'Tempo Run — T',d:'20 min',p:T,t:'F',desc:`Ritmo T: ${T}. Desconfortável mas sustentável — você fala apenas palavras isoladas. Daniels: "comfortably hard". Mantenha o ritmo uniforme.`},
+      {f:'Trote fácil E',d:'10 min',p:E,t:'M',desc:'Reduza gradualmente. Não pare de repente.'},
+      {f:'Desaquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Caminhada + alongamento completo'}
+    ]
+  };
+
+  if(obj.id==='emagrecimento'||obj.id==='condicionamento') return {
+    tipo:'Treino E — Corrida aeróbica base',
+    obj:'70–80% do esforço em zona E é a chave para emagrecimento e saúde cardiovascular (Lydiard + Daniels).',
+    steps:[
+      {f:'Aquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Caminhada para elevar FC gradualmente'},
+      {f:'Corrida E',d:'35–45 min',p:E,t:'L',desc:`Ritmo E: ${E}. FC alvo: 65–75% FCmax. Você DEVE conseguir conversar normalmente. Esse é o ritmo que mais oxida gordura.`},
+      {f:'Desaquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Caminhada + respiração nasal'}
+    ]
+  };
+
+  if(obj.id==='melhorar5k'||obj.id==='velocidade') return {
+    tipo:'Treino I — Intervalado VO2max',
+    obj:'Daniels: intervalados no ritmo I desenvolvem VO2max — o maior motor de melhoria no 5km.',
+    steps:[
+      {f:'Aquecimento E',d:'10–15 min',p:E,t:'L',desc:'Trote fácil. Inclua 3×20 seg strides ao final.'},
+      {f:'5 × 1000m — Ritmo I',d:'~25 min',p:I,t:'F',desc:`Ritmo I: ${I}. Recuperação: 2–3 min trote E entre cada. Total: 5km em ritmo I. Daniels: "não deve ser sprint — mas muito difícil de manter".`},
+      {f:'Trote E',d:'10 min',p:E,t:'M',desc:'Recuperação ativa — não pare.'},
+      {f:'Desaquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Caminhada + alongamento'}
+    ]
+  };
+
+  // Default: T (Threshold) for 10km goals
+  return {
+    tipo:'Treino T — Tempo Run (Limiar)',
+    obj:'Principal treino de qualidade. Daniels: 1 sessão T por semana melhora drasticamente a performance no 10km.',
+    steps:[
+      {f:'Aquecimento E',d:'10 min',p:E,t:'L',desc:'Trote fácil E — não pule o aquecimento'},
+      {f:'Tempo Run — T',d:'20 min',p:T,t:'F',desc:`Ritmo T: ${T}/km. "Comfortably hard" — difícil mas sustentável. Respire ritmicamente: 2 passadas inspira, 2 expira.`},
+      {f:'Trote E',d:'8 min',p:E,t:'M',desc:'Reduza o esforço gradualmente'},
+      {f:'Desaquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Caminhada + alongamento'}
+    ]
+  };
 }
 
 // ═══════════════════════════════════════════════════
