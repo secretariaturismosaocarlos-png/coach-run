@@ -655,12 +655,11 @@ function renderHome(){
     </div>
   </div>`;
 
-  if(n<3){
-    const miss=3-n;
+  if(n===0){
     html+=`<div class="card card-orange">
-      <div style="font-size:14px;font-weight:700;color:var(--orange);margin-bottom:6px">📋 Insira ${miss} treino${miss>1?'s':''} para ativar a análise completa</div>
-      <div style="font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:12px">Para uma assessoria realmente personalizada preciso dos seus <strong>3 treinos mais recentes</strong>. Com eles calculo seu pace real, tendência e monto o plano específico para você.</div>
-      <button class="btn btn-orange" onclick="goTab('treino')">➕ Inserir treino (${n}/3)</button>
+      <div style="font-size:14px;font-weight:700;color:var(--orange);margin-bottom:6px">📋 Insira seu primeiro treino</div>
+      <div style="font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:12px">Suas zonas já estão definidas pelo teste de 3km. Agora insira seus treinos para acompanhar sua evolução e receber análises personalizadas.</div>
+      <button class="btn btn-orange" onclick="goTab('treino')">➕ Inserir primeiro treino</button>
     </div>`;
   } else {
     // Last workout summary
@@ -1079,9 +1078,13 @@ async function addTreino(){
 
 async function doDelete(id){
   const t=HIST.find(x=>x.id===id);if(!t)return;
-  if(!confirm(`Excluir treino de ${t.data} (${t.dist}km · ${t.pace}/km)?`))return;
+  if(!confirm(`Excluir treino de ${t.data} (${t.dist}km · ${t.pace}/km)?\n\nIsso removerá o treino de todas as análises e do histórico.`))return;
   await deleteWorkout(id);
-  renderEvolucao();renderHome();
+  // Refresh all panels
+  renderHome();
+  renderAnalise();
+  renderPlano();
+  renderEvolucao();
 }
 
 // ═══════════════════════════════════════════════════
@@ -1098,7 +1101,11 @@ function normPace(p){if(!p)return '';p=String(p).replace(/[^0-9:.,']/g,'').repla
 //  ANALYSIS ENGINE
 // ═══════════════════════════════════════════════════
 function computeAnalise(){
-  if(!HIST.length||!USER_GOAL)return null;
+  if(!USER_GOAL)return null;
+  if(!HIST.length){
+    // No workouts yet but has profile — return null to show empty state
+    return null;
+  }
   const h=HIST, n=h.length, last=h[n-1];
   const obj=OBJS.find(o=>o.id===USER_GOAL.obj_id)||OBJS[0];
 
@@ -1331,7 +1338,7 @@ function getCoachMsg(obj, evoSt, basePace, dist, n){
 // ═══════════════════════════════════════════════════
 function renderAnalise(){
   const a=computeAnalise();const el=document.getElementById('pn-analise');
-  if(!a){el.innerHTML=`<div class="empty"><div class="empty-icon">📊</div><div class="empty-title">Sem dados</div><div class="empty-sub">Adicione treinos para ver a análise.</div></div>`;return;}
+  if(!a){el.innerHTML=`<div class="empty"><div class="empty-icon">📊</div><div class="empty-title">Sem treinos</div><div class="empty-sub">Insira seu primeiro treino para ver a análise.</div></div>`;return;}
 
   const sc=a.score>=90?{c:'var(--neon)',l:'EXCELENTE'}:a.score>=70?{c:'var(--teal)',l:'BOM'}:a.score>=50?{c:'var(--orange)',l:'ATENÇÃO'}:{c:'var(--red)',l:'REVISAR'};
   const ecBadge=a.evoSt==='evolucao'?'badge-neon':a.evoSt==='regressao'?'badge-red':'badge-orange';
@@ -1630,7 +1637,8 @@ function buildNextWorkoutSteps(obj,z,bp,tp,evoSt){
 // ═══════════════════════════════════════════════════
 function renderEvolucao(){
   const el=document.getElementById('pn-evolucao');const h=HIST;
-  if(h.length<2){el.innerHTML=`<div class="empty"><div class="empty-icon">📈</div><div class="empty-title">Poucos dados</div><div class="empty-sub">Adicione pelo menos 2 treinos para ver o relatório de evolução.</div></div>`;return;}
+  if(h.length===0){el.innerHTML=`<div class="empty"><div class="empty-icon">📈</div><div class="empty-title">Sem treinos</div><div class="empty-sub">Insira treinos para ver seu relatório de evolução.</div></div>`;return;}
+  if(h.length<2){el.innerHTML=`<div class="empty"><div class="empty-icon">📈</div><div class="empty-title">Quase lá!</div><div class="empty-sub">Insira mais 1 treino para ver o relatório de evolução completo.</div></div>`;return;}
   const a=computeAnalise();const n=h.length;
   const first=h[0],last=h[n-1];
   const pd=first.paceSec-last.paceSec;
