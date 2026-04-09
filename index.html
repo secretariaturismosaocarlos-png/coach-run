@@ -467,23 +467,24 @@ db.auth.onAuthStateChange(async (event, session)=>{
 });
 
 async function loadUserProfile(){
-  const {data} = await db.from('profiles').select('*').eq('id', CU.id).single();
-  PROFILE = data;
-  IS_ADMIN = data?.is_admin || CU.email === ADMIN_EMAIL;
-
-  if(!PROFILE || PROFILE.status === 'pending'){
-    showScreen('pending'); return;
+  try {
+    const {data} = await db.from('profiles').select('*').eq('id', CU.id).single();
+    // Admin always gets through
+    if(CU.email === ADMIN_EMAIL){
+      PROFILE = data || {id:CU.id,email:CU.email,name:'Admin',status:'approved',is_admin:true};
+      IS_ADMIN = true;
+      showScreen('app'); await loadData(); setupUI(); renderHome(); return;
+    }
+    PROFILE = data; IS_ADMIN = data?.is_admin||false;
+    if(!PROFILE||PROFILE.status==='pending'){showScreen('pending');return;}
+    if(PROFILE.status==='blocked'){showScreen('pending');return;}
+    showScreen('app'); await loadData(); setupUI(); renderHome();
+  } catch(e) {
+    if(CU.email===ADMIN_EMAIL){
+      PROFILE={id:CU.id,email:CU.email,name:'Admin',status:'approved',is_admin:true};
+      IS_ADMIN=true; showScreen('app'); await loadData(); setupUI(); renderHome();
+    } else { showScreen('pending'); }
   }
-  if(PROFILE.status === 'blocked'){
-    showScreen('pending'); 
-    document.querySelector('#screen-pending div').children[1].textContent = 'Seu acesso foi bloqueado. Entre em contato com a administradora.';
-    return;
-  }
-  // Approved — load data and show app
-  showScreen('app');
-  await loadData();
-  setupUI();
-  renderHome();
 }
 
 function showScreen(s){
