@@ -750,9 +750,20 @@ function renderOnboarding(el){
 
       <div class="card" style="margin-bottom:12px">
         <div style="font-size:13px;font-weight:700;margin-bottom:10px">Insira o resultado do seu teste:</div>
+        
+        <div style="border:2px dashed rgba(232,255,0,.25);border-radius:var(--rl);padding:16px;text-align:center;background:var(--neon-dim);position:relative;margin-bottom:12px;cursor:pointer" id="ob-upload-zone">
+          <input type="file" accept=".gpx,.tcx,.csv,.json" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%" onchange="obHandleFile(this.files[0])">
+          <div style="font-size:20px;margin-bottom:4px">📁</div>
+          <div style="font-size:13px;font-weight:700;color:var(--neon);margin-bottom:2px">Importar arquivo do teste</div>
+          <div style="font-size:11px;color:var(--tx2)">GPX, TCX, CSV ou JSON — preenche o tempo automaticamente</div>
+        </div>
+        <div id="ob-upload-msg" style="display:none;padding:8px 12px;border-radius:var(--r);font-size:12px;margin-bottom:10px"></div>
+
+        <div style="font-size:11px;color:var(--tx3);text-align:center;margin-bottom:10px">— ou preencha manualmente —</div>
+
         <div class="g2" style="margin-bottom:10px">
-          <div class="field"><label>Tempo nos 3km (mm:ss)</label><input type="text" id="ob-test-time" value="${OB_TEST_TIME}" placeholder="ex: 16:30" oninput="OB_TEST_TIME=this.value"></div>
-          <div class="field"><label>FC máxima (opcional)</label><input type="number" id="ob-test-fcmax" value="${OB_TEST_FCMAX||''}" placeholder="ex: 182" oninput="OB_TEST_FCMAX=parseInt(this.value)||0"></div>
+          <div class="field"><label>Tempo nos 3km (mm:ss)</label><input type="text" id="ob-test-time" value="${OB_TEST_TIME}" placeholder="ex: 16:30" oninput="OB_TEST_TIME=this.value;renderHome()"></div>
+          <div class="field"><label>FC máxima (opcional)</label><input type="number" id="ob-test-fcmax" value="${OB_TEST_FCMAX||''}" placeholder="ex: 182" oninput="OB_TEST_FCMAX=parseInt(this.value)||0;renderHome()"></div>
         </div>
         <div style="font-size:11px;color:var(--tx2);line-height:1.6">
           Ainda não fez o teste? <strong style="color:var(--neon)">Faça antes de continuar</strong> — os planos e análises dependem desse dado para ser precisos.<br>
@@ -813,6 +824,43 @@ function calcZonesFromTest(testTime, fcmax){
     rep:   {min:Math.round(vam_pace/1.00), max:Math.round(vam_pace/0.97), label:'Máximo',     emoji:'💀', desc:'Sprints curtos — sem conseguir falar',  color:'var(--purple)',bg:'var(--purple-dim)'},
   };
 }
+
+function obHandleFile(file){
+  if(!file) return;
+  const ext = file.name.split('.').pop().toLowerCase();
+  const reader = new FileReader();
+  reader.onload = function(e){
+    try{
+      let d = null;
+      if(ext==='gpx') d = parseGPX(e.target.result);
+      else if(ext==='tcx') d = parseTCX(e.target.result);
+      else if(ext==='csv') d = parseCSV(e.target.result);
+      else if(ext==='json') d = parseJSON(e.target.result);
+      else { obUploadMsg('Formato não suportado. Use GPX, TCX, CSV ou JSON.', 'err'); return; }
+      if(!d){ obUploadMsg('Não foi possível ler os dados.', 'err'); return; }
+      if(d.tempo){ 
+        OB_TEST_TIME = d.tempo;
+        if(d.fcmax) OB_TEST_FCMAX = d.fcmax;
+        obUploadMsg('✓ ' + file.name + ' importado! Tempo: ' + d.tempo + (d.fcmax?' · FC máx: '+d.fcmax+' bpm':''), 'ok');
+        renderHome();
+      } else {
+        obUploadMsg('Arquivo importado mas sem tempo detectado. Preencha manualmente.', 'warn');
+      }
+    } catch(err){ obUploadMsg('Erro: ' + err.message, 'err'); }
+  };
+  reader.readAsText(file);
+}
+
+function obUploadMsg(msg, type){
+  const el = document.getElementById('ob-upload-msg');
+  if(!el) return;
+  el.style.display = 'block';
+  el.style.background = type==='ok' ? 'var(--neon-dim)' : type==='err' ? 'var(--red-dim)' : 'var(--orange-dim)';
+  el.style.color = type==='ok' ? 'var(--neon)' : type==='err' ? 'var(--red)' : 'var(--orange)';
+  el.style.border = '1px solid ' + (type==='ok' ? 'rgba(232,255,0,.3)' : type==='err' ? 'rgba(255,61,90,.3)' : 'rgba(255,92,0,.3)');
+  el.textContent = msg;
+}
+
 
 
 let OB_NIVEL_LABEL = '';
