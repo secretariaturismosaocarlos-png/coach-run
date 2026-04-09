@@ -655,11 +655,18 @@ function renderHome(){
     </div>
   </div>`;
 
-  if(n===0 && !USER_GOAL.test_time){
+  if(n===0){
+    // No workouts yet
     html+=`<div class="card card-orange">
       <div style="font-size:14px;font-weight:700;color:var(--orange);margin-bottom:6px">📋 Insira seu primeiro treino</div>
-      <div style="font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:12px">Suas zonas já estão definidas pelo teste de 3km. Agora insira seus treinos para acompanhar sua evolução e receber análises personalizadas.</div>
+      <div style="font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:12px">
+        ${USER_GOAL.test_time ? 'Suas zonas já estão definidas pelo teste de 3km. Agora insira seus treinos para acompanhar sua evolução.' : 'Insira seus treinos para começar a análise personalizada.'}
+      </div>
       <button class="btn btn-orange" onclick="goTab('treino')">➕ Inserir primeiro treino</button>
+    </div>`;
+    html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
+      <button class="btn btn-ghost" onclick="goTab('plano')">📅 Ver plano</button>
+      <button class="btn btn-ghost" onclick="goTab('analise')">📊 Análise</button>
     </div>`;
   } else {
     // Last workout summary
