@@ -784,7 +784,7 @@ function renderOnboarding(el){
       </div>
 
       ${OB_TEST_TIME ? `<div class="card card-teal" style="margin-bottom:12px">
-        <div style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:6px">✓ Pré-visualização das suas zonas:</div>
+        <div style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:6px">✓ Suas zonas — Modelo Híbrido:</div>
         ${previewZones(OB_TEST_TIME, OB_TEST_FCMAX)}
       </div>` : ''}
 
@@ -803,12 +803,25 @@ function renderOnboarding(el){
 function previewZones(testTime, fcmax){
   const z = calcZonesFromTest(testTime, fcmax);
   if(!z) return '<div style="font-size:12px;color:var(--tx2)">Tempo inválido.</div>';
-  return Object.values(z).map(zv=>
-    `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;border-radius:6px;margin-bottom:3px;background:${zv.bg}">
-      <span style="font-size:12px;font-weight:600;color:${zv.color}">${zv.emoji} ${zv.label}</span>
-      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${zv.color}">${sp(zv.min)}–${sp(zv.max)}</span>
-    </div>`
-  ).join('');
+  const z1min = z.e ? sp(z.e.min) : '—', z1max = z.e ? sp(z.e.max) : '—';
+  const z2min = z.t ? sp(z.t.min) : '—', z2max = z.t ? sp(z.t.max) : '—';
+  const z3min = z.i ? sp(z.i.min) : '—', z3max = z.r ? sp(z.r.max) : '—';
+  const vam = z._vam;
+  return `
+    ${vam ? `<div style="font-size:11px;color:var(--neon);margin-bottom:6px">VAM: ${vam.kmh} km/h · VDOT ~${vam.vdot}</div>` : ''}
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:6px;margin-bottom:4px;background:var(--neon-dim);border:1px solid rgba(232,255,0,.2)">
+      <span style="font-size:12px;font-weight:700;color:var(--neon)">Z1 — Base aeróbica</span>
+      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--neon)">${z1min}–${z1max}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:6px;margin-bottom:4px;background:var(--orange-dim);border:1px solid rgba(255,92,0,.2)">
+      <span style="font-size:12px;font-weight:700;color:var(--orange)">Z2 — Limiar / Threshold</span>
+      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--orange)">${z2min}–${z2max}</span>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:6px;background:var(--red-dim);border:1px solid rgba(255,61,90,.2)">
+      <span style="font-size:12px;font-weight:700;color:var(--red)">Z3 — Alta intensidade / VO2max</span>
+      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--red)">${z3min}–${z3max}</span>
+    </div>
+  `;
 }
 
 function calcZonesFromTest(testTime, fcmax){
@@ -1866,102 +1879,102 @@ function renderPlano(){
   const detalhes={
     // ── 5K ──────────────────────────────────────────────────
     'primeiro5k':[
-      {tipo:'Corrida E — Base contínua',        pill:'pg',obj:'Construir o hábito de correr sem parar',dur:'25–30 min',dist_:'3–4 km',
+      {tipo:'Corrida Z1 — Base contínua',        pill:'pg',obj:'Construir o hábito de correr sem parar',dur:'25–30 min',dist_:'3–4 km',
        e:`2km aquecimento E (${E}) + 2km ritmo E + 1km leve E + alongamento.`+suf},
-      {tipo:'Velocidade em subida — Strides',   pill:'pr',obj:'Ativar as fibras rápidas sem fadiga (Correfix)',dur:'30 min',dist_:'3–4 km',
+      {tipo:'Treino Z3 — Strides',   pill:'pr',obj:'Ativar as fibras rápidas sem fadiga (Correfix)',dur:'30 min',dist_:'3–4 km',
        e:`2km aquecimento E (${E}) + 10×60m em velocidade máxima em subida suave, descanso: 1min30 caminhando de volta + 1km leve E + alongamento.`+suf},
-      {tipo:'Corrida L — Longão leve',          pill:'pa',obj:'Construir resistência aeróbica — o treino mais importante',dur:'35–45 min',dist_:'5–7 km',
+      {tipo:'Corrida Z1 — Longão leve',          pill:'pa',obj:'Construir resistência aeróbica — o treino mais importante',dur:'35–45 min',dist_:'5–7 km',
        e:`1km aquecimento E + corrida contínua E (${E}). Mantenha o mesmo ritmo do início ao fim. Aumente +1km por semana.`+suf},
     ],
     '5k_sub30':[
       {tipo:'Corrida E+T — Aquecimento + Ritmo alvo',pill:'pg',obj:'Construir resistência no pace de prova',dur:'30–35 min',dist_:'4–5 km',
        e:`2km aquecimento E (${E}) + 3km ritmo T (${T}) + 1km leve E + alongamento.`+suf},
-      {tipo:'Intervalado — 200m rápidos',        pill:'pr',obj:'Desenvolver velocidade (Correfix: 12×200m)',dur:'35–40 min',dist_:'4–5 km',
+      {tipo:'Intervalado Z3 — 200m rápidos',        pill:'pr',obj:'Desenvolver velocidade (Correfix: 12×200m)',dur:'35–40 min',dist_:'4–5 km',
        e:`2km aquecimento E (${E}) + 12×200m ritmo I/R (${I}) com 1min caminhando entre cada + 1km leve E + alongamento.`+suf},
-      {tipo:'Corrida L — Longão com ritmo',      pill:'pa',obj:'Resistência + acostumar o corpo com distâncias maiores',dur:'50–60 min',dist_:'7–10 km',
+      {tipo:'Corrida Z1 — Longão com ritmo',      pill:'pa',obj:'Resistência + acostumar o corpo com distâncias maiores',dur:'50–60 min',dist_:'7–10 km',
        e:`1km aquecimento E (${E}) + 8-10km ritmo M/T (${z.m?sp(z.m.min)+'–'+sp(z.m.max):T}/km) + 1km leve E + alongamento.`+suf},
     ],
     '5k_sub25':[
       {tipo:'Corrida E+T — Progressiva',         pill:'pg',obj:'Eficiência no pace alvo',dur:'35–40 min',dist_:'5–6 km',
        e:`2km aquecimento E (${E}) + 4km ritmo T (${T}) + 1km leve E + alongamento.`+suf},
-      {tipo:'Intervalado — 1000m intensos',      pill:'pr',obj:'VO2max — o maior motor do 5km (Daniels I-pace)',dur:'40–45 min',dist_:'5–7 km',
+      {tipo:'Intervalado Z3 — 1000m intensos',      pill:'pr',obj:'VO2max — o maior motor do 5km (Daniels I-pace)',dur:'40–45 min',dist_:'5–7 km',
        e:`2km aquecimento E + 5×1000m ritmo I (${I}) com 2min30 caminhando entre cada + 1km leve E + alongamento.`+suf},
-      {tipo:'Corrida L — Longão',               pill:'pa',obj:'Base aeróbica para sustentar ritmo forte nos 5km',dur:'55–65 min',dist_:'8–10 km',
+      {tipo:'Corrida Z1 — Longão',               pill:'pa',obj:'Base aeróbica para sustentar ritmo forte nos 5km',dur:'55–65 min',dist_:'8–10 km',
        e:`1km aquecimento E + corrida ritmo T/M (${T}) + 1km leve E. Aumente +1km por semana.`+suf},
     ],
     // ── 10K ──────────────────────────────────────────────────
     'primeiro10k':[
-      {tipo:'Corrida E — Base contínua',         pill:'pg',obj:'Construir a base aeróbica com segurança',dur:'30–35 min',dist_:'4–5 km',
+      {tipo:'Corrida Z1 — Base contínua',         pill:'pg',obj:'Construir a base aeróbica com segurança',dur:'30–35 min',dist_:'4–5 km',
        e:`2km aquecimento E (${E}) + 3km ritmo E + 1km leve E + alongamento.`+suf},
-      {tipo:'Velocidade em subida — Strides',    pill:'pr',obj:'Força e velocidade sem risco de lesão (Correfix)',dur:'35–40 min',dist_:'4–5 km',
+      {tipo:'Treino Z3 — Strides',    pill:'pr',obj:'Força e velocidade sem risco de lesão (Correfix)',dur:'35–40 min',dist_:'4–5 km',
        e:`2km aquecimento E (${E}) + 12×80m em velocidade máxima em subida suave, descanso: 1min30 caminhando de volta + 1km leve E + alongamento.`+suf},
-      {tipo:'Corrida L — Longão progressivo',   pill:'pa',obj:'O treino mais importante — aumenta +1–2km por semana',dur:'50–65 min',dist_:'7–10 km',
+      {tipo:'Corrida Z1 — Longão progressivo',   pill:'pa',obj:'O treino mais importante — aumenta +1–2km por semana',dur:'50–65 min',dist_:'7–10 km',
        e:`1km aquecimento E + corrida contínua E (${E}). Regra dos 10%: nunca aumente mais de 10% por semana. Hidrate a cada 20 min.`+suf},
     ],
     '10k_sub60':[
       {tipo:'Corrida E+T — Aquecimento + Ritmo alvo',pill:'pg',obj:'Ritmo de prova — construir resistência no pace 6:00',dur:'35–40 min',dist_:'5–6 km',
        e:`2km aquecimento E (${E}) + 4km ritmo T (${T}) + 1km leve E + alongamento.`+suf},
-      {tipo:'Intervalado — 400m intensos',       pill:'pr',obj:'Velocidade + limiar (Correfix: 8×400m)',dur:'40–45 min',dist_:'5–6 km',
+      {tipo:'Intervalado Z3 — 400m intensos',       pill:'pr',obj:'Velocidade + limiar (Correfix: 8×400m)',dur:'40–45 min',dist_:'5–6 km',
        e:`2km aquecimento E (${E}) + 8×400m ritmo I (${I}) com 1min caminhando entre cada + 1km leve E + alongamento.`+suf},
-      {tipo:'Corrida L — Longão com ritmo',      pill:'pa',obj:'Resistência específica para o 10km',dur:'55–70 min',dist_:'8–12 km',
+      {tipo:'Corrida Z1 — Longão com ritmo',      pill:'pa',obj:'Resistência específica para o 10km',dur:'55–70 min',dist_:'8–12 km',
        e:`1km aquecimento E + corrida longa E/M (${E}) + 1km leve E. Aumente gradualmente até 12km.`+suf},
     ],
     '10k_sub50':[
-      {tipo:'Corrida T — Tempo Run',             pill:'pg',obj:'Limiar anaeróbico — principal motor do 10km',dur:'40–50 min',dist_:'6–8 km',
+      {tipo:'Corrida Z2 — Tempo Run',             pill:'pg',obj:'Limiar anaeróbico — principal motor do 10km',dur:'40–50 min',dist_:'6–8 km',
        e:`2km aquecimento E (${E}) + 5km ritmo T (${T}) + 1km leve E + alongamento. "Comfortably hard."` +suf},
-      {tipo:'Intervalado — 1000m intensos',      pill:'pr',obj:'VO2max — teto aeróbico (Daniels I-pace)',dur:'45–50 min',dist_:'6–8 km',
+      {tipo:'Intervalado Z3 — 1000m intensos',      pill:'pr',obj:'VO2max — teto aeróbico (Daniels I-pace)',dur:'45–50 min',dist_:'6–8 km',
        e:`2km aquecimento E + 5×1000m ritmo I (${I}) com 2min30 caminhando entre cada + 1km leve E + alongamento.`+suf},
-      {tipo:'Corrida L — Longão',               pill:'pa',obj:'Base de resistência para sustentar pace forte por 10km',dur:'60–75 min',dist_:'10–14 km',
+      {tipo:'Corrida Z1 — Longão',               pill:'pa',obj:'Base de resistência para sustentar pace forte por 10km',dur:'60–75 min',dist_:'10–14 km',
        e:`1km aquecimento E + corrida longa E (${E}). Mantenha ritmo uniforme. Termine com energia sobrando.`+suf},
     ],
     // ── MEIA / MARATONA ──────────────────────────────────────
     'meia':[
-      {tipo:'Corrida E — Recuperação',          pill:'pg',obj:'Pernas frescas para o treino de qualidade',dur:'35–45 min',dist_:'5–7 km',
+      {tipo:'Corrida Z1 — Recuperação',          pill:'pg',obj:'Pernas frescas para o treino de qualidade',dur:'35–45 min',dist_:'5–7 km',
        e:`Corrida contínua E (${E}). Se sentir pernas pesadas: reduza ainda mais. Este dia NÃO é para se cansar.`+suf},
-      {tipo:'Corrida T — Tempo Run',            pill:'pr',obj:'Resistência no ritmo de prova (Correfix: ritmo alvo)',dur:'50–60 min',dist_:'7–10 km',
+      {tipo:'Corrida Z2 — Tempo Run',            pill:'pr',obj:'Resistência no ritmo de prova (Correfix: ritmo alvo)',dur:'50–60 min',dist_:'7–10 km',
        e:`2km aquecimento E (${E}) + 5km ritmo T (${T}) + 2km leve E + alongamento. Respire ritmicamente.`+suf},
-      {tipo:'Corrida L — Longão progressivo',  pill:'pa',obj:'O treino mais importante — coração do plano de meia',dur:'70–90 min',dist_:'11–16 km',
+      {tipo:'Corrida Z1 — Longão progressivo',  pill:'pa',obj:'O treino mais importante — coração do plano de meia',dur:'70–90 min',dist_:'11–16 km',
        e:`Inicie E (${E}), últimos 20-30% no ritmo T (${T}). Hidrate a cada 3km. Gel/banana a cada 45 min.`+suf},
     ],
     'maratona':[
-      {tipo:'Corrida E — Recuperação',          pill:'pg',obj:'Recuperação ativa — a maratona se ganha no descanso',dur:'35–45 min',dist_:'5–7 km',
+      {tipo:'Corrida Z1 — Recuperação',          pill:'pg',obj:'Recuperação ativa — a maratona se ganha no descanso',dur:'35–45 min',dist_:'5–7 km',
        e:`Corrida contínua E (${E}). Lydiard: "o corredor de maratona vive no pace E". Nunca force aqui.`+suf},
-      {tipo:'Corrida M — Pace específico',      pill:'pr',obj:'Especificidade maratona (Canova: pace de prova sob fadiga)',dur:'55–70 min',dist_:'8–12 km',
+      {tipo:'Corrida Z2 — Pace específico',      pill:'pr',obj:'Especificidade maratona (Canova: pace de prova sob fadiga)',dur:'55–70 min',dist_:'8–12 km',
        e:`2km E + 6km ritmo M (${z.m?sp(z.m.min)+'–'+sp(z.m.max):T}/km, pace de prova) + 2km E. Daniels: "aprenda a correr no pace alvo cansado".`+suf},
-      {tipo:'Corrida L — Longão fundamental',  pill:'pa',obj:'O treino mais importante da semana para maratona',dur:'90–130 min',dist_:'14–22 km',
+      {tipo:'Corrida Z1 — Longão fundamental',  pill:'pa',obj:'O treino mais importante da semana para maratona',dur:'90–130 min',dist_:'14–22 km',
        e:`Ritmo E (${E}). Gel/banana a cada 45 min, 150-200ml água a cada 15 min. Termine com 30% de energia sobrando.`+suf},
     ],
     // ── SAÚDE / OUTROS ────────────────────────────────────────
     'emagrecimento':[
-      {tipo:'Corrida E — Zona aeróbica',        pill:'pg',obj:'Queima de gordura — FC 65-72% FCmax (Correfix base)',dur:'40–50 min',dist_:'5–7 km',
+      {tipo:'Corrida Z1 — Zona aeróbica',        pill:'pg',obj:'Queima de gordura — FC 65-72% FCmax (Correfix base)',dur:'40–50 min',dist_:'5–7 km',
        e:`Corrida contínua E (${E}). FC 120-140 bpm. Converse normalmente. Lydiard: volume fácil é o maior queimador de gordura.`+suf},
       {tipo:'Intervalado HIIT — Gasto calórico',pill:'pr',obj:'Elevar metabolismo pós-treino por até 24h (EPOC)',dur:'30–35 min',dist_:'4–5 km',
        e:`10min E + 8×1min I (${I}) + 1min caminhando entre cada + 10min E. ~400 kcal. Máximo 1×/semana.`+suf},
-      {tipo:'Corrida L — Volume total',         pill:'pa',obj:'Volume = maior aliado do emagrecimento sustentável',dur:'50–65 min',dist_:'6–9 km',
+      {tipo:'Corrida Z1 — Volume total',         pill:'pa',obj:'Volume = maior aliado do emagrecimento sustentável',dur:'50–65 min',dist_:'6–9 km',
        e:`Corrida contínua E (${E}). Duração importa mais que velocidade. Aumente gradualmente.`+suf},
     ],
     'volta':[
-      {tipo:'Corrida E — Reativação suave',     pill:'pg',obj:'Reintroduzir o estímulo aeróbico com segurança',dur:'25–30 min',dist_:'3–4 km',
+      {tipo:'Corrida Z1 — Reativação suave',     pill:'pg',obj:'Reintroduzir o estímulo aeróbico com segurança',dur:'25–30 min',dist_:'3–4 km',
        e:`5min caminhada + 15-20min E (${E}) + 5min caminhada. Tendões adaptam mais devagar que músculos.`+suf},
-      {tipo:'Velocidade em subida — Strides',   pill:'pr',obj:'Ativar neuromotor sem carga excessiva (Correfix)',dur:'30–35 min',dist_:'3–5 km',
+      {tipo:'Treino Z3 — Strides',   pill:'pr',obj:'Ativar neuromotor sem carga excessiva (Correfix)',dur:'30–35 min',dist_:'3–5 km',
        e:`2km E (${E}) + 8×60m velocidade máxima em subida suave, descanso: 1min30 + 1km E. Pare se sentir dor articular.`+suf},
-      {tipo:'Corrida L — Volume seguro',        pill:'pa',obj:'Regra dos 10% — nunca mais que isso por semana',dur:'35–40 min',dist_:'4–5 km',
+      {tipo:'Corrida Z1 — Volume seguro',        pill:'pa',obj:'Regra dos 10% — nunca mais que isso por semana',dur:'35–40 min',dist_:'4–5 km',
        e:`Corrida E (${E}). Pausa >2 semanas = recomece com 50% do volume anterior. Sem pressa.`+suf},
     ],
     'condicionamento':[
-      {tipo:'Corrida E — Base aeróbica',        pill:'pg',obj:'Saúde cardiovascular e longevidade (Lydiard)',dur:'35–45 min',dist_:'4–6 km',
+      {tipo:'Corrida Z1 — Base aeróbica',        pill:'pg',obj:'Saúde cardiovascular e longevidade (Lydiard)',dur:'35–45 min',dist_:'4–6 km',
        e:`Corrida E (${E}). Respire pelo nariz se conseguir — sinal de zona certa. Lydiard: base aeróbica é a fundação de tudo.`+suf},
-      {tipo:'Fartlek — Velocidade livre',       pill:'pa',obj:'Estímulo variado sem pressão (McMillan)',dur:'35–40 min',dist_:'4–6 km',
+      {tipo:'Fartlek Z1/Z2 — Velocidade livre',       pill:'pa',obj:'Estímulo variado sem pressão (McMillan)',dur:'35–40 min',dist_:'4–6 km',
        e:`15min E + 4× fartlek: 3min M (${z.m?sp(z.m.min):T}/km) + 2min E + 8min E. Sem relógio no fartlek — corra por percepção.`+suf},
-      {tipo:'Corrida L — Longão suave',         pill:'pg',obj:'Resistência cardiovascular progressiva',dur:'45–55 min',dist_:'5–8 km',
+      {tipo:'Corrida Z1 — Longão suave',         pill:'pg',obj:'Resistência cardiovascular progressiva',dur:'45–55 min',dist_:'5–8 km',
        e:`Corrida E (${E}). FC abaixo de 155 bpm. O treino de longevidade — faça por anos.`+suf},
     ],
     'trail10k':[
-      {tipo:'Corrida E — Base + técnica',       pill:'pg',obj:'Adaptação ao terreno irregular com segurança',dur:'35–45 min',dist_:'4–6 km',
+      {tipo:'Corrida Z1 — Base + técnica',       pill:'pg',obj:'Adaptação ao terreno irregular com segurança',dur:'35–45 min',dist_:'4–6 km',
        e:`Corrida E (${E}) em terreno variado. Passos curtos em subidas. Foco em postura — quadril alto, olhar no chão à frente.`+suf},
-      {tipo:'Hill repeats — Força em subida',   pill:'pr',obj:'Força muscular específica para trail (Correfix)',dur:'40–45 min',dist_:'4–6 km',
+      {tipo:'Treino Z3 — Força em subida',   pill:'pr',obj:'Força muscular específica para trail (Correfix)',dur:'40–45 min',dist_:'4–6 km',
        e:`2km E + 8×80m subida em esforço máximo, descanso: caminhe de volta + 1km E. Daniels R-pace. Fortalece glúteos e panturrilha.`+suf},
-      {tipo:'Corrida L — Longão em terreno',    pill:'pa',obj:'Resistência específica para distância na trilha',dur:'60–80 min',dist_:'8–12 km',
+      {tipo:'Corrida Z1 — Longão em terreno',    pill:'pa',obj:'Resistência específica para distância na trilha',dur:'60–80 min',dist_:'8–12 km',
        e:`Corrida E (${E}) em terreno variado. Em subidas >8%: caminhe rápido (mais econômico que correr). Hidrate bem.`+suf},
     ],
   };
@@ -2071,101 +2084,96 @@ function renderPlano(){
 }
 
 function buildNextWorkoutSteps(obj, z, bp, tp, evoSt){
-  const E = z.e ? `${sp(z.e.min)}–${sp(z.e.max)}/km` : '—';
-  const M = z.m ? `${sp(z.m.min)}–${sp(z.m.max)}/km` : E;
-  const T = z.t ? `${sp(z.t.min)}–${sp(z.t.max)}/km` : '—';
-  const I = z.i ? `${sp(z.i.min)}–${sp(z.i.max)}/km` : '—';
-  const R = z.r ? `${sp(z.r.min)}–${sp(z.r.max)}/km` : '—';
-  const eMin = z.e ? sp(z.e.min) : '—';
-  const eMax = z.e ? sp(z.e.max) : '—';
-  const tPace = z.t ? sp(z.t.min) : '—';
-  const iPace = z.i ? sp(z.i.min) : '—';
+  // Hybrid model — Z1/Z2/Z3 terminology
+  const z1 = z.e ? `${sp(z.e.min)}–${sp(z.e.max)}/km` : '—';
+  const z2 = z.t ? `${sp(z.t.min)}–${sp(z.t.max)}/km` : '—';
+  const z3 = z.i ? `${sp(z.i.min)}–${sp(z.i.max)}/km` : '—';
+  const z1max = z.e ? sp(z.e.max) : '—';
+  const z1min = z.e ? sp(z.e.min) : '—';
+  const z3min = z.i ? sp(z.i.min) : '—';
 
-  if(evoSt==='regressao') return {
-    tipo:'Treino E — Recuperação ativa',
-    obj:'Semana de reconstrução. Restaurar o sistema nervoso e muscular antes de retomar carga.',
+  // Recovery — always Z1
+  if(evoSt==='regressao' || obj.id==='_recovery') return {
+    tipo:'Treino Z1 — Recuperação',
+    obj:'Recuperação ativa. A supercompensação acontece no descanso — não force agora.',
     steps:[
-      {f:'Aquecimento',d:'5 min',p:'caminhada leve',t:'L',desc:'Ative articulações suavemente'},
-      {f:'Corrida E (Fácil)',d:'20–25 min',p:E,t:'L',desc:'Ritmo E (fácil) — você deve conseguir falar frases inteiras sem dificuldade. Se não conseguir: reduza o ritmo.'},
-      {f:'Desaquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Caminhada + alongamento 5 min mínimo'}
+      {f:'Caminhada ativa',d:'5 min',p:'passo leve',t:'L',desc:'Ative as articulações suavemente'},
+      {f:'Corrida Z1 leve',d:'20–25 min',p:z1,t:'L',desc:`Ritmo Z1 (${z1}). Você DEVE conseguir falar frases inteiras sem dificuldade. FC <70% FCmax.`},
+      {f:'Desaquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Caminhada + alongamento mínimo 5 min'}
     ]
   };
 
-  if(obj.id==='primeiro5k'||obj.id==='volta'||obj.id==='condicionamento') return {
-    tipo:'Treino E — Run-Walk progressivo',
-    obj:'Método run-walk: construir resistência sem sobrecarregar as articulações. Cada semana aumenta 1 min na corrida.',
+  // Long run — Z1
+  if(obj.id==='_long') return {
+    tipo:'Treino Z1 — Longão',
+    obj:'Base aeróbica. O treino mais importante para qualquer objetivo de corrida.',
     steps:[
-      {f:'Caminhada ativa',d:'5 min',p:'passo acelerado',t:'L',desc:'Prepare músculos e articulações'},
-      {f:'Run-Walk × 6',d:'18–24 min',p:E,t:'M',desc:`Corrida ${eMin} por 3 min + caminhada 1 min. 6 repetições. Próxima semana: 4 min correndo + 1 min caminhando.`},
-      {f:'Caminhada final',d:'5 min',p:'relaxado',t:'L',desc:'Respire controlado. Não sente — caminhe para resfriamento ativo.'}
-    ]
-  };
-
-  if(obj.id==='primeiro10k'||obj.id==='primeiro15k') return {
-    tipo:'Treino E — Corrida contínua leve',
-    obj:'Construir base aeróbica. Distância cresce +10% por semana. Ritmo E o tempo todo.',
-    steps:[
-      {f:'Aquecimento',d:'5 min',p:eMax+'/km',t:'L',desc:'Trote bem suave para aquecer'},
-      {f:'Corrida E contínua',d:'30–40 min',p:E,t:'L',desc:`Ritmo E (fácil): ${E}. Você deve conseguir conversar. Se ficar ofegante, reduza. Este é o treino mais importante da semana.`},
-      {f:'Desaquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Caminhada + alongamento quadríceps, panturrilha e quadril'}
-    ]
-  };
-
-  if(obj.id==='meia'||obj.id==='maratona') return {
-    tipo:'Treino T — Tempo Run (Limiar)',
-    obj:'Daniels: 20 min contínuos no ritmo T desenvolvem o limiar anaeróbico. Principal treino de qualidade da semana.',
-    steps:[
-      {f:'Aquecimento E',d:'10–15 min',p:E,t:'L',desc:'Trote fácil. Últimos 2 min: 4×20 seg aceleração suave.'},
-      {f:'Tempo Run — T',d:'20 min',p:T,t:'F',desc:`Ritmo T: ${T}. Desconfortável mas sustentável — você fala apenas palavras isoladas. Daniels: "comfortably hard". Mantenha o ritmo uniforme.`},
-      {f:'Trote fácil E',d:'10 min',p:E,t:'M',desc:'Reduza gradualmente. Não pare de repente.'},
+      {f:'Aquecimento',d:'5 min',p:z1max+'/km',t:'L',desc:'Trote suave para elevar FC gradualmente'},
+      {f:'Longão Z1',d:'50–70 min',p:z1,t:'L',desc:`Ritmo Z1 (${z1}) o tempo todo. Conversa normal. Hidrate a cada 20 min. Lydiard: nunca termine exausto.`},
       {f:'Desaquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Caminhada + alongamento completo'}
     ]
   };
 
-  if(obj.id==='emagrecimento'||obj.id==='condicionamento') return {
-    tipo:'Treino E — Corrida aeróbica base',
-    obj:'70–80% do esforço em zona E é a chave para emagrecimento e saúde cardiovascular (Lydiard + Daniels).',
+  // Run-Walk for beginners — Z1
+  if(obj.id==='primeiro5k'||obj.id==='volta'||obj.id==='condicionamento') return {
+    tipo:'Treino Z1 — Corrida base',
+    obj:'Construir base aeróbica. 70–80% dos treinos devem ser Z1.',
     steps:[
-      {f:'Aquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Caminhada para elevar FC gradualmente'},
-      {f:'Corrida E',d:'35–45 min',p:E,t:'L',desc:`Ritmo E: ${E}. FC alvo: 65–75% FCmax. Você DEVE conseguir conversar normalmente. Esse é o ritmo que mais oxida gordura.`},
+      {f:'Caminhada',d:'5 min',p:'passo acelerado',t:'L',desc:'Prepare músculos e articulações'},
+      {f:'Corrida Z1',d:'20–30 min',p:z1,t:'L',desc:`Ritmo Z1 (${z1}). Conversa normal. Se ficar ofegante: reduza. Este é o treino base do modelo híbrido.`},
+      {f:'Caminhada final',d:'5 min',p:'relaxado',t:'L',desc:'Resfriamento ativo. Não sente imediatamente.'}
+    ]
+  };
+
+  // Meia/Maratona — Z2 progressive
+  if(obj.id==='maratona'||obj.id==='meia') return {
+    tipo:'Treino Z2 — Limiar progressivo',
+    obj:'Modelo híbrido: Z1 base + Z2 limiar. Desenvolve resistência no ritmo de prova.',
+    steps:[
+      {f:'Aquecimento Z1',d:'10 min',p:z1,t:'L',desc:'Trote Z1 — não pule esta etapa'},
+      {f:'Corrida Z1→Z2',d:'15 min',p:z1,t:'L',desc:'Inicie Z1, eleve gradualmente para Z2'},
+      {f:'Sustentação Z2',d:'15 min',p:z2,t:'F',desc:`Ritmo Z2 (${z2}). Fala só frases curtas. Desconfortável mas sustentável.`},
+      {f:'Retorno Z1',d:'10 min',p:z1,t:'M',desc:'Reduza gradualmente para Z1'},
+      {f:'Desaquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Caminhada + alongamento'}
+    ]
+  };
+
+  // Emagrecimento — Z1 long
+  if(obj.id==='emagrecimento') return {
+    tipo:'Treino Z1 — Volume aeróbico',
+    obj:'Z1 por mais tempo = maior queima de gordura. Volume supera intensidade para emagrecimento.',
+    steps:[
+      {f:'Aquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Elevação gradual da FC'},
+      {f:'Corrida Z1',d:'35–45 min',p:z1,t:'L',desc:`Ritmo Z1 (${z1}). FC 65–75% FCmax. Conversa normal. Longo e constante.`},
       {f:'Desaquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Caminhada + respiração nasal'}
     ]
   };
 
-  if(obj.id==='5k_sub25'||obj.id==='5k_sub30'||obj.id==='10k_sub50'||obj.id==='10k_sub60') return {
-    tipo:'Treino I — Intervalado VO2max',
-    obj:'Daniels: intervalados no ritmo I desenvolvem VO2max — o maior motor de melhoria no 5km.',
+  // VO2max intervals — Z3
+  if(['5k_sub25','5k_sub30','10k_sub50','10k_sub60'].includes(obj.id)) return {
+    tipo:'Treino Z3 — Intervalado VO2max',
+    obj:'Modelo híbrido: 5–10% do volume em Z3. Eleva teto aeróbico — maior motor de melhoria.',
     steps:[
-      {f:'Aquecimento E',d:'10–15 min',p:E,t:'L',desc:'Trote fácil. Inclua 3×20 seg strides ao final.'},
-      {f:'5 × 1000m — Ritmo I',d:'~25 min',p:I,t:'F',desc:`Ritmo I: ${I}. Recuperação: 2–3 min trote E entre cada. Total: 5km em ritmo I. Daniels: "não deve ser sprint — mas muito difícil de manter".`},
-      {f:'Trote E',d:'10 min',p:E,t:'M',desc:'Recuperação ativa — não pare.'},
+      {f:'Aquecimento Z1',d:'10–15 min',p:z1,t:'L',desc:'Trote Z1. Inclua 3×20 seg de aceleração ao final.'},
+      {f:'5 × 1000m Z3',d:'~25 min',p:z3,t:'F',desc:`Ritmo Z3 (${z3}). Recuperação: 2–3 min trote Z1 entre cada. RPE 8–9. Total: 5km intensos.`},
+      {f:'Trote Z1',d:'10 min',p:z1,t:'M',desc:'Recuperação ativa — não pare de repente.'},
       {f:'Desaquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Caminhada + alongamento'}
     ]
   };
 
-  // Long run case
-  if(obj.id === '_long') return {
-    tipo:'Treino L — Longão Z1',
-    obj:'Base aeróbica. O treino mais importante para qualquer objetivo de corrida.',
-    steps:[
-      {f:'Aquecimento',d:'5 min',p:eMin+'/km',t:'L',desc:'Trote suave para elevar FC gradualmente'},
-      {f:'Longão Z1',d:'50–70 min',p:E,t:'L',desc:`Ritmo E (${E}) o tempo todo. Conversa normal. Hidrate a cada 20 min. Daniels: nunca termine exausto.`},
-      {f:'Desaquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Caminhada + alongamento completo'}
-    ]
-  };
-
-  // Default: T (Threshold) for 10km goals
+  // Default — Z2 threshold
   return {
-    tipo:'Treino T — Tempo Run (Limiar)',
-    obj:'Principal treino de qualidade. Daniels: 1 sessão T por semana melhora drasticamente a performance no 10km.',
+    tipo:'Treino Z2 — Limiar (Tempo Run)',
+    obj:'Modelo híbrido: 10–20% do volume em Z2. Principal treino de qualidade da semana.',
     steps:[
-      {f:'Aquecimento E',d:'10 min',p:E,t:'L',desc:'Trote fácil E — não pule o aquecimento'},
-      {f:'Tempo Run — T',d:'20 min',p:T,t:'F',desc:`Ritmo T: ${T}/km. "Comfortably hard" — difícil mas sustentável. Respire ritmicamente: 2 passadas inspira, 2 expira.`},
-      {f:'Trote E',d:'8 min',p:E,t:'M',desc:'Reduza o esforço gradualmente'},
+      {f:'Aquecimento Z1',d:'10 min',p:z1,t:'L',desc:'Trote Z1 — não pule o aquecimento'},
+      {f:'Sustentação Z2',d:'20 min',p:z2,t:'F',desc:`Ritmo Z2 (${z2}/km). "Comfortably hard" — difícil mas sustentável. RPE 6–7.`},
+      {f:'Retorno Z1',d:'8 min',p:z1,t:'M',desc:'Reduza o esforço gradualmente'},
       {f:'Desaquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Caminhada + alongamento'}
     ]
   };
 }
+
 
 // ═══════════════════════════════════════════════════
 //  RENDER EVOLUTION
