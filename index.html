@@ -276,6 +276,11 @@ select option{background:var(--bg3)}
 .sdg{background:var(--neon)}.sda{background:var(--orange)}.sdx{background:var(--tx3)}.sdb{background:var(--teal);animation:sdp 1s linear infinite}
 @keyframes sdp{0%,100%{opacity:1}50%{opacity:.2}}
 
+/* ══ ANIMATIONS ══ */
+@keyframes pulse-border{0%,100%{border-color:var(--orange);box-shadow:0 0 0 0 rgba(255,92,0,.4)}50%{border-color:#ff8c00;box-shadow:0 0 0 6px rgba(255,92,0,.1)}}
+@keyframes shake{0%,100%{transform:rotate(0deg)}25%{transform:rotate(-10deg)}75%{transform:rotate(10deg)}}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+
 /* ══ RESPONSIVE ══ */
 @media(max-width:480px){
   .g3{grid-template-columns:1fr 1fr}
@@ -849,12 +854,19 @@ function renderOnboarding(el){
         </div>
       </div>
 
-      <div class="card card-orange" style="margin-bottom:12px">
-        <div style="font-size:13px;font-weight:700;color:var(--orange);margin-bottom:8px">⚠️ Por que esse teste é importante?</div>
-        <div style="font-size:12px;color:var(--tx);line-height:1.7;margin-bottom:0">
-          Suas zonas Z1/Z2/Z3 são calculadas a partir deste teste. <strong>Se inserir um treino de corrida comum (não máximo), as zonas serão calculadas incorretamente</strong> e todos os treinos ficam desalinhados.<br><br>
-          ✅ <strong>Ideal:</strong> faça o teste de 3km no máximo esforço sustentável — como descrito acima — e insira o tempo aqui.<br>
-          ⚠️ <strong>Se não fez ainda:</strong> pode avançar com outro tempo, mas refaça o teste em breve e atualize nas configurações.
+      <div id="test-alert" style="margin-bottom:12px;border-radius:var(--rl);overflow:hidden;border:2px solid var(--orange);animation:pulse-border 1.5s ease-in-out infinite">
+        <div style="background:rgba(255,92,0,.15);padding:12px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,92,0,.2)">
+          <span style="font-size:20px;animation:shake 0.5s ease-in-out infinite">⚠️</span>
+          <div style="font-size:13px;font-weight:700;color:var(--orange)">ATENÇÃO — Leia antes de continuar!</div>
+        </div>
+        <div style="background:rgba(255,92,0,.08);padding:14px">
+          <div style="font-size:13px;color:var(--tx);line-height:1.8;margin-bottom:10px">
+            Suas zonas de treino Z1/Z2/Z3 são calculadas <strong style="color:var(--orange)">exclusivamente</strong> a partir deste teste.<br>
+            Se você inserir um tempo de treino comum (não máximo), <strong style="color:var(--red)">as zonas ficam erradas e todos os treinos são ineficientes.</strong>
+          </div>
+          <div style="background:rgba(0,229,204,.08);border:1px solid rgba(0,229,204,.2);border-radius:var(--r);padding:10px 12px;font-size:12px;color:var(--teal);line-height:1.6">
+            ✅ <strong>O que fazer:</strong> realize o teste de 3km como descrito acima (esforço máximo sustentável) e insira o tempo real aqui.
+          </div>
         </div>
       </div>
 
@@ -1148,17 +1160,89 @@ function parseGPX(xml){
 function parseTCX(xml){
   const doc=new DOMParser().parseFromString(xml,'text/xml');
   const tps=doc.querySelectorAll('Trackpoint');if(!tps.length)return null;
-  const points=[];
+
+  // Extract HR and cadence from trackpoints
+  const hrs=[], cads=[];
   tps.forEach(tp=>{
-    const pos=tp.querySelector('Position'),te=tp.querySelector('Time'),hr=tp.querySelector('Value'),cad=tp.querySelector('Cadence,RunCadence');
-    points.push({lat:pos?parseFloat(pos.querySelector('LatitudeDegrees').textContent):0,lon:pos?parseFloat(pos.querySelector('LongitudeDegrees').textContent):0,time:te?new Date(te.textContent):null,hr:hr?parseInt(hr.textContent):0,cad:cad?parseInt(cad.textContent)*2:0});
+    // HR can be in multiple places in TCX
+    const hrEl = tp.querySelector('HeartRateBpm Value, HeartRateBpm > Value, Value');
+    if(hrEl){ const v=parseInt(hrEl.textContent); if(v>30&&v<250)hrs.push(v); }
+    const cadEl = tp.querySelector('Cadence, RunCadence, ns3\:RunCadence');
+    if(cadEl){ const v=parseInt(cadEl.textContent); if(v>0)cads.push(v); }
   });
-  const r=calcFromPoints(points);
-  const dEl=doc.querySelector('DistanceMeters'),tEl=doc.querySelector('TotalTimeSeconds'),ah=doc.querySelector('AverageHeartRateBpm Value'),mh=doc.querySelector('MaximumHeartRateBpm Value');
-  if(dEl)r.dist=Math.round(parseFloat(dEl.textContent)/10)/100;
-  if(tEl)r.tempo=s2t(parseFloat(tEl.textContent));
-  if(ah)r.fcmed=parseInt(ah.textContent);if(mh)r.fcmax=parseInt(mh.textContent);
-  return r;
+
+  // Get authoritative data from TCX Activity metadata (most accurate)
+  const dEl=doc.querySelector('DistanceMeters');
+  const tEl=doc.querySelector('TotalTimeSeconds');
+  const ahEl=doc.querySelector('AverageHeartRateBpm Value');
+  const mhEl=doc.querySelector('MaximumHeartRateBpm Value');
+  const avgCadEl=doc.querySelector('Cadence'); // activity-level cadence
+
+  // Distance from TCX (in meters → km)
+  let dist = 0;
+  if(dEl){
+    const meters = parseFloat(dEl.textContent);
+    dist = Math.round(meters/10)/100; // e.g. 4380m → 4.38km
+  }
+
+  // Time from TCX (in seconds)
+  let totalSecs = 0;
+  if(tEl){
+    totalSecs = parseFloat(tEl.textContent);
+  } else {
+    // Fallback: use first/last trackpoint time
+    const times=[];
+    tps.forEach(tp=>{ const te=tp.querySelector('Time'); if(te)times.push(new Date(te.textContent)); });
+    if(times.length>=2) totalSecs=(times[times.length-1]-times[0])/1000;
+  }
+
+  const tempo = s2t(Math.round(totalSecs));
+
+  // Pace = time / distance (sec/km), only if both valid
+  let pace = '—';
+  if(dist>0 && totalSecs>0){
+    const paceSec = Math.round(totalSecs/dist);
+    pace = sp(paceSec);
+  }
+
+  // Heart rate: prefer TCX metadata, fallback to trackpoint average
+  let fcmed=0, fcmax=0;
+  if(ahEl) fcmed=parseInt(ahEl.textContent);
+  else if(hrs.length) fcmed=Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length);
+  if(mhEl) fcmax=parseInt(mhEl.textContent);
+  else if(hrs.length) fcmax=Math.max(...hrs);
+
+  // Cadence: prefer activity-level, fallback to trackpoint average
+  let cad=0;
+  if(avgCadEl) cad=parseInt(avgCadEl.textContent);
+  else if(cads.length){ cad=Math.round(cads.reduce((a,b)=>a+b,0)/cads.length); if(cad<100&&cad>0)cad*=2; }
+
+  // Splits from trackpoints (km markers)
+  const splits=[];
+  const positions=[];
+  tps.forEach(tp=>{
+    const pos=tp.querySelector('Position');
+    const te=tp.querySelector('Time');
+    if(pos&&te){
+      try{
+        const lat=parseFloat(pos.querySelector('LatitudeDegrees').textContent);
+        const lon=parseFloat(pos.querySelector('LongitudeDegrees').textContent);
+        positions.push({lat,lon,time:new Date(te.textContent)});
+      }catch(e){}
+    }
+  });
+  if(positions.length>1 && dist>1){
+    let km=1,da=0,lt=positions[0].time;
+    for(let i=1;i<positions.length;i++){
+      da+=haversine(positions[i-1].lat,positions[i-1].lon,positions[i].lat,positions[i].lon)/1000;
+      if(da>=km){
+        splits.push(sp(Math.round((positions[i].time-lt)/1000)));
+        lt=positions[i].time; km++;
+      }
+    }
+  }
+
+  return{dist,tempo,pace,fcmed,fcmax,cad,splits};
 }
 function parseCSV(text){
   const lines=text.trim().split('\n');if(lines.length<2)return null;
@@ -1921,26 +2005,33 @@ function renderAnalise(){
   }
 
   // O que você fez bem
-  html+=`<div class="card">
-    <div class="clabel" style="color:var(--neon)">👍 O que você fez bem</div>`;
+  // O que você fez bem
+  html+=`<div class="card" style="border-color:rgba(232,255,0,.2)">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <span style="font-size:18px">👍</span>
+      <div style="font-size:12px;font-weight:700;color:var(--neon);text-transform:uppercase;letter-spacing:1px">O que você fez bem</div>
+    </div>`;
   a.analysis.pontosBons.forEach((p,i)=>{
-    html+=`<div style="padding:10px 0;border-bottom:1px solid var(--bd)">
-      <div style="font-size:14px;font-weight:700;margin-bottom:4px">${i+1}. ${p.titulo}</div>
-      <div style="font-size:13px;color:var(--tx);margin-bottom:4px;line-height:1.6">${p.texto}</div>
-      <div style="font-size:12px;color:var(--neon);line-height:1.5">➡️ ${p.dica}</div>
+    html+=`<div style="padding:10px 12px;border-radius:var(--r);margin-bottom:6px;background:rgba(232,255,0,.04);border:1px solid rgba(232,255,0,.1)">
+      <div style="font-size:13px;font-weight:700;color:var(--neon);margin-bottom:4px">✅ ${p.titulo}</div>
+      <div style="font-size:12px;color:var(--tx);margin-bottom:5px;line-height:1.6">${p.texto}</div>
+      <div style="font-size:11px;color:var(--tx2);line-height:1.5;padding-left:8px;border-left:2px solid rgba(232,255,0,.3)">➡️ ${p.dica}</div>
     </div>`;
   });
   html+=`</div>`;
 
   // O que melhorar
-  html+=`<div class="card">
-    <div class="clabel" style="color:var(--orange)">⚠️ O que melhorar</div>`;
+  html+=`<div class="card" style="border-color:rgba(255,92,0,.2)">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
+      <span style="font-size:18px">⚠️</span>
+      <div style="font-size:12px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:1px">O que melhorar</div>
+    </div>`;
   a.analysis.melhorar.forEach((m,i)=>{
-    html+=`<div style="padding:10px 0;border-bottom:1px solid var(--bd)">
-      <div style="font-size:14px;font-weight:700;margin-bottom:4px">${i+1}. ${m.titulo}</div>
-      <div style="font-size:13px;color:var(--tx2);margin-bottom:6px;line-height:1.6">${m.problema}</div>
-      <div style="background:var(--bg3);border-radius:var(--r);padding:8px 12px;font-size:12px;color:var(--tx);line-height:1.6;border-left:3px solid var(--neon)">
-        ${m.icon} <strong>Como fazer:</strong> ${m.solucao}
+    html+=`<div style="padding:10px 12px;border-radius:var(--r);margin-bottom:6px;background:rgba(255,92,0,.04);border:1px solid rgba(255,92,0,.15)">
+      <div style="font-size:13px;font-weight:700;color:var(--orange);margin-bottom:4px">⚡ ${m.titulo}</div>
+      <div style="font-size:12px;color:var(--tx2);margin-bottom:6px;line-height:1.6">${m.problema}</div>
+      <div style="background:var(--bg3);border-radius:var(--r);padding:8px 12px;font-size:12px;color:var(--tx);line-height:1.6;border-left:3px solid var(--orange)">
+        💡 <strong style="color:var(--orange)">Como fazer:</strong> ${m.solucao}
       </div>
     </div>`;
   });
