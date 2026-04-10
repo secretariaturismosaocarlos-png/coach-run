@@ -1183,7 +1183,7 @@ function parseTCX(xml){
     // HR can be in multiple places in TCX
     const hrEl = tp.querySelector('HeartRateBpm Value, HeartRateBpm > Value, Value');
     if(hrEl){ const v=parseInt(hrEl.textContent); if(v>30&&v<250)hrs.push(v); }
-    const cadEl = tp.querySelector('Cadence, RunCadence, ns3\:RunCadence');
+    const cadEl = tp.querySelector('Cadence') || tp.querySelector('RunCadence');
     if(cadEl){ const v=parseInt(cadEl.textContent); if(v>0)cads.push(v); }
   });
 
