@@ -210,14 +210,14 @@ select option{background:var(--bg3)}
 .utype{padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;background:var(--bg3);color:var(--tx2);border:1px solid var(--bd);margin:2px}
 
 /* ══ OBJ GRID ══ */
-.obj-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
-.obj-card{background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:12px;cursor:pointer;transition:all .2s;position:relative}
-.obj-card:hover{border-color:rgba(232,255,0,.3);transform:translateY(-1px)}
-.obj-card.sel{border-color:var(--neon);background:var(--neon-dim);box-shadow:0 0 20px rgba(232,255,0,.08)}
-.obj-card.sel::after{content:'✓';position:absolute;top:8px;right:10px;font-size:12px;color:var(--neon);font-weight:700}
-.oi{font-size:18px;margin-bottom:5px}
-.ot{font-size:12px;font-weight:700;margin-bottom:2px;line-height:1.3}
-.os{font-size:10px;color:var(--tx2)}
+.obj-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.obj-card{background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:8px 10px;cursor:pointer;transition:all .2s;position:relative;display:flex;align-items:center;gap:8px}
+.obj-card:hover{border-color:rgba(232,255,0,.3)}
+.obj-card.sel{border-color:var(--neon);background:var(--neon-dim)}
+.obj-card.sel::after{content:'✓';position:absolute;top:6px;right:8px;font-size:11px;color:var(--neon);font-weight:700}
+.oi{font-size:20px;flex-shrink:0}
+.ot{font-size:12px;font-weight:700;line-height:1.3}
+.os{font-size:10px;color:var(--tx2);margin-top:1px}
 
 /* ══ DIVIDER ══ */
 .divider{height:1px;background:var(--bd);margin:12px 0}
@@ -709,7 +709,9 @@ function renderOnboarding(el){
           <div class="field"><label>Data alvo (opcional)</label><input type="date" id="ob-td" value="${OB_TARGET_DATE}" oninput="OB_TARGET_DATE=this.value"></div>
         </div>
       </div>`:''}
-      <button class="btn btn-neon" style="margin-top:14px" onclick="obNext(1)" ${OB_OBJ?'':'disabled style="opacity:.4;cursor:not-allowed"'}>Próximo →</button>`;
+      <div style="position:sticky;bottom:80px;padding-top:10px;background:linear-gradient(transparent,var(--bg) 40%)">
+        <button class="btn btn-neon" onclick="obNext(1)" ${OB_OBJ?'':'disabled style="opacity:.4;cursor:not-allowed"'}>Próximo →</button>
+      </div>\`;
   }
   else if(OB_STEP===2){
     const levels=[
