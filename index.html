@@ -510,6 +510,21 @@ function hideTutorial(){
   document.getElementById('tutorial-modal').style.display='none';
   document.body.style.overflow='';
 }
+
+let _pse = 0;
+function setPSE(n){
+  _pse = n;
+  document.getElementById('t-pse').value = n;
+  for(let i=1;i<=10;i++){
+    const btn = document.getElementById('pse-'+i);
+    if(!btn) continue;
+    const active = i<=n;
+    const col = n<=3?'var(--neon)':n<=6?'var(--orange)':'var(--red)';
+    btn.style.background = active ? col+'33' : 'var(--bg3)';
+    btn.style.borderColor = active ? col : 'var(--bd)';
+    btn.style.color = active ? col : 'var(--tx3)';
+  }
+}
 function togglePass(id, btn){
   const el = document.getElementById(id);
   if(el.type === 'password'){ el.type='text'; btn.textContent='🙈'; }
@@ -635,7 +650,8 @@ async function saveWorkout(t){
   const {data} = await db.from('workouts').insert({
     user_id:CU.id, data:t.data, dist:t.dist, tempo:t.tempo,
     pace:t.pace, fcmed:t.fcmed||null, fcmax:t.fcmax||null,
-    cad:t.cad||null, splits:t.splits||null
+    cad:t.cad||null, splits:t.splits||null,
+    elev:t.elev||null, pse:t.pse||null
   }).select().single();
   if(data){ t.id=data.id; t.created_at=data.created_at; HIST.push({...t, paceSec:ps(t.pace)}); }
 }
@@ -1326,6 +1342,15 @@ function renderTreino(){
       <div class="field"><label>Cadência (spm)</label><input type="number" id="t-cad" placeholder="opcional"></div>
     </div>
     <div style="margin-top:10px" class="field"><label>Splits por km</label><input type="text" id="t-splits" placeholder="6:20, 6:15, 6:08..."></div>
+    <div style="margin-top:10px" class="field"><label>Ganho de elevação (m) — opcional</label><input type="number" id="t-elev" placeholder="ex: 45"></div>
+    <div style="margin-top:10px" class="field">
+      <label>PSE — Percepção de esforço (1–10)</label>
+      <div style="display:flex;gap:6px;margin-top:6px" id="pse-btns">
+        ${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" onclick="setPSE(${n})" id="pse-${n}" style="flex:1;padding:6px 2px;border:1px solid var(--bd);border-radius:6px;background:var(--bg3);color:var(--tx2);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s">${n}</button>`).join('')}
+      </div>
+      <div style="font-size:10px;color:var(--tx3);margin-top:4px">1=muito fácil · 5=moderado · 8=difícil · 10=máximo</div>
+      <input type="hidden" id="t-pse" value="0">
+    </div>
   </div>
   <button class="btn btn-neon" onclick="addTreino()">Salvar treino ✓</button>
   <div id="workout-history"></div>`;
@@ -1386,7 +1411,9 @@ async function addTreino(){
   const cad=parseInt(document.getElementById('t-cad')?.value)||0;
   const raw=document.getElementById('t-splits')?.value||'';
   const splits=raw?raw.split(',').map(s=>s.trim()).filter(Boolean):[];
-  const t={data:new Date().toLocaleDateString('pt-BR'),ts:Date.now(),dist,tempo,pace,fcmed,fcmax,cad,splits,paceSec:ps(pace)};
+  const elev=parseInt(document.getElementById('t-elev')?.value)||0;
+  const pse=parseInt(document.getElementById('t-pse')?.value)||0;
+  const t={data:new Date().toLocaleDateString('pt-BR'),ts:Date.now(),dist,tempo,pace,fcmed,fcmax,cad,splits,elev,pse,paceSec:ps(pace)};
   await saveWorkout(t);
   // Clear
   ['t-dist','t-tempo','t-pace','t-fcmed','t-fcmax','t-cad','t-splits'].forEach(id=>{const el=document.getElementById(id);if(el){el.value='';el.classList.remove('ok');}});
@@ -1663,165 +1690,172 @@ function computeHybridAnalysis(workouts, z, obj, basePace){
 
 
 function buildHumanAnalysis(last, basePace, evoSt, evoMag, obj, n, h){
-  const dist = last.dist;
-  const tempo = last.tempo;
-  const pace = last.pace;
-  const paceSec = last.paceSec;
+  // ═══════════════════════════════════════════════
+  // STRICT DATA-ONLY ANALYSIS — 4 PILLARS
+  // Only analyze data that exists. Never invent.
+  // ═══════════════════════════════════════════════
+
+  const dist = last.dist || 0;
+  const tempo = last.tempo || '';
+  const pace = last.pace || '—';
+  const paceSec = last.paceSec || 0;
   const fcmed = last.fcmed || 0;
   const fcmax = last.fcmax || 0;
   const cad = last.cad || 0;
+  const elev = last.elev || 0;
+  const pse = last.pse || 0;
+  const splits = last.splits || [];
+  const totalSecs = t2s(tempo);
 
-  // Classify workout zone based on VAM zones (coherent with hybrid model)
+  // Zone classification
   const zones = USER_GOAL?.vam_pace ? calcZonesFromTest(USER_GOAL.test_time, USER_GOAL.test_fcmax) : null;
   let workoutZone = 'z1', workoutZoneLabel = 'Z1 — Base aeróbica', workoutZoneColor = 'var(--neon)';
   if(zones && paceSec > 0){
-    if(paceSec <= (zones.i?.min || 0) * 1.05){
-      workoutZone = 'z3'; workoutZoneLabel = 'Z3 — Alta intensidade'; workoutZoneColor = 'var(--red)';
-    } else if(paceSec <= (zones.t?.max || 0) * 1.05){
-      workoutZone = 'z2'; workoutZoneLabel = 'Z2 — Limiar'; workoutZoneColor = 'var(--orange)';
-    }
-  } else {
-    // Fallback: relative to basePace
-    if(paceSec < basePace * 0.97) { workoutZone='z3'; workoutZoneLabel='Z3 — Alta intensidade'; workoutZoneColor='var(--red)'; }
-    else if(paceSec < basePace * 1.10) { workoutZone='z2'; workoutZoneLabel='Z2 — Limiar'; workoutZoneColor='var(--orange)'; }
+    if(paceSec <= (zones.i?.min || 0) * 1.05){ workoutZone='z3'; workoutZoneLabel='Z3 — Alta intensidade'; workoutZoneColor='var(--red)'; }
+    else if(paceSec <= (zones.t?.max || 0) * 1.05){ workoutZone='z2'; workoutZoneLabel='Z2 — Limiar'; workoutZoneColor='var(--orange)'; }
   }
 
-  // Effort description — coherent with zone
-  let esforcoLabel, esforcoDesc, esforcoEmoji;
-  if(workoutZone === 'z3'){
-    esforcoLabel = 'Treino de alta intensidade (Z3)';
-    esforcoDesc = 'Esforço elevado — difícil manter conversa. Eleva VO2max e capacidade anaeróbica.';
-    esforcoEmoji = '🔴';
-  } else if(workoutZone === 'z2'){
-    esforcoLabel = 'Treino de limiar (Z2)';
-    esforcoDesc = 'Esforço moderado-alto — fala frases curtas. Desenvolve limiar láctico e pace de prova.';
-    esforcoEmoji = '🟡';
-  } else {
-    esforcoLabel = 'Treino de base aeróbica (Z1)';
-    esforcoDesc = 'Esforço leve — conversa normal. Constrói a base aeróbica fundamental.';
-    esforcoEmoji = '🟢';
+  const esforcoEmoji = workoutZone==='z3'?'🔴':workoutZone==='z2'?'🟡':'🟢';
+  const esforcoLabel = workoutZone==='z3'?'Alta intensidade (Z3)':workoutZone==='z2'?'Limiar (Z2)':'Base aeróbica (Z1)';
+  const esforcoDesc = workoutZone==='z3'?'Difícil manter conversa. VO2max — eleva teto aeróbico.':workoutZone==='z2'?'Fala frases curtas. Desenvolve limiar láctico.':'Conversa normal. Constrói base aeróbica fundamental.';
+
+  // ── PILLAR 1: CARGA EXTERNA ────────────────────
+  const pilar1 = [];
+
+  // Pace analysis
+  if(paceSec > 0){
+    const paceDesc = paceSec > 540 ? 'Trote leve — base aeróbica Z1' :
+                     paceSec > 450 ? 'Corrida confortável — Z1/Z2' :
+                     paceSec > 390 ? 'Ritmo moderado — Z2' :
+                     paceSec > 330 ? 'Ritmo forte — Z2/Z3' : 'Ritmo alto — Z3';
+    pilar1.push({ ok: true, titulo: `Pace: ${pace}/km`, detalhe: paceDesc, dado: true });
   }
 
-  // What went well — based on ACTUAL data, no hallucinations
-  const pontosBons = [];
-
-  // Always: showed up
-  pontosBons.push({
-    titulo: 'Treino concluído 👏',
-    texto: `${dist}km em ${tempo||pace+'/km'} — dados registrados.`,
-    dica: 'Consistência é o fator mais determinante de performance. Cada treino conta.'
-  });
-
-  // Zone coherence
-  if(workoutZone === 'z1'){
-    pontosBons.push({
-      titulo: 'Intensidade correta para Z1 ✅',
-      texto: `Pace de ${pace}/km está na zona de base aeróbica (Z1) para o seu perfil.`,
-      dica: 'Modelo híbrido: 70–80% dos treinos devem ser Z1. Este treino contribui para essa distribuição ideal.'
-    });
-  } else if(workoutZone === 'z3'){
-    pontosBons.push({
-      titulo: 'Treino Z3 registrado ⚡',
-      texto: `Pace de ${pace}/km é alta intensidade para o seu perfil (Z3 — VO2max).`,
-      dica: 'Modelo híbrido: Z3 deve representar 5–10% do volume total. Certifique-se de seguir com Z1 nos próximos dias.'
-    });
+  // Cadence analysis (only if data exists)
+  if(cad > 0){
+    const cadOk = cad >= 160 && cad <= 190;
+    const cadDesc = cad < 150 ? `⚠️ Abaixo de 150 spm — passos muito longos, maior impacto articular. Meta: aumentar 5 spm/semana.` :
+                    cad < 160 ? `⚠️ ${cad} spm — abaixo do ideal. Passos longos aumentam impacto. Meta progressiva: 170–180 spm.` :
+                    cad <= 175 ? `✅ ${cad} spm — dentro da faixa eficiente (160–175). Corrida fluida.` :
+                    cad <= 185 ? `✅ ${cad} spm — faixa ideal (175–185). Excelente eficiência.` :
+                    `ℹ️ ${cad} spm — acima de 185. Normal em ritmos mais fortes.`;
+    pilar1.push({ ok: cadOk, titulo: `Cadência: ${cad} spm`, detalhe: cadDesc, dado: true });
   }
 
-  // FC data if available
-  if(fcmed > 0){
-    const fcZone = fcmax > 0 ? Math.round(fcmed/fcmax*100) : 0;
-    const fcDesc = fcZone > 87 ? 'Z3 — alta intensidade' : fcZone > 75 ? 'Z2 — limiar' : 'Z1 — base aeróbica';
-    pontosBons.push({
-      titulo: `FC média: ${fcmed} bpm`,
-      texto: `${fcZone > 0 ? fcZone+'% da FCmax — '+fcDesc : 'Frequência cardíaca registrada.'}`,
-      dica: fcZone > 87 ? 'Confirma Z3. Recuperação Z1 nas próximas 24–48h é essencial.' :
-            fcZone > 75 ? 'Confirma Z2. Um dia leve Z1 após este treino é recomendado.' :
-            'Confirma Z1. Boa eficiência aeróbica — continue assim.'
-    });
+  // Elevation (only if data exists)
+  if(elev > 0){
+    const elevDesc = elev < 20 ? `${elev}m — percurso praticamente plano. Impacto mínimo no esforço.` :
+                     elev < 60 ? `${elev}m — elevação leve. Eleva FC em ~3–5 bpm em relação ao plano.` :
+                     elev < 150 ? `${elev}m — elevação moderada. Esforço equivale a um pace ~15–20 seg mais rápido no plano.` :
+                     `${elev}m — elevação significativa. O pace não reflete o esforço real — compare sempre com FC.`;
+    pilar1.push({ ok: true, titulo: `Elevação: ${elev}m`, detalhe: elevDesc, dado: true });
   }
 
-  // Distance
-  if(dist >= 8){
-    pontosBons.push({
-      titulo: `Volume sólido — ${dist}km`,
-      texto: 'Distância acima de 8km contribui significativamente para a base aeróbica.',
-      dica: 'Modelo híbrido: volume total semanal em Z1 é o maior preditor de melhoria de performance a longo prazo.'
-    });
+  // ── PILLAR 2: CARGA INTERNA ────────────────────
+  const pilar2 = [];
+
+  if(fcmed > 0 && fcmax > 0){
+    // FC zones based on FCmax
+    const fcPct = Math.round(fcmed/fcmax*100);
+    const fcZone = fcPct > 87 ? 'Z3 (>87% FCmax)' : fcPct > 77 ? 'Z2 (77–87%)' : 'Z1 (<77%)';
+    const fcDesc = fcPct > 90 ? `${fcmed}/${fcmax} bpm (${fcPct}%) — Z3. Esforço muito elevado. Recuperação Z1 nas próximas 24–48h.` :
+                   fcPct > 83 ? `${fcmed}/${fcmax} bpm (${fcPct}%) — Z2/Z3. Esforço significativo. Dia Z1 amanhã.` :
+                   fcPct > 75 ? `${fcmed}/${fcmax} bpm (${fcPct}%) — Z2. Esforço moderado-alto. Normal para treino de qualidade.` :
+                   `${fcmed}/${fcmax} bpm (${fcPct}%) — Z1. Esforço controlado. Boa eficiência aeróbica.`;
+    pilar2.push({ titulo: 'FC média/máx', detalhe: fcDesc, dado: true });
+  } else if(fcmed > 0){
+    pilar2.push({ titulo: `FC média: ${fcmed} bpm`, detalhe: 'FC máxima não registrada — impossível calcular % de esforço com precisão.', dado: true });
   }
 
-  // Evolution
-  if(evoSt === 'evolucao' && Math.abs(evoMag) > 0){
-    pontosBons.push({
-      titulo: `Melhora de ritmo detectada ↑`,
-      texto: `Pace médio melhorou ${sp(Math.abs(evoMag))}/km em relação aos treinos anteriores.`,
-      dica: 'Sinal de adaptação positiva. Mantenha a distribuição Z1/Z2/Z3 e o ritmo de progressão.'
-    });
-  }
-
-  // What to improve — only real issues from data
-  const melhorar = [];
-
-  // Check if too much Z3 recently
-  const zones3 = h.slice(-3).filter(w => {
-    if(!zones || !w.paceSec) return false;
-    return w.paceSec <= (zones.i?.min || 0) * 1.05;
-  }).length;
-  if(zones3 >= 2){
-    melhorar.push({
-      titulo: 'Distribuição Z3 acima do ideal ⚠️',
-      problema: `${zones3} dos últimos 3 treinos foram Z3 (alta intensidade). O modelo híbrido recomenda máximo 10% do volume em Z3.`,
-      solucao: 'Insira 2–3 treinos Z1 antes do próximo treino intenso. Supercompensação acontece no descanso.',
-      icon: '😴'
-    });
-  }
-
-  // Cadence if available and problematic
-  if(cad > 0 && cad < 160){
-    melhorar.push({
-      titulo: `Frequência de passada baixa: ${cad} spm`,
-      problema: `Menos de 160 passos/min aumenta o impacto em cada passada e o risco de lesão.`,
-      solucao: 'Pense em "passos rápidos e leves". Aumente 5 spm por semana. Meta: 170–180 spm.',
-      icon: '👣'
-    });
-  }
-
-  // Splits if wildly inconsistent
-  if(last.splits && last.splits.length > 2){
-    const sv = last.splits.map(ps);
-    const maxS = Math.max(...sv), minS = Math.min(...sv);
-    if(maxS - minS > 90){
-      melhorar.push({
-        titulo: 'Ritmo irregular ao longo do treino',
-        problema: `Variação de ${sp(minS)}/km a ${sp(maxS)}/km — diferença de ${sp(maxS-minS)}.`,
-        solucao: 'Saia mais devagar do que parece necessário. Nos últimos km, se ainda tiver energia, acelere.',
-        icon: '🎯'
-      });
+  // Cardiac drift (pace drop vs FC) — from splits
+  let cardiacDrift = null;
+  if(splits.length >= 3 && fcmax > 0 && fcmed > 0){
+    const svPace = splits.map(ps);
+    const firstPace = svPace[0];
+    const lastPace = svPace[svPace.length-1];
+    const driftSec = lastPace - firstPace;
+    if(Math.abs(driftSec) > 15){
+      if(driftSec > 0){
+        cardiacDrift = {
+          detected: true,
+          tipo: 'fadiga progressiva',
+          desc: `Ritmo caiu ${sp(driftSec)}/km do 1º para o último km (${splits[0]} → ${splits[splits.length-1]}). ${fcmax >= 170 ? `FC chegou a ${fcmax} bpm no final — drift cardíaco detectado.` : 'Queda de ritmo progressiva.'} Indica que a base aeróbica ainda precisa ser fortalecida — o coração não consegue manter o ritmo sem elevar a FC.`
+        };
+      } else {
+        cardiacDrift = {
+          detected: false,
+          tipo: 'negative split',
+          desc: `Ritmo melhorou ${sp(Math.abs(driftSec))}/km do 1º para o último km (${splits[0]} → ${splits[splits.length-1]}). Negative split — controlou o esforço e acelerou no final. Excelente gestão de energia.`
+        };
+      }
     }
   }
 
-  // If no issues found, give constructive next step
-  if(melhorar.length === 0){
-    const nextZone = workoutZone === 'z3' ? 'Z1' : workoutZone === 'z2' ? 'Z1' : 'Z2 ou Z3';
-    melhorar.push({
-      titulo: `Próximo passo: treino ${nextZone}`,
-      problema: workoutZone === 'z3' 
-        ? 'Após treino Z3, o modelo híbrido exige recuperação Z1 nas próximas 24–48h.'
-        : workoutZone === 'z2'
-        ? 'Após treino Z2, um dia Z1 ajuda na recuperação e maximiza a adaptação.'
-        : 'Continue construindo base Z1. Quando a distribuição estiver estável, insira um treino Z2.',
-      solucao: workoutZone === 'z1' && dist < 6
-        ? `Aumente gradualmente a distância — próximo treino Z1: ${Math.round((dist*1.1)*10)/10}km (regra dos 10%).`
-        : 'Veja o Plano para o treino específico recomendado pelo modelo híbrido.',
-      icon: '💡'
+  if(cardiacDrift){
+    pilar2.push({ titulo: cardiacDrift.detected?'⚠️ Drift cardíaco detectado':'✅ Negative split', detalhe: cardiacDrift.desc, dado: true, alert: cardiacDrift.detected });
+  }
+
+  // PSE analysis (only if provided)
+  if(pse > 0){
+    const pseDesc = pse <= 3 ? `PSE ${pse}/10 — muito fácil. Esforço subjetivo baixo. Confirma Z1.` :
+                    pse <= 5 ? `PSE ${pse}/10 — moderado. Compatível com Z1/Z2.` :
+                    pse <= 7 ? `PSE ${pse}/10 — difícil. Compatível com Z2/Z3.` :
+                    `PSE ${pse}/10 — muito difícil. Confirma Z3. Recuperação essencial.`;
+    // Cross-check PSE vs zone
+    const pseZone = pse<=4?'z1':pse<=6?'z2':'z3';
+    const mismatch = pseZone !== workoutZone;
+    pilar2.push({
+      titulo: `PSE (percepção de esforço): ${pse}/10`,
+      detalhe: pseDesc + (mismatch ? ` ⚠️ Divergência: pace indica ${workoutZoneLabel} mas PSE indica ${pseZone.toUpperCase()}. Possível fadiga acumulada ou calor.` : ''),
+      dado: true,
+      alert: mismatch
     });
   }
 
-  const coachMsg = getCoachMsg(obj, evoSt, basePace, dist, n);
-  return { esforcoLabel, esforcoDesc, esforcoEmoji, workoutZone, workoutZoneLabel, workoutZoneColor, pontosBons, melhorar, coachMsg };
+  // ── PILLAR 3: SPLITS ANALYSIS ─────────────────
+  const pilar3 = [];
+  if(splits.length >= 2){
+    const sv = splits.map(ps);
+    const minPace = Math.min(...sv), maxPace = Math.max(...sv);
+    const variation = maxPace - minPace;
+    const variationDesc = variation < 20 ? `Variação de ${sp(variation)}/km entre o km mais rápido (${sp(minPace)}) e mais lento (${sp(maxPace)}). Ritmo muito uniforme — excelente controle.` :
+                          variation < 45 ? `Variação de ${sp(variation)}/km (${sp(minPace)}–${sp(maxPace)}). Variação normal para corredores.` :
+                          variation < 75 ? `Variação de ${sp(variation)}/km (${sp(minPace)}–${sp(maxPace)}). Variação considerável — saída possivelmente rápida demais.` :
+                          `Variação de ${sp(variation)}/km (${sp(minPace)}–${sp(maxPace)}). Alta variação. Típico de quem começa rápido e não sustenta.`;
+    pilar3.push({ titulo: 'Análise km a km', detalhe: variationDesc, splits: splits, dado: true });
+  }
+
+  // ── PILLAR 4: CONSISTÊNCIA ────────────────────
+  const pilar4 = [];
+  if(n >= 2){
+    // Weekly volume
+    const weekDist = h.slice(-4).reduce((a,w)=>a+w.dist,0);
+    pilar4.push({ titulo: `Volume recente (4 treinos): ${Math.round(weekDist*10)/10}km`, detalhe: `Média de ${Math.round(weekDist/4*10)/10}km por treino. Aumento máximo recomendado: 10% por semana.`, dado: true });
+
+    // Trend
+    if(n >= 3 && evoSt !== 'neutro'){
+      const trendDesc = evoSt==='evolucao' ? `↑ Pace melhorou ${sp(Math.abs(evoMag))}/km em relação à média recente. Adaptação positiva em andamento.` :
+                        evoSt==='regressao' ? `↓ Pace piorou ${sp(Math.abs(evoMag))}/km. Possíveis causas: fadiga acumulada, sono insuficiente, volume excessivo.` :
+                        '→ Ritmo estável nos últimos treinos.';
+      pilar4.push({ titulo: 'Tendência de ritmo', detalhe: trendDesc, dado: true, alert: evoSt==='regressao' });
+    }
+  }
+
+  // ── COACH MESSAGE ─────────────────────────────
+  const coachMsg = getCoachMsg(obj, evoSt, basePace, dist, n, cardiacDrift, fcmed, fcmax, pse);
+
+  return {
+    esforcoLabel, esforcoDesc, esforcoEmoji,
+    workoutZone, workoutZoneLabel, workoutZoneColor,
+    pilar1, pilar2, pilar3, pilar4,
+    cardiacDrift, coachMsg,
+    // Legacy compat
+    pontosBons: [], melhorar: []
+  };
 }
 
 
-function getCoachMsg(obj, evoSt, basePace, dist, n){
+function getCoachMsg(obj, evoSt, basePace, dist, n, drift, fcmed, fcmax, pse){
   const msgs = {
     'primeiro5k': n < 2
       ? 'Primeiros passos! O objetivo agora é criar o hábito. Não se preocupe com velocidade — foque em aparecer 3x por semana. Cada treino conta.'
@@ -1840,7 +1874,9 @@ function getCoachMsg(obj, evoSt, basePace, dist, n){
   };
   let msg = msgs[obj.id] || 'Continue treinando com consistência — é o que faz a diferença no longo prazo.';
   if(evoSt === 'evolucao') msg += ' 🔥 Você está evoluindo — continue!';
-  if(evoSt === 'regressao') msg += ' Descanse bem essa semana antes de retomar.';
+  if(evoSt === 'regressao') msg += ' ⚠️ Descanse bem antes de retomar carga.';
+  if(drift && drift.detected) msg += ' O drift cardíaco indica que o treino mais eficiente agora é volume Z1 — manter pace constante sem elevar FC.';
+  if(fcmed > 0 && fcmax > 0 && Math.round(fcmed/fcmax*100) > 88) msg += ' FC elevada — priorize recuperação Z1 antes do próximo treino de qualidade.';
   return msg;
 }
 
@@ -2005,37 +2041,62 @@ function renderAnalise(){
   }
 
   // O que você fez bem
-  // O que você fez bem
-  html+=`<div class="card" style="border-color:rgba(232,255,0,.2)">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-      <span style="font-size:18px">👍</span>
-      <div style="font-size:12px;font-weight:700;color:var(--neon);text-transform:uppercase;letter-spacing:1px">O que você fez bem</div>
-    </div>`;
-  a.analysis.pontosBons.forEach((p,i)=>{
-    html+=`<div style="padding:10px 12px;border-radius:var(--r);margin-bottom:6px;background:rgba(232,255,0,.04);border:1px solid rgba(232,255,0,.1)">
-      <div style="font-size:13px;font-weight:700;color:var(--neon);margin-bottom:4px">✅ ${p.titulo}</div>
-      <div style="font-size:12px;color:var(--tx);margin-bottom:5px;line-height:1.6">${p.texto}</div>
-      <div style="font-size:11px;color:var(--tx2);line-height:1.5;padding-left:8px;border-left:2px solid rgba(232,255,0,.3)">➡️ ${p.dica}</div>
-    </div>`;
-  });
-  html+=`</div>`;
+  // ── 4 PILLARS ANALYSIS ──────────────────────────
+  const an = a.analysis;
 
-  // O que melhorar
-  html+=`<div class="card" style="border-color:rgba(255,92,0,.2)">
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:12px">
-      <span style="font-size:18px">⚠️</span>
-      <div style="font-size:12px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:1px">O que melhorar</div>
+  function renderPillarItem(item){
+    const alertColor = item.alert ? 'rgba(255,92,0,.1)' : item.ok===false ? 'rgba(255,61,90,.06)' : 'rgba(255,255,255,.03)';
+    const borderColor = item.alert ? 'rgba(255,92,0,.25)' : item.ok===false ? 'rgba(255,61,90,.2)' : 'var(--bd)';
+    return `<div style="padding:10px 12px;border-radius:var(--r);margin-bottom:6px;background:${alertColor};border:1px solid ${borderColor}">
+      <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:4px">${item.titulo}</div>
+      <div style="font-size:12px;color:var(--tx2);line-height:1.6">${item.detalhe}</div>
+      ${item.splits ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">${item.splits.map((s,i)=>{const best=ps(s)===Math.min(...item.splits.map(ps));return `<span style="padding:3px 8px;border-radius:12px;font-family:var(--mono);font-size:10px;font-weight:700;background:${best?'var(--neon-dim)':'var(--bg3)'};color:${best?'var(--neon)':'var(--tx2)'};border:1px solid ${best?'rgba(232,255,0,.3)':'var(--bd)'}">km${i+1} ${s}</span>`;}).join('')}</div>` : ''}
     </div>`;
-  a.analysis.melhorar.forEach((m,i)=>{
-    html+=`<div style="padding:10px 12px;border-radius:var(--r);margin-bottom:6px;background:rgba(255,92,0,.04);border:1px solid rgba(255,92,0,.15)">
-      <div style="font-size:13px;font-weight:700;color:var(--orange);margin-bottom:4px">⚡ ${m.titulo}</div>
-      <div style="font-size:12px;color:var(--tx2);margin-bottom:6px;line-height:1.6">${m.problema}</div>
-      <div style="background:var(--bg3);border-radius:var(--r);padding:8px 12px;font-size:12px;color:var(--tx);line-height:1.6;border-left:3px solid var(--orange)">
-        💡 <strong style="color:var(--orange)">Como fazer:</strong> ${m.solucao}
-      </div>
-    </div>`;
-  });
-  html+=`</div>`;
+  }
+
+  // Pillar 1: External Load
+  if(an.pilar1 && an.pilar1.length){
+    html+=`<div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="width:24px;height:24px;border-radius:50%;background:var(--neon-dim);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--neon)">1</span>
+        <div style="font-size:12px;font-weight:700;color:var(--neon);text-transform:uppercase;letter-spacing:.8px">Carga externa — O que você fez</div>
+      </div>`;
+    an.pilar1.forEach(item => { html += renderPillarItem(item); });
+    html+=`</div>`;
+  }
+
+  // Pillar 2: Internal Load
+  if(an.pilar2 && an.pilar2.length){
+    html+=`<div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="width:24px;height:24px;border-radius:50%;background:var(--orange-dim);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--orange)">2</span>
+        <div style="font-size:12px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.8px">Carga interna — Como seu corpo reagiu</div>
+      </div>`;
+    an.pilar2.forEach(item => { html += renderPillarItem(item); });
+    html+=`</div>`;
+  }
+
+  // Pillar 3: Splits
+  if(an.pilar3 && an.pilar3.length){
+    html+=`<div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="width:24px;height:24px;border-radius:50%;background:var(--teal-dim);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--teal)">3</span>
+        <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.8px">Ritmo por km</div>
+      </div>`;
+    an.pilar3.forEach(item => { html += renderPillarItem(item); });
+    html+=`</div>`;
+  }
+
+  // Pillar 4: Consistency
+  if(an.pilar4 && an.pilar4.length){
+    html+=`<div class="card">
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
+        <span style="width:24px;height:24px;border-radius:50%;background:var(--purple-dim);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--purple)">4</span>
+        <div style="font-size:12px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.8px">Consistência — Histórico</div>
+      </div>`;
+    an.pilar4.forEach(item => { html += renderPillarItem(item); });
+    html+=`</div>`;
+  }
 
   // Zones — Hybrid model display (Z1/Z2/Z3)
   const vamData = a.z._vam || null;
