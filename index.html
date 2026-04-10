@@ -1882,7 +1882,17 @@ function renderPlano(){
   const a=computeAnalise();const el=document.getElementById('pn-plano');
   if(!a){el.innerHTML=`<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Sem dados</div><div class="empty-sub">Configure seu objetivo e adicione treinos.</div></div>`;return;}
   const z=a.z,bp=a.basePace,tp=a.tp,obj=a.obj;
-  // Use Modelo Híbrido zone keys
+  // Hybrid model zone shortcuts used throughout detalhes
+  const z1 = z.e ? `${sp(z.e.min)}–${sp(z.e.max)}/km` : '—';
+  const z2 = z.t ? `${sp(z.t.min)}–${sp(z.t.max)}/km` : '—';
+  const z3 = z.i ? `${sp(z.i.min)}–${sp(z.i.max)}/km` : '—';
+  const z1min = z.e ? sp(z.e.min) : '—';
+  const z1max = z.e ? sp(z.e.max) : '—';
+  const z2min = z.t ? sp(z.t.min) : '—';
+  const z3min = z.i ? sp(z.i.min) : '—';
+  // Legacy aliases kept for any remaining references
+  const E = z1, T = z2, I = z3, R = z3;
+  const Epace = z1min, Tpace = z2min, Ipace = z3min;
   const suf=a.evoSt==='regressao'?' <span style="color:var(--orange);font-size:10px">(−20% carga esta semana)</span>':'';
 
   const PLANS={
