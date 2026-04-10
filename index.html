@@ -1267,8 +1267,167 @@ function computeAnalise(){
   // Human-friendly analysis
   const analysis = buildHumanAnalysis(last, basePace, evoSt, evoMag, obj, n, h);
 
-  return{last,basePace,evoSt,evoMag,z,score,gapSec,weeksETA,etaDate,progPct,raceEst,tp,obj,analysis,h};
+  // Hybrid model analysis
+  const hybrid = computeHybridAnalysis(h, z, obj, basePace);
+  return{last,basePace,evoSt,evoMag,z,score,gapSec,weeksETA,etaDate,progPct,raceEst,tp,obj,analysis,hybrid,h};
 }
+
+// ═══════════════════════════════════════════════════
+//  HYBRID TRAINING ENGINE
+//  Based on: Polarized/Pyramidal TID + Seiler + Hybrid model
+// ═══════════════════════════════════════════════════
+function classifyWorkoutZone(workout, z){
+  // Classify a workout into Z1/Z2/Z3 based on pace vs zones
+  if(!workout || !workout.paceSec || workout.paceSec === 0) return 'z1';
+  const p = workout.paceSec;
+  
+  // Use Daniels zones if available
+  if(z && z.t && z.i){
+    if(p <= z.i.min) return 'z3';           // I/R pace → Z3 (VO2max/intervals)
+    if(p <= z.t.max) return 'z2';           // T pace → Z2 (threshold)
+    return 'z1';                             // E pace → Z1 (base)
+  }
+  // Fallback: relative to basePace
+  const vam = USER_GOAL?.vam_pace || 0;
+  if(vam > 0){
+    if(p <= vam * 1.05) return 'z3';
+    if(p <= vam * 1.18) return 'z2';
+    return 'z1';
+  }
+  return 'z1';
+}
+
+function analyzeTrainingDistribution(workouts, z){
+  // Analyze last 2-3 weeks of training distribution
+  const recent = workouts.slice(-12); // max 12 workouts
+  if(!recent.length) return { z1:0, z2:0, z3:0, total:0, pct:{z1:0,z2:0,z3:0} };
+  
+  let z1=0, z2=0, z3=0;
+  recent.forEach(w => {
+    const zone = classifyWorkoutZone(w, z);
+    if(zone === 'z3') z3++;
+    else if(zone === 'z2') z2++;
+    else z1++;
+  });
+  
+  const total = z1+z2+z3;
+  return {
+    z1, z2, z3, total,
+    pct: {
+      z1: Math.round(z1/total*100),
+      z2: Math.round(z2/total*100),
+      z3: Math.round(z3/total*100)
+    }
+  };
+}
+
+function detectFatigue(workouts, basePace){
+  // Detect fatigue from recent training load
+  if(workouts.length < 2) return { level:'ok', msg:'' };
+  
+  const last3 = workouts.slice(-3);
+  const hardCount = last3.filter(w => classifyWorkoutZone(w) !== 'z1').length;
+  const paceRegression = workouts.slice(-3).reduce((acc,w,i,arr) => {
+    if(i===0) return 0;
+    return acc + (w.paceSec - arr[i-1].paceSec);
+  }, 0);
+  
+  if(hardCount >= 2 && paceRegression > 30) return {
+    level: 'high',
+    msg: 'Dois ou mais treinos intensos recentes com queda de ritmo — sinais de fadiga acumulada. Priorize Z1 e descanso.'
+  };
+  if(hardCount >= 2) return {
+    level: 'moderate',
+    msg: 'Carga intensa acumulada. Próximo treino deve ser leve (Z1) para permitir supercompensação.'
+  };
+  return { level:'ok', msg:'' };
+}
+
+function getNextWorkoutRecommendation(workouts, z, obj, distribution, fatigue){
+  // Dynamic next workout based on hybrid model
+  // Hybrid principle: 80% Z1, 10-20% Z2/threshold, 5-10% Z3/VO2
+  
+  if(fatigue.level === 'high') return { type:'recovery', priority:'RECUPERAÇÃO OBRIGATÓRIA' };
+  
+  // What did the last workout look like?
+  const last = workouts[workouts.length - 1];
+  const lastZone = last ? classifyWorkoutZone(last, z) : 'z1';
+  
+  // What's the distribution imbalance?
+  const pct = distribution.pct;
+  
+  // If too much intensity recently → easy
+  if(pct.z3 > 20 || pct.z2 > 30) return { type:'easy', priority:'TREINO FÁCIL (Z1)' };
+  
+  // Hybrid model logic
+  const n = workouts.length;
+  
+  // Check recent pattern (last 3)
+  const recent3 = workouts.slice(-3).map(w => classifyWorkoutZone(w, z));
+  const hadInterval = recent3.includes('z3');
+  const hadThreshold = recent3.includes('z2');
+  const hadLong = workouts.slice(-7).some(w => w.dist >= 10);
+  
+  // Decision tree (Seiler hybrid)
+  if(lastZone === 'z3') return { type:'easy', priority:'Z1 OBRIGATÓRIO — após alta intensidade' };
+  if(lastZone === 'z2') return { type:'easy', priority:'Z1 RECOMENDADO — após limiar' };
+  
+  // Need long run?
+  if(!hadLong && n >= 3) return { type:'long', priority:'LONGÃO — mais de 7 dias sem distância longa' };
+  
+  // Need VO2max?
+  if(!hadInterval && pct.z3 < 10 && n >= 2) return { type:'interval', priority:'VO2MAX — déficit de alta intensidade' };
+  
+  // Need threshold?
+  if(!hadThreshold && pct.z2 < 15 && n >= 2) return { type:'threshold', priority:'LIMIAR — desenvolver pace de prova' };
+  
+  // Default: easy base
+  return { type:'easy', priority:'Z1 BASE — construção aeróbica' };
+}
+
+function computeHybridAnalysis(workouts, z, obj, basePace){
+  const distribution = analyzeTrainingDistribution(workouts, z);
+  const fatigue = detectFatigue(workouts, basePace);
+  const nextRec = getNextWorkoutRecommendation(workouts, z, obj, distribution, fatigue);
+  
+  // Training load estimate (arbitrary units)
+  const recentLoad = workouts.slice(-4).reduce((acc, w) => {
+    const zone = classifyWorkoutZone(w, z);
+    const intensity = zone==='z3' ? 3 : zone==='z2' ? 2 : 1;
+    return acc + (w.dist * intensity);
+  }, 0);
+  
+  // Model health score
+  const pct = distribution.pct;
+  let modelScore = 100;
+  // Penalize if not enough Z1
+  if(pct.z1 < 60) modelScore -= 20;
+  if(pct.z1 < 40) modelScore -= 20;
+  // Penalize too much Z3
+  if(pct.z3 > 25) modelScore -= 15;
+  // Penalize if no long runs
+  const hasLong = workouts.slice(-7).some(w => w.dist >= 8);
+  if(!hasLong && workouts.length > 3) modelScore -= 10;
+  modelScore = Math.max(20, modelScore);
+  
+  // Phase detection (what phase is the athlete in?)
+  let phase = 'base';
+  if(workouts.length >= 6){
+    if(pct.z3 >= 15) phase = 'peak';
+    else if(pct.z2 >= 15) phase = 'threshold';
+    else phase = 'base';
+  }
+  
+  const phaseLabel = phase==='peak' ? '🔴 Fase de Pico' : phase==='threshold' ? '🟡 Fase de Limiar' : '🟢 Fase de Base';
+  const phaseDesc = phase==='peak' 
+    ? 'Volume intenso elevado. Atenção à recuperação e sinais de fadiga.'
+    : phase==='threshold' 
+    ? 'Construindo limiar anaeróbico. Ideal para desenvolvimento de pace de prova.'
+    : 'Construção aeróbica. 70-80% Z1 é exatamente o que deve ser.';
+  
+  return { distribution, fatigue, nextRec, recentLoad, modelScore, phase, phaseLabel, phaseDesc };
+}
+
 
 function buildHumanAnalysis(last, basePace, evoSt, evoMag, obj, n, h){
   const pace = last.pace;
@@ -1498,6 +1657,87 @@ function renderAnalise(){
     <div style="font-size:14px;line-height:1.8;color:var(--tx)">${a.analysis.coachMsg}</div>
   </div>`;
 
+  // ── HYBRID MODEL DASHBOARD ──────────────────────────
+  if(a.hybrid && a.h.length >= 1){
+    const hy = a.hybrid;
+    const dist = hy.distribution;
+    const barW = (n) => Math.max(4, n);
+    
+    // Phase card
+    html+=`<div class="card" style="border-color:${hy.phase==='peak'?'rgba(255,61,90,.2)':hy.phase==='threshold'?'rgba(255,92,0,.2)':'rgba(232,255,0,.15)'}">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+        <div>
+          <div style="font-size:13px;font-weight:700">${hy.phaseLabel}</div>
+          <div style="font-size:11px;color:var(--tx2);margin-top:2px">${hy.phaseDesc}</div>
+        </div>
+        <div style="text-align:right">
+          <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Equilíbrio</div>
+          <div style="font-size:11px;font-weight:700;color:${hy.modelScore>=80?'var(--neon)':hy.modelScore>=60?'var(--orange)':'var(--red)'}">${hy.modelScore}/100</div>
+        </div>
+      </div>
+      
+      <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Distribuição de intensidade (últimos ${dist.total} treinos)</div>
+      
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <div style="width:28px;font-size:10px;color:var(--neon);font-weight:700;text-align:right">Z1</div>
+        <div style="flex:1;background:var(--bg3);border-radius:4px;height:18px;overflow:hidden">
+          <div style="width:${barW(dist.pct.z1)}%;height:100%;background:var(--neon);border-radius:4px;display:flex;align-items:center;padding-left:6px">
+            <span style="font-size:10px;font-weight:700;color:#000">${dist.pct.z1}%</span>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--tx2);width:60px">Fácil (${dist.z1}x)</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
+        <div style="width:28px;font-size:10px;color:var(--orange);font-weight:700;text-align:right">Z2</div>
+        <div style="flex:1;background:var(--bg3);border-radius:4px;height:18px;overflow:hidden">
+          <div style="width:${barW(dist.pct.z2)}%;height:100%;background:var(--orange);border-radius:4px;display:flex;align-items:center;padding-left:6px">
+            <span style="font-size:10px;font-weight:700;color:#fff">${dist.pct.z2 > 5 ? dist.pct.z2+'%' : ''}</span>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--tx2);width:60px">Limiar (${dist.z2}x)</div>
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
+        <div style="width:28px;font-size:10px;color:var(--red);font-weight:700;text-align:right">Z3</div>
+        <div style="flex:1;background:var(--bg3);border-radius:4px;height:18px;overflow:hidden">
+          <div style="width:${barW(dist.pct.z3)}%;height:100%;background:var(--red);border-radius:4px;display:flex;align-items:center;padding-left:6px">
+            <span style="font-size:10px;font-weight:700;color:#fff">${dist.pct.z3 > 5 ? dist.pct.z3+'%' : ''}</span>
+          </div>
+        </div>
+        <div style="font-size:10px;color:var(--tx2);width:60px">Intenso (${dist.z3}x)</div>
+      </div>
+      
+      <div style="font-size:11px;color:var(--tx2);padding:8px 10px;background:var(--bg3);border-radius:var(--r)">
+        🎯 <strong style="color:var(--tx)">Meta ideal:</strong> ~80% Z1 · ~10-15% Z2 · ~5-10% Z3 
+        <span style="color:var(--tx3)"> (Seiler / Modelo Híbrido)</span>
+      </div>
+    </div>`;
+
+    // Fatigue alert
+    if(hy.fatigue.level !== 'ok'){
+      html+=`<div class="alert ${hy.fatigue.level==='high'?'alert-red':'alert-orange'}">${hy.fatigue.level==='high'?'⚠️':'😴'} ${hy.fatigue.msg}</div>`;
+    }
+    
+    // Next workout recommendation from hybrid engine
+    const nrec = hy.nextRec;
+    const nrecColor = nrec.type==='recovery'?'var(--purple)':nrec.type==='interval'?'var(--red)':nrec.type==='threshold'?'var(--orange)':nrec.type==='long'?'var(--teal)':'var(--neon)';
+    html+=`<div class="card" style="border-color:${nrecColor}33;background:linear-gradient(135deg,var(--bg2),${nrecColor}08)">
+      <div class="clabel">🤖 Recomendação do modelo híbrido</div>
+      <div style="display:flex;align-items:center;gap:10px">
+        <span style="font-size:24px">${nrec.type==='recovery'?'😴':nrec.type==='interval'?'⚡':nrec.type==='threshold'?'🔥':nrec.type==='long'?'🏃':'🟢'}</span>
+        <div>
+          <div style="font-size:13px;font-weight:700;color:${nrecColor}">${nrec.priority}</div>
+          <div style="font-size:12px;color:var(--tx2);margin-top:2px">${
+            nrec.type==='recovery' ? 'Descanso ou corrida muito leve. Supercompensação acontece no descanso.' :
+            nrec.type==='interval' ? 'Intervalados curtos (400m) ou longos (1000m) no ritmo I. VO2max é seu teto aeróbico.' :
+            nrec.type==='threshold' ? 'Tempo Run ou corrida de ritmo. 20 min no limiar = maior ganho de pace.' :
+            nrec.type==='long' ? 'Longão em Z1. Base aeróbica é a fundação de toda melhoria de performance.' :
+            'Corrida leve Z1. 70-80% do volume aqui é o que os melhores corredores do mundo fazem.'
+          }</div>
+        </div>
+      </div>
+    </div>`;
+  }
+
   // O que você fez bem
   html+=`<div class="card">
     <div class="clabel" style="color:var(--neon)">👍 O que você fez bem</div>`;
@@ -1723,7 +1963,24 @@ function renderPlano(){
   const badgeMap={easy:'badge-neon',mod:'badge-orange',hard:'badge-red',long:'badge-teal'};
 
   // Next workout steps
-  const nxt=buildNextWorkoutSteps(obj,z,a.basePace,tp,a.evoSt);
+  // Use hybrid model recommendation to determine next workout type
+  const hybrid = a.hybrid;
+  const recType = hybrid?.nextRec?.type || 'easy';
+  const recPriority = hybrid?.nextRec?.priority || '';
+  
+  // Map hybrid recommendation to workout type
+  let nxt;
+  if(recType === 'recovery'){
+    nxt = buildNextWorkoutSteps({id:'_recovery'}, z, a.basePace, tp, 'regressao');
+  } else if(recType === 'interval'){
+    nxt = buildNextWorkoutSteps({id:'5k_sub25'}, z, a.basePace, tp, a.evoSt);
+  } else if(recType === 'threshold'){
+    nxt = buildNextWorkoutSteps({id:'10k_sub50'}, z, a.basePace, tp, a.evoSt);
+  } else if(recType === 'long'){
+    nxt = buildNextWorkoutSteps({id:'_long'}, z, a.basePace, tp, a.evoSt);
+  } else {
+    nxt = buildNextWorkoutSteps(obj, z, a.basePace, tp, a.evoSt);
+  }
 
   let html=`<div style="padding-top:8px;margin-bottom:14px">
     <div style="font-size:18px;font-weight:700;letter-spacing:-.3px">📅 Plano Semanal</div>
@@ -1731,11 +1988,13 @@ function renderPlano(){
   </div>`;
 
   // Next workout
-  html+=`<div class="card card-accent" style="margin-bottom:14px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div class="clabel" style="margin:0">Próximo treino — formato relógio</div>
-      <span class="badge badge-neon">${nxt.tipo}</span>
+  const nxtColor = recType==='interval'?'card-orange':recType==='threshold'?'card-orange':recType==='recovery'?'card':'card-accent';
+  html+=`<div class="${nxtColor}" style="margin-bottom:14px;border-radius:var(--rl)">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px">
+      <div class="clabel" style="margin:0">Próximo treino recomendado</div>
+      <span class="badge ${recType==='recovery'?'badge-purple':recType==='interval'?'badge-red':recType==='long'?'badge-teal':recType==='threshold'?'badge-orange':'badge-neon'}">${nxt.tipo.split('—')[0].trim()}</span>
     </div>
+    ${recPriority ? `<div style="font-size:10px;font-weight:700;letter-spacing:.5px;text-transform:uppercase;color:var(--tx3);margin-bottom:6px">${recPriority}</div>` : ''}
     <div style="font-size:11px;color:var(--tx2);margin-bottom:10px">${nxt.obj}</div>`;
   nxt.steps.forEach(s=>{
     html+=`<div class="step-row">
@@ -1783,8 +2042,6 @@ function renderPlano(){
 }
 
 function buildNextWorkoutSteps(obj, z, bp, tp, evoSt){
-  // Daniels-based workout types
-  // E = Easy, T = Threshold, I = Interval, R = Repetition, L = Long
   const E = z.e ? `${sp(z.e.min)}–${sp(z.e.max)}/km` : '—';
   const M = z.m ? `${sp(z.m.min)}–${sp(z.m.max)}/km` : E;
   const T = z.t ? `${sp(z.t.min)}–${sp(z.t.max)}/km` : '—';
@@ -1854,6 +2111,17 @@ function buildNextWorkoutSteps(obj, z, bp, tp, evoSt){
       {f:'5 × 1000m — Ritmo I',d:'~25 min',p:I,t:'F',desc:`Ritmo I: ${I}. Recuperação: 2–3 min trote E entre cada. Total: 5km em ritmo I. Daniels: "não deve ser sprint — mas muito difícil de manter".`},
       {f:'Trote E',d:'10 min',p:E,t:'M',desc:'Recuperação ativa — não pare.'},
       {f:'Desaquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Caminhada + alongamento'}
+    ]
+  };
+
+  // Long run case
+  if(obj.id === '_long') return {
+    tipo:'Treino L — Longão Z1',
+    obj:'Base aeróbica. O treino mais importante para qualquer objetivo de corrida.',
+    steps:[
+      {f:'Aquecimento',d:'5 min',p:eMin+'/km',t:'L',desc:'Trote suave para elevar FC gradualmente'},
+      {f:'Longão Z1',d:'50–70 min',p:E,t:'L',desc:`Ritmo E (${E}) o tempo todo. Conversa normal. Hidrate a cada 20 min. Daniels: nunca termine exausto.`},
+      {f:'Desaquecimento',d:'5 min',p:'caminhar',t:'L',desc:'Caminhada + alongamento completo'}
     ]
   };
 
