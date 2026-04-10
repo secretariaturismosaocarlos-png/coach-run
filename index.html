@@ -302,14 +302,25 @@ select option{background:var(--bg3)}
         <button class="auth-tab" onclick="authSwitchTab('register')">Criar conta</button>
       </div>
       <div id="auth-login">
-        <div class="field" style="margin-bottom:10px"><label>E-mail</label><input type="email" id="l-email" placeholder="seu@email.com"></div>
-        <div class="field" style="margin-bottom:16px"><label>Senha</label><input type="password" id="l-pass" placeholder="••••••••"></div>
+        <div class="field" style="margin-bottom:10px"><label>E-mail</label><input type="email" id="l-email" placeholder="seu@email.com" onkeydown="if(event.key==='Enter')document.getElementById('l-pass').focus()"></div>
+        <div class="field" style="margin-bottom:6px"><label>Senha</label>
+          <div style="position:relative">
+            <input type="password" id="l-pass" placeholder="••••••••" style="padding-right:44px" onkeydown="if(event.key==='Enter')doLogin()">
+            <button onclick="togglePass('l-pass',this)" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--tx3);font-size:16px">👁</button>
+          </div>
+        </div>
+        <div style="text-align:right;margin-bottom:14px"><button onclick="doForgotPass()" style="background:none;border:none;color:var(--tx2);font-size:12px;cursor:pointer;font-family:var(--sans)">Esqueci minha senha</button></div>
         <button class="btn btn-neon" onclick="doLogin()">Entrar →</button>
       </div>
       <div id="auth-register" style="display:none">
         <div class="field" style="margin-bottom:10px"><label>Nome</label><input type="text" id="r-name" placeholder="Seu nome"></div>
         <div class="field" style="margin-bottom:10px"><label>E-mail</label><input type="email" id="r-email" placeholder="seu@email.com"></div>
-        <div class="field" style="margin-bottom:16px"><label>Senha (mín. 6 caracteres)</label><input type="password" id="r-pass" placeholder="••••••••"></div>
+        <div class="field" style="margin-bottom:16px"><label>Senha (mín. 6 caracteres)</label>
+          <div style="position:relative">
+            <input type="password" id="r-pass" placeholder="••••••••" style="padding-right:44px" onkeydown="if(event.key==='Enter')doRegister()">
+            <button onclick="togglePass('r-pass',this)" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--tx3);font-size:16px">👁</button>
+          </div>
+        </div>
         <button class="btn btn-orange" onclick="doRegister()">Solicitar acesso →</button>
       </div>
       <div class="auth-msg" id="auth-msg"></div>
@@ -335,9 +346,61 @@ select option{background:var(--bg3)}
         <div class="logo-icon">🏃</div>
         <div><div class="logo-text">Coach Run</div><div class="logo-sub">Treinador inteligente</div></div>
       </div>
-      <div class="user-badge" onclick="doLogout()">
-        <div class="user-avatar" id="user-avatar">?</div>
-        <div class="user-name" id="user-name-display">...</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button onclick="showTutorial()" style="background:var(--bg3);border:1px solid var(--bd);border-radius:20px;padding:5px 12px;color:var(--tx2);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--sans)">❓ Como usar</button>
+        <div class="user-badge" onclick="doLogout()">
+          <div class="user-avatar" id="user-avatar">?</div>
+          <div class="user-name" id="user-name-display">...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- TUTORIAL MODAL -->
+    <div id="tutorial-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2000;overflow-y:auto;padding:20px">
+      <div style="max-width:600px;margin:0 auto;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rx);padding:24px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
+          <div style="font-size:20px;font-weight:700">📖 Como usar o Coach Run</div>
+          <button onclick="hideTutorial()" style="background:var(--bg3);border:1px solid var(--bd);border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;color:var(--tx2)">✕</button>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:14px">
+          <div style="background:var(--bg3);border-radius:var(--rl);padding:14px;border-left:3px solid var(--neon)">
+            <div style="font-size:13px;font-weight:700;color:var(--neon);margin-bottom:6px">1️⃣ Faça o teste de 3km</div>
+            <div style="font-size:12px;color:var(--tx2);line-height:1.7">O <strong style="color:var(--tx)">primeiro passo</strong> é fazer o teste de 3km no seu esforço máximo sustentável. Esse teste define suas zonas Z1/Z2/Z3 — sem ele, os treinos não são precisos.<br><br>No app: clique em <strong style="color:var(--tx)">Início → Alterar objetivo → Passo 4</strong> e insira seu resultado.</div>
+          </div>
+
+          <div style="background:var(--bg3);border-radius:var(--rl);padding:14px;border-left:3px solid var(--orange)">
+            <div style="font-size:13px;font-weight:700;color:var(--orange);margin-bottom:6px">2️⃣ Configure seu objetivo</div>
+            <div style="font-size:12px;color:var(--tx2);line-height:1.7">Na tela inicial, clique em <strong style="color:var(--tx)">Alterar</strong> e passe pelos 4 passos: objetivo, nível, dias por semana e resultado do teste de 3km.<br><br>Exemplos: "5km abaixo de 30 min", "Completar meu primeiro 10km", "Emagrecimento".</div>
+          </div>
+
+          <div style="background:var(--bg3);border-radius:var(--rl);padding:14px;border-left:3px solid var(--teal)">
+            <div style="font-size:13px;font-weight:700;color:var(--teal);margin-bottom:6px">3️⃣ Insira seus treinos (aba ➕)</div>
+            <div style="font-size:12px;color:var(--tx2);line-height:1.7">Após cada treino, acesse a aba <strong style="color:var(--tx)">Treino (➕)</strong> e importe o arquivo GPX/TCX do relógio ou preencha manualmente distância, tempo e ritmo.<br><br>O app classifica automaticamente em Z1/Z2/Z3 e atualiza a análise e o plano.</div>
+          </div>
+
+          <div style="background:var(--bg3);border-radius:var(--rl);padding:14px;border-left:3px solid var(--purple)">
+            <div style="font-size:13px;font-weight:700;color:var(--purple);margin-bottom:6px">4️⃣ Leia a Análise (aba 📊)</div>
+            <div style="font-size:12px;color:var(--tx2);line-height:1.7">A análise mostra: zona do treino, distribuição Z1/Z2/Z3, o que foi bem, o que melhorar e a recomendação do modelo híbrido para o próximo treino.<br><br>Tudo baseado nos seus dados reais — sem invenção.</div>
+          </div>
+
+          <div style="background:var(--bg3);border-radius:var(--rl);padding:14px;border-left:3px solid var(--red)">
+            <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:6px">5️⃣ Siga o Plano (aba 📅)</div>
+            <div style="font-size:12px;color:var(--tx2);line-height:1.7">O plano se atualiza automaticamente a cada treino inserido. Ele prescreve os próximos treinos com base no que você fez:<br><br>• Após Z3 → recuperação Z1 obrigatória<br>• Sem Z2 recente → prescreve limiar<br>• Sem longão → prescreve longão +10%</div>
+          </div>
+
+          <div style="background:var(--bg3);border-radius:var(--rl);padding:14px;border-left:3px solid var(--neon)">
+            <div style="font-size:13px;font-weight:700;color:var(--neon);margin-bottom:6px">6️⃣ Acompanhe a Evolução (aba 📈)</div>
+            <div style="font-size:12px;color:var(--tx2);line-height:1.7">Com 2+ treinos, a aba Evolução mostra gráfico de pace, histórico completo e progresso rumo ao objetivo.<br><br>Para excluir um treino: aba <strong style="color:var(--tx)">Treino (➕)</strong> → lista de treinos → botão <strong style="color:var(--tx)">✕</strong>.</div>
+          </div>
+
+          <div style="background:var(--neon-dim);border:1px solid rgba(232,255,0,.2);border-radius:var(--rl);padding:14px">
+            <div style="font-size:13px;font-weight:700;color:var(--neon);margin-bottom:6px">💡 Dica principal</div>
+            <div style="font-size:12px;color:var(--tx);line-height:1.7">O app funciona melhor com treinos reais inseridos regularmente. Quanto mais treinos, mais precisa fica a análise e a prescrição. Insira todo treino que você fizer!</div>
+          </div>
+        </div>
+
+        <button class="btn btn-neon" onclick="hideTutorial()" style="margin-top:20px">Entendido! Vamos treinar 🏃</button>
       </div>
     </div>
 
@@ -432,6 +495,32 @@ function showAuthMsg(msg, type='error'){
   el.textContent = msg;
 }
 function hideAuthMsg(){ document.getElementById('auth-msg').style.display='none'; }
+
+
+function showTutorial(){
+  document.getElementById('tutorial-modal').style.display='block';
+  document.body.style.overflow='hidden';
+}
+function hideTutorial(){
+  document.getElementById('tutorial-modal').style.display='none';
+  document.body.style.overflow='';
+}
+function togglePass(id, btn){
+  const el = document.getElementById(id);
+  if(el.type === 'password'){ el.type='text'; btn.textContent='🙈'; }
+  else { el.type='password'; btn.textContent='👁'; }
+}
+
+async function doForgotPass(){
+  const email = document.getElementById('l-email').value.trim();
+  if(!email){ showAuthMsg('Digite seu e-mail acima primeiro.'); return; }
+  showAuthMsg('Enviando link de recuperação...','ok');
+  const {error} = await db.auth.resetPasswordForEmail(email, {
+    redirectTo: 'https://secretariaturismosaocarlos-png.github.io/coach-run/'
+  });
+  if(error) showAuthMsg('Erro: '+error.message);
+  else showAuthMsg('✓ Link de recuperação enviado para '+email+'. Verifique sua caixa de entrada.','ok');
+}
 
 async function doLogin(){
   const email = document.getElementById('l-email').value.trim();
@@ -757,6 +846,15 @@ function renderOnboarding(el){
           <div style="margin-bottom:6px">3️⃣ <strong>Execute:</strong> corra os 3km no maior esforço que conseguir manter do início ao fim — chegue perto da exaustão no final</div>
           <div style="margin-bottom:6px">4️⃣ <strong>Estratégia:</strong> não saia no máximo — mantenha ritmo forte e constante, dê tudo no último km</div>
           <div>5️⃣ <strong>Anote:</strong> seu tempo total e (se tiver monitor) sua FC máxima atingida</div>
+        </div>
+      </div>
+
+      <div class="card card-orange" style="margin-bottom:12px">
+        <div style="font-size:13px;font-weight:700;color:var(--orange);margin-bottom:8px">⚠️ Por que esse teste é importante?</div>
+        <div style="font-size:12px;color:var(--tx);line-height:1.7;margin-bottom:0">
+          Suas zonas Z1/Z2/Z3 são calculadas a partir deste teste. <strong>Se inserir um treino de corrida comum (não máximo), as zonas serão calculadas incorretamente</strong> e todos os treinos ficam desalinhados.<br><br>
+          ✅ <strong>Ideal:</strong> faça o teste de 3km no máximo esforço sustentável — como descrito acima — e insira o tempo aqui.<br>
+          ⚠️ <strong>Se não fez ainda:</strong> pode avançar com outro tempo, mas refaça o teste em breve e atualize nas configurações.
         </div>
       </div>
 
@@ -1145,7 +1243,9 @@ function renderTreino(){
     </div>
     <div style="margin-top:10px" class="field"><label>Splits por km</label><input type="text" id="t-splits" placeholder="6:20, 6:15, 6:08..."></div>
   </div>
-  <button class="btn btn-neon" onclick="addTreino()">Salvar treino ✓</button>`;
+  <button class="btn btn-neon" onclick="addTreino()">Salvar treino ✓</button>
+  <div id="workout-history"></div>`;
+  renderWorkoutHistory();
 
   // Re-attach drag & drop
   const uz=document.getElementById('upload-zone2');
@@ -1154,6 +1254,39 @@ function renderTreino(){
     uz.addEventListener('dragleave',()=>uz.classList.remove('drag'));
     uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('drag');if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
   }
+
+  // Render workout history below form
+  renderWorkoutHistory();
+}
+
+function renderWorkoutHistory(){
+  const el = document.getElementById('workout-history');
+  if(!el) return;
+  if(!HIST.length){ el.innerHTML=''; return; }
+
+  const zones = USER_GOAL?.vam_pace ? calcZonesFromTest(USER_GOAL.test_time, USER_GOAL.test_fcmax) : null;
+
+  let html = `<div class="card" style="margin-top:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+      <div class="clabel" style="margin:0">📋 Treinos inseridos (${HIST.length})</div>
+    </div>`;
+
+  HIST.slice().reverse().forEach(t => {
+    const zone = zones ? classifyWorkoutZone(t, zones) : 'z1';
+    const zColor = zone==='z3'?'var(--red)':zone==='z2'?'var(--orange)':'var(--neon)';
+    const zLabel = zone==='z3'?'Z3':'z2'===zone?'Z2':'Z1';
+    html += `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)">
+      <div style="width:32px;height:32px;border-radius:50%;background:${zColor}22;border:1px solid ${zColor}44;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${zColor};flex-shrink:0">${zLabel}</div>
+      <div style="flex:1;min-width:0">
+        <div style="font-size:13px;font-weight:600">${t.dist}km · ${t.pace}/km</div>
+        <div style="font-size:11px;color:var(--tx2)">${t.data}${t.tempo?' · '+t.tempo:''}${t.fcmed?' · ❤️ '+t.fcmed+' bpm':''}</div>
+      </div>
+      <button onclick="doDelete('${t.id}')" style="background:none;border:1px solid var(--bd);border-radius:6px;padding:4px 8px;color:var(--tx3);cursor:pointer;font-size:12px;flex-shrink:0" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(255,61,90,.3)'" onmouseout="this.style.color='var(--tx3)';this.style.borderColor='var(--bd)'">✕</button>
+    </div>`;
+  });
+
+  html += `</div>`;
+  el.innerHTML = html;
 }
 
 // ═══════════════════════════════════════════════════
@@ -1179,12 +1312,15 @@ async function addTreino(){
 
 async function doDelete(id){
   const t=HIST.find(x=>x.id===id);if(!t)return;
-  if(!confirm(`Excluir treino de ${t.data} (${t.dist}km · ${t.pace}/km)?\n\nIsso removerá o treino de todas as análises e do histórico.`))return;
+  if(!confirm(`Excluir treino de ${t.data} (${t.dist}km a ${t.pace}/km)?\n\nEle será removido da análise, plano e evolução.`))return;
   await deleteWorkout(id);
-  // Refresh all panels
+  // Refresh all active panels
+  const active = document.querySelector('.panel.active')?.id;
   renderHome();
-  renderAnalise();
-  renderPlano();
+  if(active==='pn-analise') renderAnalise();
+  if(active==='pn-plano') renderPlano();
+  if(active==='pn-evolucao') renderEvolucao();
+  // Always refresh evolucao data
   renderEvolucao();
 }
 
