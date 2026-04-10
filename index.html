@@ -1764,28 +1764,57 @@ function renderAnalise(){
   });
   html+=`</div>`;
 
-  // Zones — Daniels methodology display
-  const zEntries = Object.entries(a.z).filter(([k])=>k!=='_vam' && a.z[k].label);
+  // Zones — Hybrid model display (Z1/Z2/Z3)
   const vamData = a.z._vam || null;
+  const z1min = a.z.e ? sp(a.z.e.min) : '—';
+  const z1max = a.z.e ? sp(a.z.e.max) : '—';
+  const z2min = a.z.t ? sp(a.z.t.min) : '—';
+  const z2max = a.z.t ? sp(a.z.t.max) : '—';
+  const z3min = a.z.i ? sp(a.z.i.min) : '—';
+  const z3max = a.z.r ? sp(a.z.r.max) : '—';
+
   html+=`<div class="card">
-    <div class="clabel">🏃 Suas zonas de treino — Método Jack Daniels</div>
-    ${vamData ? `<div style="background:var(--neon-dim);border:1px solid rgba(232,255,0,.2);border-radius:var(--r);padding:8px 12px;margin-bottom:10px;font-size:12px">
-      <span style="color:var(--neon);font-weight:700">VAM: ${vamData.kmh} km/h</span>
-      <span style="color:var(--tx2);margin-left:12px">VDOT estimado: ~${vamData.vdot}</span>
-      <span style="color:var(--tx2);margin-left:12px">Base: teste 3km</span>
+    <div class="clabel">⚡ Suas zonas — Modelo Híbrido</div>
+    ${vamData ? `<div style="background:var(--neon-dim);border:1px solid rgba(232,255,0,.2);border-radius:var(--r);padding:8px 12px;margin-bottom:10px;font-size:12px;display:flex;gap:16px;flex-wrap:wrap">
+      <span><strong style="color:var(--neon)">VAM: ${vamData.kmh} km/h</strong></span>
+      <span style="color:var(--tx2)">VDOT ~${vamData.vdot}</span>
+      <span style="color:var(--tx2)">Base: teste 3km</span>
     </div>` : ''}
-    <div style="font-size:12px;color:var(--tx2);margin-bottom:10px">Todos os seus treinos usam esses ritmos. Baseados no seu resultado real — não em estimativas.</div>`;
-  zEntries.forEach(([k,zv])=>{
-    html+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r);margin-bottom:5px;background:${zv.bg};border:1px solid ${zv.color}22">
-      <span style="font-size:16px">${zv.emoji}</span>
+
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--r);margin-bottom:6px;background:var(--neon-dim);border:1px solid rgba(232,255,0,.2)">
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--neon);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#000;flex-shrink:0">Z1</div>
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:700;color:${zv.color}">${zv.label}</div>
-        <div style="font-size:11px;color:var(--tx2);margin-top:1px">${zv.desc}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--neon)">Baixa intensidade — Base aeróbica</div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:2px">70–80% dos seus treinos aqui. Conversa normal. Constrói mitocôndrias e capilarização.</div>
+        <div style="font-size:10px;color:var(--tx3);margin-top:2px">RPE 2–4 · FC &lt;75% FCmax · Inclui: corrida fácil, aquecimento, desaquecimento, longão</div>
       </div>
-      <div style="font-family:var(--mono);font-size:14px;font-weight:700;color:${zv.color}">${sp(zv.min)}–${sp(zv.max)}</div>
-    </div>`;
-  });
-  html+=`</div>`;
+      <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--neon);text-align:right">${z1min}–${z1max}</div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--r);margin-bottom:6px;background:var(--orange-dim);border:1px solid rgba(255,92,0,.2)">
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">Z2</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:var(--orange)">Limiar — Threshold</div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:2px">10–20% do volume. Fala frases curtas. Desenvolve limiar láctico e pace de prova.</div>
+        <div style="font-size:10px;color:var(--tx3);margin-top:2px">RPE 6–7 · FC 75–87% FCmax · Inclui: Tempo Run, corrida de ritmo, progressivo</div>
+      </div>
+      <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--orange);text-align:right">${z2min}–${z2max}</div>
+    </div>
+
+    <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--r);margin-bottom:10px;background:var(--red-dim);border:1px solid rgba(255,61,90,.2)">
+      <div style="width:32px;height:32px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">Z3</div>
+      <div style="flex:1">
+        <div style="font-size:13px;font-weight:700;color:var(--red)">Alta intensidade — VO2max</div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:2px">5–10% do volume. Muito difícil de falar. Eleva teto aeróbico e capacidade anaeróbica.</div>
+        <div style="font-size:10px;color:var(--tx3);margin-top:2px">RPE 8–10 · FC &gt;87% FCmax · Inclui: intervalados 400m/1000m, strides, sprints</div>
+      </div>
+      <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--red);text-align:right">${z3min}–${z3max}</div>
+    </div>
+
+    <div style="font-size:11px;color:var(--tx3);line-height:1.6;padding:8px 10px;background:var(--bg3);border-radius:var(--r)">
+      📊 Modelo baseado em <strong style="color:var(--tx2)">Distribuição de Intensidade Híbrida</strong> (Seiler, 2010 + Stöggl & Sperlich, 2014): combinação polarizada (Z1+Z3) e piramidal (Z1+Z2+Z3) que maximiza adaptações fisiológicas e minimiza risco de lesão.
+    </div>
+  </div>`;
 
   // Splits if available
   if(a.last.splits&&a.last.splits.length>1){
