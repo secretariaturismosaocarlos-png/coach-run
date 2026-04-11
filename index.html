@@ -397,7 +397,6 @@ let OB_TARGET_PACE = '';
 let OB_TARGET_DATE = '';
 let OB_TEST_TIME = '';
 let OB_TEST_FCMAX = 0;
-let OB_NIVEL_LABEL = '';
 
 // ═══════════════════════════════════════════════════
 //  OBJECTIVES
@@ -1545,331 +1544,35 @@ function buildProgNarr(pd,pct,n,a){
   return pd>0?`Você melhorou ${sp(pd)}/km desde o início. Com mais dados, as projeções de prazo ficam mais precisas.`:`Dados insuficientes para projeção sólida. Insira pelo menos 5 treinos.`;
 }
 
-// ═══════════════════════════════════════════════════
-//  UTILITY — pace / time helpers
-// ═══════════════════════════════════════════════════
-function sp(secs){
-  if(!secs||isNaN(secs)||secs<=0) return '—';
-  const m=Math.floor(secs/60),s=Math.round(secs%60);
-  return `${m}:${String(s).padStart(2,'0')}`;
-}
-function ps(str){
-  if(!str||typeof str!=='string') return 0;
-  const p=str.trim().split(':');
-  if(p.length===2) return parseInt(p[0])*60+parseInt(p[1]);
-  if(p.length===3) return parseInt(p[0])*3600+parseInt(p[1])*60+parseInt(p[2]);
-  return 0;
-}
-function t2s(str){
-  if(!str) return 0;
-  const p=str.trim().split(':');
-  if(p.length===2) return parseInt(p[0])*60+parseInt(p[1]);
-  if(p.length===3) return parseInt(p[0])*3600+parseInt(p[1])*60+parseInt(p[2]);
-  return 0;
-}
-function s2t(secs){
-  if(!secs||secs<=0) return '—';
-  const h=Math.floor(secs/3600),m=Math.floor((secs%3600)/60),s=Math.round(secs%60);
-  if(h>0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
-  return `${m}:${String(s).padStart(2,'0')}`;
-}
-
-// ═══════════════════════════════════════════════════
-//  COMPUTE ANALYSIS
-// ═══════════════════════════════════════════════════
-function computeAnalise(){
-  if(!USER_GOAL||!USER_GOAL.onboard_done) return null;
-  const h=HIST; const n=h.length; if(n===0) return null;
-  const obj=OBJS.find(o=>o.id===USER_GOAL.obj_id)||OBJS[0];
-  const last=h[n-1];
-  const recent=h.slice(-5).filter(w=>w.paceSec>60&&w.paceSec<900);
-  const basePace=recent.length>0?Math.round(recent.reduce((a,w)=>a+w.paceSec,0)/recent.length):last.paceSec;
-  let evoSt='estavel',evoMag=0;
-  if(n>=3){
-    const prev=h.slice(-4,-1).filter(w=>w.paceSec>0);
-    if(prev.length>0){const prevAvg=prev.reduce((a,w)=>a+w.paceSec,0)/prev.length;evoMag=prevAvg-basePace;if(evoMag>10)evoSt='evolucao';else if(evoMag<-15)evoSt='regressao';}
-  }
-  let z={};
-  if(USER_GOAL.test_time){z=calcZonesFromTest(USER_GOAL.test_time,USER_GOAL.test_fcmax||0)||{};}
-  if(!z||!z.e){
-    z={
-      e:{min:Math.round(basePace*1.10),max:Math.round(basePace*1.25),label:'Z1 — Base aeróbica',emoji:'🟢',desc:'Conversa normal.',color:'var(--neon)',bg:'var(--neon-dim)'},
-      m:{min:Math.round(basePace*1.03),max:Math.round(basePace*1.09),label:'Z1+ — Leve/Moderado',emoji:'🔵',desc:'Frases curtas.',color:'#4da6ff',bg:'rgba(77,166,255,.08)'},
-      t:{min:Math.round(basePace*0.95),max:Math.round(basePace*1.02),label:'Z2 — Limiar',emoji:'🟡',desc:'Difícil, sustentável.',color:'var(--orange)',bg:'var(--orange-dim)'},
-      i:{min:Math.round(basePace*0.87),max:Math.round(basePace*0.94),label:'Z3 — Intervalo VO2max',emoji:'🔴',desc:'Muito difícil.',color:'var(--red)',bg:'var(--red-dim)'},
-      r:{min:Math.round(basePace*0.80),max:Math.round(basePace*0.86),label:'Z3+ — Sprint',emoji:'💀',desc:'Sprint curto.',color:'var(--purple)',bg:'var(--purple-dim)'},
-    };
-  }
-  let score=50;
-  if(n>=5)score+=10;if(evoSt==='evolucao')score+=15;if(evoSt==='regressao')score-=10;
-  if(last.fcmed>0&&last.fcmed<160)score+=10;if(last.dist>=5)score+=10;if(last.splits&&last.splits.length>1)score+=5;
-  score=Math.max(10,Math.min(99,score));
-  const tp=USER_GOAL.target_pace_sec||0;
-  const startPace=h[0].paceSec;
-  let progPct=0,gapSec=0;
-  if(tp>0){gapSec=Math.max(0,basePace-tp);const totalGap=startPace-tp;progPct=totalGap>0?Math.min(100,Math.round((startPace-basePace)/totalGap*100)):0;}
-  let raceEst='';
-  if(obj.dist>0&&basePace>0){raceEst=s2t(Math.round(basePace*obj.dist*1.08));}
-  const improvPerWeek=8;
-  const weeksETA=tp>0&&gapSec>0?Math.ceil(gapSec/improvPerWeek):obj.weeks||12;
-  const etaD=new Date();etaD.setDate(etaD.getDate()+weeksETA*7);
-  const etaDate=etaD.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
-  const analysis=buildHumanAnalysis(last,basePace,evoSt,evoMag,obj,n,h);
-  return {last,h,n,score,evoSt,evoMag,basePace,z,obj,tp,gapSec,progPct,raceEst,weeksETA,etaDate,analysis};
-}
-
-// ═══════════════════════════════════════════════════
-//  RENDER TREINO
-// ═══════════════════════════════════════════════════
-function renderTreino(){
-  const el=document.getElementById('pn-treino');
-  const today=new Date().toISOString().split('T')[0];
-  el.innerHTML=`
-  <div style="padding-top:8px;margin-bottom:14px">
-    <div style="font-size:18px;font-weight:700;letter-spacing:-.3px">➕ Registrar Treino</div>
-    <div style="font-size:12px;color:var(--tx2);margin-top:2px">Insira manualmente ou faça upload do arquivo GPS</div>
-  </div>
-  <div class="upload-zone" id="upload-zone">
-    <input type="file" id="file-input" accept=".gpx,.tcx,.csv,.json" onchange="handleFileUpload(this)">
-    <div style="font-size:28px;margin-bottom:8px">📂</div>
-    <div style="font-size:13px;font-weight:700;color:var(--neon);margin-bottom:4px">Upload de arquivo GPS</div>
-    <div style="font-size:11px;color:var(--tx2);margin-bottom:8px">Toque aqui para selecionar</div>
-    <div><span class="utype">GPX</span><span class="utype">TCX</span><span class="utype">CSV</span><span class="utype">JSON</span></div>
-  </div>
-  <div id="upload-status" style="display:none;padding:10px 14px;border-radius:var(--r);font-size:12px;border-left:3px solid;margin-bottom:12px"></div>
-  <div class="or-div">ou insira manualmente</div>
-  <div class="card">
-    <div class="clabel">Dados do treino</div>
-    <div class="g2" style="margin-bottom:10px">
-      <div class="field"><label>Data</label><input type="date" id="t-data" value="${today}"></div>
-      <div class="field"><label>Distância (km)</label><input type="number" id="t-dist" placeholder="ex: 5.2" step="0.1" min="0.1" oninput="autoCalcPace()"></div>
-    </div>
-    <div class="g2" style="margin-bottom:10px">
-      <div class="field"><label>Duração (mm:ss)</label><input type="text" id="t-tempo" placeholder="ex: 28:30" oninput="autoCalcPace()"></div>
-      <div class="field"><label>Pace médio (mm:ss/km)</label><input type="text" id="t-pace" placeholder="ex: 5:29"></div>
-    </div>
-    <div class="g2" style="margin-bottom:10px">
-      <div class="field"><label>FC média (bpm)</label><input type="number" id="t-fcmed" placeholder="ex: 148"></div>
-      <div class="field"><label>FC máxima (bpm)</label><input type="number" id="t-fcmax" placeholder="ex: 172"></div>
-    </div>
-    <div class="g2" style="margin-bottom:10px">
-      <div class="field"><label>Cadência (passos/min)</label><input type="number" id="t-cad" placeholder="ex: 172"></div>
-      <div class="field"><label>Elevação acumulada (m)</label><input type="number" id="t-elev" placeholder="ex: 45"></div>
-    </div>
-    <div class="field" style="margin-bottom:10px">
-      <label>Splits por km (pace separado por vírgula)</label>
-      <input type="text" id="t-splits" placeholder="ex: 5:40, 5:30, 5:25">
-    </div>
-    <div class="field" style="margin-bottom:14px">
-      <label>PSE — Percepção de Esforço (1–10)</label>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
-        ${[1,2,3,4,5,6,7,8,9,10].map(i=>`<button onclick="selectPSE(${i})" id="pse-${i}" style="width:34px;height:34px;border-radius:8px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx2);font-weight:700;font-size:13px;cursor:pointer;font-family:var(--sans);transition:all .15s">${i}</button>`).join('')}
-      </div>
-      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--tx3);margin-top:4px"><span>Muito leve</span><span>Máximo</span></div>
-    </div>
-    <div id="save-msg" style="display:none;margin-bottom:10px;padding:10px 14px;border-radius:var(--r);font-size:12px;border-left:3px solid"></div>
-    <button class="btn btn-neon" onclick="doSaveTreino()">💾 Salvar treino</button>
-  </div>`;
-  window._pseVal=0;
-  const uz=document.getElementById('upload-zone');
-  uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('drag');});
-  uz.addEventListener('dragleave',()=>uz.classList.remove('drag'));
-  uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('drag');const f=e.dataTransfer.files[0];if(f)processFile(f);});
-}
-
-function selectPSE(v){
-  window._pseVal=v;
-  for(let i=1;i<=10;i++){
-    const b=document.getElementById('pse-'+i);if(!b)continue;
-    const col=i<=3?'var(--neon)':i<=6?'var(--orange)':i<=8?'var(--red)':'var(--purple)';
-    b.style.background=i<=v?col+'22':'var(--bg3)';
-    b.style.color=i<=v?col:'var(--tx2)';
-    b.style.borderColor=i<=v?col:'var(--bd)';
-  }
-}
-
-function autoCalcPace(){
-  const dist=parseFloat(document.getElementById('t-dist')?.value)||0;
-  const tempo=document.getElementById('t-tempo')?.value||'';
-  const pf=document.getElementById('t-pace');
-  if(pf&&dist>0&&tempo){const dur=t2s(tempo);if(dur>0)pf.value=sp(Math.round(dur/dist));}
-}
-
-async function doSaveTreino(){
-  const data=document.getElementById('t-data')?.value;
-  const dist=parseFloat(document.getElementById('t-dist')?.value);
-  const tempo=document.getElementById('t-tempo')?.value?.trim();
-  let pace=document.getElementById('t-pace')?.value?.trim();
-  const fcmed=parseInt(document.getElementById('t-fcmed')?.value)||0;
-  const fcmax=parseInt(document.getElementById('t-fcmax')?.value)||0;
-  const cad=parseInt(document.getElementById('t-cad')?.value)||0;
-  const elev=parseInt(document.getElementById('t-elev')?.value)||0;
-  const splitsRaw=document.getElementById('t-splits')?.value?.trim()||'';
-  const pse=window._pseVal||0;
-  if(!data||!dist||dist<=0){showSaveMsg('Informe pelo menos a data e a distância.','err');return;}
-  if(!pace&&tempo){const d=t2s(tempo);if(d>0)pace=sp(Math.round(d/dist));}
-  if(!pace){showSaveMsg('Informe o pace ou a duração.','err');return;}
-  const splits=splitsRaw?splitsRaw.split(',').map(s=>s.trim()).filter(Boolean):null;
-  showSaveMsg('Salvando...','ok');
-  await saveWorkout({data:data.split('-').reverse().join('/'),dist,tempo:tempo||null,pace,fcmed,fcmax,cad,splits,elev,pse});
-  showSaveMsg('✓ Treino salvo!','ok');
-  setTimeout(()=>goTab('analise'),1200);
-}
-
-function showSaveMsg(msg,type){
-  const el=document.getElementById('save-msg');if(!el)return;
-  el.style.display='block';
-  el.style.background=type==='ok'?'var(--teal-dim)':'var(--red-dim)';
-  el.style.color=type==='ok'?'var(--teal)':'var(--red)';
-  el.style.borderColor=type==='ok'?'var(--teal)':'var(--red)';
-  el.textContent=msg;
-}
-
-// ═══════════════════════════════════════════════════
-//  FILE UPLOAD
-// ═══════════════════════════════════════════════════
-function handleFileUpload(input){const f=input.files[0];if(f)processFile(f);}
-
-function processFile(file){
-  showUploadStatus('Lendo arquivo...','');
-  const reader=new FileReader();
-  reader.onload=e=>{
-    try{
-      const name=file.name.toLowerCase();
-      let r=null;
-      if(name.endsWith('.gpx'))       r=parseGPX(e.target.result);
-      else if(name.endsWith('.tcx'))  r=parseTCX(e.target.result);
-      else if(name.endsWith('.json')) r=parseJSON(e.target.result);
-      else if(name.endsWith('.csv'))  r=parseCSV(e.target.result);
-      else{showUploadStatus('Formato não suportado.','err');return;}
-      if(r){fillFormFromFile(r);showUploadStatus('✓ Arquivo lido! Confira os dados e salve.','ok');}
-      else showUploadStatus('Não foi possível ler o arquivo. Insira manualmente.','err');
-    }catch(err){showUploadStatus('Erro: '+err.message,'err');}
-  };
-  reader.readAsText(file);
-}
-
-function showUploadStatus(msg,type){
-  const el=document.getElementById('upload-status');if(!el)return;
-  el.style.display='block';
-  if(type==='ok'){el.style.background='var(--teal-dim)';el.style.color='var(--teal)';el.style.borderColor='var(--teal)';}
-  else if(type==='err'){el.style.background='var(--red-dim)';el.style.color='var(--red)';el.style.borderColor='var(--red)';}
-  else{el.style.background='var(--bg3)';el.style.color='var(--tx2)';el.style.borderColor='var(--bd)';}
-  el.textContent=msg;
-}
-
-function haversine(lat1,lon1,lat2,lon2){
-  const R=6371,dLat=(lat2-lat1)*Math.PI/180,dLon=(lon2-lon1)*Math.PI/180;
-  const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-  return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
-}
-
-function parseGPX(xml){
-  const doc=new DOMParser().parseFromString(xml,'text/xml');
-  const trkpts=[...doc.querySelectorAll('trkpt')];
-  if(!trkpts.length) return null;
-  const times=trkpts.map(p=>new Date(p.querySelector('time')?.textContent||0)).filter(t=>+t>0);
-  const lats=trkpts.map(p=>parseFloat(p.getAttribute('lat')));
-  const lons=trkpts.map(p=>parseFloat(p.getAttribute('lon')));
-  const hrs=[...doc.querySelectorAll('hr,ns3\:hr,gpxtpx\:hr')].map(n=>parseInt(n.textContent)).filter(v=>v>60&&v<220);
-  let dist=0;
-  for(let i=1;i<lats.length;i++) dist+=haversine(lats[i-1],lons[i-1],lats[i],lons[i]);
-  dist=Math.round(dist*100)/100;
-  const durSec=times.length>=2?(+times[times.length-1]-+times[0])/1000:0;
-  const fcmed=hrs.length?Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length):0;
-  const fcmax=hrs.length?Math.max(...hrs):0;
-  const splits=[];let cumDist=0,lastKm=0,lastT=times[0];
-  for(let i=1;i<lats.length;i++){
-    cumDist+=haversine(lats[i-1],lons[i-1],lats[i],lons[i]);
-    if(cumDist>=lastKm+1&&times[i]){splits.push(sp(Math.round((+times[i]-+lastT)/1000)));lastT=times[i];lastKm=Math.floor(cumDist);}
-  }
-  return {dist,durSec,fcmed,fcmax,elevGain:0,splits,date:times[0]||new Date()};
-}
-
-function parseTCX(xml){
-  const doc=new DOMParser().parseFromString(xml,'text/xml');
-  const ns='http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2';
-  const tps=[...doc.getElementsByTagNameNS(ns,'Trackpoint')];
-  if(!tps.length) return null;
-  let distMax=0,fcSum=0,fcCnt=0,fcmax=0;const times=[];
-  tps.forEach(tp=>{
-    const t=tp.getElementsByTagNameNS(ns,'Time')[0]?.textContent;if(t)times.push(new Date(t));
-    const d=parseFloat(tp.getElementsByTagNameNS(ns,'DistanceMeters')[0]?.textContent||0);if(d>distMax)distMax=d;
-    const hr=parseInt(tp.getElementsByTagNameNS(ns,'Value')[0]?.textContent||0);if(hr>0){fcSum+=hr;fcCnt++;if(hr>fcmax)fcmax=hr;}
+// Render treino tab on mount
+document.addEventListener('DOMContentLoaded',()=>{
+  document.getElementById('nb-treino').addEventListener('click',()=>{
+    if(document.getElementById('pn-treino').classList.contains('active')) renderTreino();
   });
-  return {dist:Math.round(distMax/10)/100,durSec:times.length>=2?(+times[times.length-1]-+times[0])/1000:0,fcmed:fcCnt?Math.round(fcSum/fcCnt):0,fcmax,elevGain:0,splits:[],date:times[0]||new Date()};
-}
-
-function parseJSON(txt){
-  const d=JSON.parse(txt);
-  return {dist:parseFloat(d.distance||d.dist||0),durSec:t2s(d.time||d.tempo||d.duration||''),
-    fcmed:parseInt(d.avg_hr||d.fcmed||0),fcmax:parseInt(d.max_hr||d.fcmax||0),
-    elevGain:parseInt(d.elevation||d.elev||0),splits:d.splits||[],date:new Date(d.date||d.data||Date.now())};
-}
-
-function parseCSV(txt){
-  const lines=txt.trim().split('\n');if(lines.length<2)return null;
-  const hdr=lines[0].split(',').map(h=>h.trim().toLowerCase());
-  const row=lines[1].split(',').map(v=>v.trim());
-  const get=k=>row[hdr.indexOf(k)]||'';
-  return {dist:parseFloat(get('distance')||get('dist')||0),durSec:t2s(get('time')||get('duration')||get('tempo')||''),
-    fcmed:parseInt(get('avg_hr')||get('fcmed')||0),fcmax:parseInt(get('max_hr')||get('fcmax')||0),
-    elevGain:parseInt(get('elevation')||get('elev')||0),splits:[],date:new Date(get('date')||Date.now())};
-}
-
-function fillFormFromFile(r){
-  const dateStr=r.date?r.date.toISOString().split('T')[0]:new Date().toISOString().split('T')[0];
-  const setV=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
-  setV('t-data',dateStr);
-  if(r.dist>0)setV('t-dist',r.dist);
-  if(r.durSec>0){const ts=s2t(Math.round(r.durSec));setV('t-tempo',ts);if(r.dist>0)setV('t-pace',sp(Math.round(r.durSec/r.dist)));}
-  if(r.fcmed)setV('t-fcmed',r.fcmed);
-  if(r.fcmax)setV('t-fcmax',r.fcmax);
-  if(r.elevGain)setV('t-elev',r.elevGain);
-  if(r.splits&&r.splits.length>0)setV('t-splits',r.splits.join(', '));
-}
-
-// ═══════════════════════════════════════════════════
-//  ONBOARDING ACTIONS
-// ═══════════════════════════════════════════════════
-function obPickObj(id){OB_OBJ=OBJS.find(o=>o.id===id)||null;OB_TARGET_PACE='';OB_TARGET_DATE='';renderHome();}
-
-function obNext(step){
-  if(step===1){if(!OB_OBJ)return;OB_STEP=2;}
-  else if(step===2){if(!OB_NIVEL)return;OB_STEP=3;}
-  else if(step===3){OB_STEP=4;}
-  renderHome();
-}
-
-async function obFinish(){
-  if(!OB_TEST_TIME)return;
-  const vam=calcZonesFromTest(OB_TEST_TIME,OB_TEST_FCMAX)||{};
-  await saveGoal({
-    obj_id:OB_OBJ.id,nivel:OB_NIVEL,nivel_label:OB_NIVEL_LABEL||OB_NIVEL,
-    dias_semana:OB_DIAS||3,target_pace_sec:OB_TARGET_PACE?ps(OB_TARGET_PACE):0,
-    target_date:OB_TARGET_DATE||null,onboard_done:true,
-    test_time:OB_TEST_TIME,test_fcmax:OB_TEST_FCMAX||0,
-    vam_pace:vam._vam?vam._vam.pace:0
-  });
-  renderHome();
-}
-
-function resetGoal(){
-  if(!confirm('Isso vai reiniciar sua configuração de objetivo. Continuar?'))return;
-  OB_STEP=1;OB_OBJ=null;OB_NIVEL=null;OB_NIVEL_LABEL='';OB_DIAS=3;
-  OB_TARGET_PACE='';OB_TARGET_DATE='';OB_TEST_TIME='';OB_TEST_FCMAX=0;
-  USER_GOAL=null;renderHome();
-}
-
-// ═══════════════════════════════════════════════════
-//  DELETE WORKOUT
-// ═══════════════════════════════════════════════════
-async function doDelete(id){
-  if(!confirm('Excluir este treino?'))return;
-  await deleteWorkout(id);
-  renderEvolucao();
-}
-
+});
+// Also render when tab switches
+const origGoTab=goTab;
 </script>
 </body>
-</html>
+</html>function getTagVal(el,name){
+  const all=el.getElementsByTagName('*');
+  for(let i=0;i<all.length;i++)if(all[i].localName===name)return all[i];
+  return null;
+}
+function parseGPX(xml){
+  const doc=new DOMParser().parseFromString(xml,'text/xml');
+  let pts=Array.from(doc.getElementsByTagName('trkpt'));
+  if(!pts.length)pts=Array.from(doc.getElementsByTagName('rtept'));
+  if(!pts.length)return null;
+  const points=[];
+  pts.forEach(pt=>{
+    const lat=parseFloat(pt.getAttribute('lat'));
+    const lon=parseFloat(pt.getAttribute('lon'));
+    if(isNaN(lat)||isNaN(lon))return;
+    const tEl=getTagVal(pt,'time')||pt.querySelector('time');
+    const hrEl=getTagVal(pt,'hr');
+    const cadEl=getTagVal(pt,'cad');
+    points.push({lat,lon,time:tEl?new Date(tEl.textContent):null,hr:hrEl?parseInt(hrEl.textContent):0,cad:cadEl?parseInt(cadEl.textContent):0});
+  });
+  return calcFromPoints(points);
+}
