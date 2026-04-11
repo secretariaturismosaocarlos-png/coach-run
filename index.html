@@ -211,14 +211,14 @@ select option{background:var(--bg3)}
 .utype{padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700;background:var(--bg3);color:var(--tx2);border:1px solid var(--bd);margin:2px}
 
 /* ══ OBJ GRID ══ */
-.obj-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
-.obj-card{background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:8px 10px;cursor:pointer;transition:all .2s;position:relative;display:flex;align-items:center;gap:8px}
-.obj-card:hover{border-color:rgba(232,255,0,.3)}
-.obj-card.sel{border-color:var(--neon);background:var(--neon-dim)}
-.obj-card.sel::after{content:'✓';position:absolute;top:6px;right:8px;font-size:11px;color:var(--neon);font-weight:700}
-.oi{font-size:20px;flex-shrink:0}
-.ot{font-size:12px;font-weight:700;line-height:1.3}
-.os{font-size:10px;color:var(--tx2);margin-top:1px}
+.obj-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.obj-card{background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:12px;cursor:pointer;transition:all .2s;position:relative}
+.obj-card:hover{border-color:rgba(232,255,0,.3);transform:translateY(-1px)}
+.obj-card.sel{border-color:var(--neon);background:var(--neon-dim);box-shadow:0 0 20px rgba(232,255,0,.08)}
+.obj-card.sel::after{content:'✓';position:absolute;top:8px;right:10px;font-size:12px;color:var(--neon);font-weight:700}
+.oi{font-size:18px;margin-bottom:5px}
+.ot{font-size:12px;font-weight:700;margin-bottom:2px;line-height:1.3}
+.os{font-size:10px;color:var(--tx2)}
 
 /* ══ DIVIDER ══ */
 .divider{height:1px;background:var(--bd);margin:12px 0}
@@ -277,11 +277,6 @@ select option{background:var(--bg3)}
 .sdg{background:var(--neon)}.sda{background:var(--orange)}.sdx{background:var(--tx3)}.sdb{background:var(--teal);animation:sdp 1s linear infinite}
 @keyframes sdp{0%,100%{opacity:1}50%{opacity:.2}}
 
-/* ══ ANIMATIONS ══ */
-@keyframes pulse-border{0%,100%{border-color:var(--orange);box-shadow:0 0 0 0 rgba(255,92,0,.4)}50%{border-color:#ff8c00;box-shadow:0 0 0 6px rgba(255,92,0,.1)}}
-@keyframes shake{0%,100%{transform:rotate(0deg)}25%{transform:rotate(-10deg)}75%{transform:rotate(10deg)}}
-@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
-
 /* ══ RESPONSIVE ══ */
 @media(max-width:480px){
   .g3{grid-template-columns:1fr 1fr}
@@ -321,12 +316,7 @@ select option{background:var(--bg3)}
       <div id="auth-register" style="display:none">
         <div class="field" style="margin-bottom:10px"><label>Nome</label><input type="text" id="r-name" placeholder="Seu nome"></div>
         <div class="field" style="margin-bottom:10px"><label>E-mail</label><input type="email" id="r-email" placeholder="seu@email.com"></div>
-        <div class="field" style="margin-bottom:16px"><label>Senha (mín. 6 caracteres)</label>
-          <div style="position:relative">
-            <input type="password" id="r-pass" placeholder="••••••••" style="padding-right:44px" onkeydown="if(event.key==='Enter')doRegister()">
-            <button onclick="togglePass('r-pass',this)" type="button" style="position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;color:var(--tx3);font-size:16px">👁</button>
-          </div>
-        </div>
+        <div class="field" style="margin-bottom:16px"><label>Senha (mín. 6 caracteres)</label><input type="password" id="r-pass" placeholder="••••••••"></div>
         <button class="btn btn-orange" onclick="doRegister()">Solicitar acesso →</button>
       </div>
       <div class="auth-msg" id="auth-msg"></div>
@@ -352,61 +342,9 @@ select option{background:var(--bg3)}
         <div class="logo-icon">🏃</div>
         <div><div class="logo-text">Coach Run</div><div class="logo-sub">Treinador inteligente</div></div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <button onclick="showTutorial()" style="background:var(--bg3);border:1px solid var(--bd);border-radius:20px;padding:5px 12px;color:var(--tx2);font-size:11px;font-weight:600;cursor:pointer;font-family:var(--sans)">❓ Como usar</button>
-        <div class="user-badge" onclick="doLogout()">
-          <div class="user-avatar" id="user-avatar">?</div>
-          <div class="user-name" id="user-name-display">...</div>
-        </div>
-      </div>
-    </div>
-
-    <!-- TUTORIAL MODAL -->
-    <div id="tutorial-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:2000;overflow-y:auto;padding:20px">
-      <div style="max-width:600px;margin:0 auto;background:var(--bg2);border:1px solid var(--bd);border-radius:var(--rx);padding:24px">
-        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px">
-          <div style="font-size:20px;font-weight:700">📖 Como usar o Coach Run</div>
-          <button onclick="hideTutorial()" style="background:var(--bg3);border:1px solid var(--bd);border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px;color:var(--tx2)">✕</button>
-        </div>
-
-        <div style="display:flex;flex-direction:column;gap:14px">
-          <div style="background:var(--bg3);border-radius:var(--rl);padding:14px;border-left:3px solid var(--neon)">
-            <div style="font-size:13px;font-weight:700;color:var(--neon);margin-bottom:6px">1️⃣ Faça o teste de 3km</div>
-            <div style="font-size:12px;color:var(--tx2);line-height:1.7">O <strong style="color:var(--tx)">primeiro passo</strong> é fazer o teste de 3km no seu esforço máximo sustentável. Esse teste define suas zonas Z1/Z2/Z3 — sem ele, os treinos não são precisos.<br><br>No app: clique em <strong style="color:var(--tx)">Início → Alterar objetivo → Passo 4</strong> e insira seu resultado.</div>
-          </div>
-
-          <div style="background:var(--bg3);border-radius:var(--rl);padding:14px;border-left:3px solid var(--orange)">
-            <div style="font-size:13px;font-weight:700;color:var(--orange);margin-bottom:6px">2️⃣ Configure seu objetivo</div>
-            <div style="font-size:12px;color:var(--tx2);line-height:1.7">Na tela inicial, clique em <strong style="color:var(--tx)">Alterar</strong> e passe pelos 4 passos: objetivo, nível, dias por semana e resultado do teste de 3km.<br><br>Exemplos: "5km abaixo de 30 min", "Completar meu primeiro 10km", "Emagrecimento".</div>
-          </div>
-
-          <div style="background:var(--bg3);border-radius:var(--rl);padding:14px;border-left:3px solid var(--teal)">
-            <div style="font-size:13px;font-weight:700;color:var(--teal);margin-bottom:6px">3️⃣ Insira seus treinos (aba ➕)</div>
-            <div style="font-size:12px;color:var(--tx2);line-height:1.7">Após cada treino, acesse a aba <strong style="color:var(--tx)">Treino (➕)</strong> e importe o arquivo GPX/TCX do relógio ou preencha manualmente distância, tempo e ritmo.<br><br>O app classifica automaticamente em Z1/Z2/Z3 e atualiza a análise e o plano.</div>
-          </div>
-
-          <div style="background:var(--bg3);border-radius:var(--rl);padding:14px;border-left:3px solid var(--purple)">
-            <div style="font-size:13px;font-weight:700;color:var(--purple);margin-bottom:6px">4️⃣ Leia a Análise (aba 📊)</div>
-            <div style="font-size:12px;color:var(--tx2);line-height:1.7">A análise mostra: zona do treino, distribuição Z1/Z2/Z3, o que foi bem, o que melhorar e a recomendação do modelo híbrido para o próximo treino.<br><br>Tudo baseado nos seus dados reais — sem invenção.</div>
-          </div>
-
-          <div style="background:var(--bg3);border-radius:var(--rl);padding:14px;border-left:3px solid var(--red)">
-            <div style="font-size:13px;font-weight:700;color:var(--red);margin-bottom:6px">5️⃣ Siga o Plano (aba 📅)</div>
-            <div style="font-size:12px;color:var(--tx2);line-height:1.7">O plano se atualiza automaticamente a cada treino inserido. Ele prescreve os próximos treinos com base no que você fez:<br><br>• Após Z3 → recuperação Z1 obrigatória<br>• Sem Z2 recente → prescreve limiar<br>• Sem longão → prescreve longão +10%</div>
-          </div>
-
-          <div style="background:var(--bg3);border-radius:var(--rl);padding:14px;border-left:3px solid var(--neon)">
-            <div style="font-size:13px;font-weight:700;color:var(--neon);margin-bottom:6px">6️⃣ Acompanhe a Evolução (aba 📈)</div>
-            <div style="font-size:12px;color:var(--tx2);line-height:1.7">Com 2+ treinos, a aba Evolução mostra gráfico de pace, histórico completo e progresso rumo ao objetivo.<br><br>Para excluir um treino: aba <strong style="color:var(--tx)">Treino (➕)</strong> → lista de treinos → botão <strong style="color:var(--tx)">✕</strong>.</div>
-          </div>
-
-          <div style="background:var(--neon-dim);border:1px solid rgba(232,255,0,.2);border-radius:var(--rl);padding:14px">
-            <div style="font-size:13px;font-weight:700;color:var(--neon);margin-bottom:6px">💡 Dica principal</div>
-            <div style="font-size:12px;color:var(--tx);line-height:1.7">O app funciona melhor com treinos reais inseridos regularmente. Quanto mais treinos, mais precisa fica a análise e a prescrição. Insira todo treino que você fizer!</div>
-          </div>
-        </div>
-
-        <button class="btn btn-neon" onclick="hideTutorial()" style="margin-top:20px">Entendido! Vamos treinar 🏃</button>
+      <div class="user-badge" onclick="doLogout()">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-name" id="user-name-display">...</div>
       </div>
     </div>
 
@@ -427,7 +365,7 @@ select option{background:var(--bg3)}
       <button class="nav-btn"        id="nb-analise"  onclick="goTab('analise')"> <span class="ni">📊</span><span class="nl">Análise</span></button>
       <button class="nav-btn"        id="nb-plano"    onclick="goTab('plano')">   <span class="ni">📅</span><span class="nl">Plano</span></button>
       <button class="nav-btn"        id="nb-evolucao" onclick="goTab('evolucao')"><span class="ni">📈</span><span class="nl">Evolução</span></button>
-      <button class="nav-btn"        id="nb-admin"    onclick="goTab('admin')" style="display:none;position:relative"><span class="ni">🔔</span><span class="nl">Admin</span><span id="admin-badge" style="display:none;position:absolute;top:4px;right:8px;background:var(--red);color:#fff;font-size:9px;font-weight:700;border-radius:10px;padding:1px 5px;min-width:14px;text-align:center">!</span></button>
+      <button class="nav-btn" id="nb-admin" onclick="goTab('admin')" style="display:none;position:relative"><span class="ni">🔔</span><span class="nl">Admin</span><span id="admin-badge" style="display:none;position:absolute;top:4px;right:8px;background:var(--red);color:#fff;font-size:9px;font-weight:700;border-radius:10px;padding:1px 5px">!</span></button>
     </div>
   </nav>
 </div>
@@ -464,22 +402,18 @@ let OB_TEST_FCMAX = 0;
 //  OBJECTIVES
 // ═══════════════════════════════════════════════════
 const OBJS = [
-  // 5K
-  {id:'primeiro5k',    icon:'⭐', t:'Completar meu primeiro 5km',  s:'Do zero ao 5km sem parar',           dist:5,  weeks:8,  hasPace:false},
-  {id:'5k_sub30',      icon:'⚡', t:'5km abaixo de 30 min',        s:'Pace alvo: ~6:00 min/km',            dist:5,  weeks:10, hasPace:true,  label:'Pace alvo (ex: 6:00)'},
-  {id:'5k_sub25',      icon:'🔥', t:'5km abaixo de 25 min',        s:'Pace alvo: ~5:00 min/km',            dist:5,  weeks:12, hasPace:true,  label:'Pace alvo (ex: 5:00)'},
-  // 10K
-  {id:'primeiro10k',   icon:'🔟', t:'Completar meu primeiro 10km', s:'Evolução gradual do 5km até 10km',   dist:10, weeks:14, hasPace:false},
-  {id:'10k_sub60',     icon:'🎯', t:'10km abaixo de 1 hora',       s:'Pace alvo: ~6:00 min/km',            dist:10, weeks:16, hasPace:true,  label:'Pace alvo (ex: 6:00)'},
-  {id:'10k_sub50',     icon:'⚡', t:'10km abaixo de 50 min',       s:'Pace alvo: ~5:00 min/km',            dist:10, weeks:18, hasPace:true,  label:'Pace alvo (ex: 5:00)'},
-  // Meia e Maratona
-  {id:'meia',          icon:'🥈', t:'Meia maratona (21km)',         s:'Completar ou melhorar PR na meia',   dist:21, weeks:22, hasPace:true,  label:'Pace alvo na prova'},
-  {id:'maratona',      icon:'🏅', t:'Maratona (42km)',              s:'Completar ou melhorar PR na maratona',dist:42,weeks:32, hasPace:true,  label:'Pace alvo na prova'},
-  // Saúde e outros
-  {id:'emagrecimento', icon:'🔥', t:'Emagrecimento e saúde',        s:'Correr mais, queimar mais, viver melhor',dist:0,weeks:12,hasPace:false},
-  {id:'volta',         icon:'🚶', t:'Voltar a correr',              s:'Retorno seguro após pausa ou lesão', dist:5,  weeks:8,  hasPace:false},
-  {id:'condicionamento',icon:'💪',t:'Condicionamento geral',        s:'Saúde cardiovascular e bem-estar',   dist:0,  weeks:10, hasPace:false},
-  {id:'trail10k',      icon:'🌲', t:'Trail / Corrida em trilha',    s:'Técnica, força e resistência off-road',dist:10,weeks:14,hasPace:true,  label:'Pace de referência'},
+  {id:'primeiro5k',   icon:'⭐',t:'Completar meu primeiro 5km',    s:'Do zero ao 5km contínuo',         dist:5,  weeks:8,  hasPace:false},
+  {id:'melhorar5k',   icon:'⚡',t:'Melhorar meu 5km',               s:'Reduzir meu tempo no 5km',         dist:5,  weeks:10, hasPace:true, label:'Pace alvo no 5km'},
+  {id:'primeiro10k',  icon:'🔟',t:'Completar meu primeiro 10km',    s:'Evolução do 5km até os 10km',      dist:10, weeks:14, hasPace:false},
+  {id:'melhorar10k',  icon:'🎯',t:'Melhorar meu 10km',              s:'Reduzir meu tempo no 10km',        dist:10, weeks:16, hasPace:true, label:'Pace alvo no 10km'},
+  {id:'primeiro15k',  icon:'💫',t:'Completar meus primeiros 15km',  s:'Construir resistência até 15km',  dist:15, weeks:20, hasPace:false},
+  {id:'meia',         icon:'🥈',t:'Meia maratona (21km)',            s:'Completar ou bater PR',            dist:21, weeks:22, hasPace:true, label:'Pace alvo na prova'},
+  {id:'maratona',     icon:'🏅',t:'Maratona (42km)',                 s:'Completar ou bater PR',            dist:42, weeks:32, hasPace:true, label:'Pace alvo na prova'},
+  {id:'emagrecimento',icon:'🔥',t:'Emagrecimento',                   s:'Volume + zona 2 + saúde',          dist:0,  weeks:12, hasPace:false},
+  {id:'condicionamento',icon:'💪',t:'Condicionamento geral',         s:'Saúde cardiovascular',             dist:0,  weeks:10, hasPace:false},
+  {id:'volta',        icon:'🚶',t:'Voltar a correr',                 s:'Retorno após pausa ou lesão',      dist:5,  weeks:8,  hasPace:false},
+  {id:'trail10k',     icon:'🌲',t:'Trail 10km',                      s:'Corrida em trilha',                dist:10, weeks:14, hasPace:true, label:'Pace de referência'},
+  {id:'velocidade',   icon:'💨',t:'Melhorar velocidade geral',       s:'Reduzir pace em qualquer prova',   dist:5,  weeks:10, hasPace:true, label:'Pace atual de referência'},
 ];
 
 // ═══════════════════════════════════════════════════
@@ -502,45 +436,15 @@ function showAuthMsg(msg, type='error'){
 }
 function hideAuthMsg(){ document.getElementById('auth-msg').style.display='none'; }
 
-
-function showTutorial(){
-  document.getElementById('tutorial-modal').style.display='block';
-  document.body.style.overflow='hidden';
-}
-function hideTutorial(){
-  document.getElementById('tutorial-modal').style.display='none';
-  document.body.style.overflow='';
-}
-
-let _pse = 0;
-function setPSE(n){
-  _pse = n;
-  document.getElementById('t-pse').value = n;
-  for(let i=1;i<=10;i++){
-    const btn = document.getElementById('pse-'+i);
-    if(!btn) continue;
-    const active = i<=n;
-    const col = n<=3?'var(--neon)':n<=6?'var(--orange)':'var(--red)';
-    btn.style.background = active ? col+'33' : 'var(--bg3)';
-    btn.style.borderColor = active ? col : 'var(--bd)';
-    btn.style.color = active ? col : 'var(--tx3)';
-  }
-}
-function togglePass(id, btn){
-  const el = document.getElementById(id);
-  if(el.type === 'password'){ el.type='text'; btn.textContent='🙈'; }
-  else { el.type='password'; btn.textContent='👁'; }
-}
+function togglePass(id,btn){const el=document.getElementById(id);if(el.type==='password'){el.type='text';btn.textContent='🙈';}else{el.type='password';btn.textContent='👁';}}
 
 async function doForgotPass(){
-  const email = document.getElementById('l-email').value.trim();
-  if(!email){ showAuthMsg('Digite seu e-mail acima primeiro.'); return; }
-  showAuthMsg('Enviando link de recuperação...','ok');
-  const {error} = await db.auth.resetPasswordForEmail(email, {
-    redirectTo: 'https://secretariaturismosaocarlos-png.github.io/coach-run/'
-  });
-  if(error) showAuthMsg('Erro: '+error.message);
-  else showAuthMsg('✓ Link de recuperação enviado para '+email+'. Verifique sua caixa de entrada.','ok');
+  const email=document.getElementById('l-email').value.trim();
+  if(!email){showAuthMsg('Digite seu e-mail acima primeiro.');return;}
+  showAuthMsg('Enviando link...','ok');
+  const {error}=await db.auth.resetPasswordForEmail(email,{redirectTo:'https://secretariaturismosaocarlos-png.github.io/coach-run/'});
+  if(error)showAuthMsg('Erro: '+error.message);
+  else showAuthMsg('✓ Link enviado para '+email+'. Verifique sua caixa de entrada.','ok');
 }
 
 async function doLogin(){
@@ -624,57 +528,38 @@ function showScreen(s){
 }
 
 function setupUI(){
-  const name = PROFILE?.name || CU.email.split('@')[0];
-  document.getElementById('user-name-display').textContent = name.split(' ')[0];
-  document.getElementById('user-avatar').textContent = name[0].toUpperCase();
-  if(IS_ADMIN){
-    document.getElementById('nb-admin').style.display='flex';
-    checkPendingUsers();
-  }
+  const name=PROFILE?.name||CU.email.split('@')[0];
+  document.getElementById('user-name-display').textContent=name.split(' ')[0];
+  document.getElementById('user-avatar').textContent=name[0].toUpperCase();
+  if(IS_ADMIN){document.getElementById('nb-admin').style.display='flex';checkPendingUsers();}
 }
-
 async function checkPendingUsers(){
-  try {
-    const {data} = await db.from('profiles').select('id').eq('status','pending');
-    const count = data ? data.length : 0;
-    const badge = document.getElementById('admin-badge');
-    if(badge){
-      if(count > 0){
-        badge.style.display = 'block';
-        badge.textContent = count;
-        // Sound notification if new pending users
-        if(count > (window._lastPendingCount || 0)){
-          playNotifSound();
-        }
-        window._lastPendingCount = count;
-      } else {
-        badge.style.display = 'none';
-        window._lastPendingCount = 0;
-      }
+  try{
+    const {data}=await db.from('profiles').select('id').eq('status','pending');
+    const n=data?data.length:0;
+    const b=document.getElementById('admin-badge');
+    if(b){
+      b.style.display=n>0?'block':'none';
+      b.textContent=n;
+      if(n>(window._lastPending||0))playNotif();
+      window._lastPending=n;
     }
-    // Poll every 30 seconds
-    setTimeout(checkPendingUsers, 30000);
-  } catch(e){}
+    setTimeout(checkPendingUsers,30000);
+  }catch(e){}
 }
-
-function playNotifSound(){
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)();
-    // Two-tone notification beep
-    [880, 1100].forEach((freq, i) => {
-      const osc = ctx.createOscillator();
-      const gain = ctx.createGain();
-      osc.connect(gain);
-      gain.connect(ctx.destination);
-      osc.frequency.value = freq;
-      osc.type = 'sine';
-      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.15);
-      gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + i * 0.15 + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.25);
-      osc.start(ctx.currentTime + i * 0.15);
-      osc.stop(ctx.currentTime + i * 0.15 + 0.25);
+function playNotif(){
+  try{
+    const ctx=new(window.AudioContext||window.webkitAudioContext)();
+    [880,1100].forEach((f,i)=>{
+      const o=ctx.createOscillator(),g=ctx.createGain();
+      o.connect(g);g.connect(ctx.destination);
+      o.frequency.value=f;o.type='sine';
+      g.gain.setValueAtTime(0,ctx.currentTime+i*.15);
+      g.gain.linearRampToValueAtTime(.3,ctx.currentTime+i*.15+.02);
+      g.gain.exponentialRampToValueAtTime(.001,ctx.currentTime+i*.15+.25);
+      o.start(ctx.currentTime+i*.15);o.stop(ctx.currentTime+i*.15+.25);
     });
-  } catch(e){}
+  }catch(e){}
 }
 
 // ═══════════════════════════════════════════════════
@@ -698,8 +583,7 @@ async function saveWorkout(t){
   const {data} = await db.from('workouts').insert({
     user_id:CU.id, data:t.data, dist:t.dist, tempo:t.tempo,
     pace:t.pace, fcmed:t.fcmed||null, fcmax:t.fcmax||null,
-    cad:t.cad||null, splits:t.splits||null,
-    elev:t.elev||null, pse:t.pse||null
+    cad:t.cad||null, splits:t.splits||null
   }).select().single();
   if(data){ t.id=data.id; t.created_at=data.created_at; HIST.push({...t, paceSec:ps(t.pace)}); }
 }
@@ -713,7 +597,6 @@ async function deleteWorkout(id){
 //  ADMIN FUNCTIONS
 // ═══════════════════════════════════════════════════
 async function loadAdminPanel(){
-  checkPendingUsers(); // refresh badge
   const {data:users} = await db.from('profiles').select('*').order('created_at');
   const el = document.getElementById('pn-admin');
   if(!users||!users.length){el.innerHTML='<div class="empty"><div class="empty-icon">👥</div><div class="empty-title">Nenhum usuário</div></div>';return;}
@@ -767,7 +650,6 @@ function adminUserRow(u){
 async function setUserStatus(uid, status){
   await db.from('profiles').update({status}).eq('id',uid);
   loadAdminPanel();
-  checkPendingUsers();
 }
 
 // ═══════════════════════════════════════════════════
@@ -819,18 +701,12 @@ function renderHome(){
     </div>
   </div>`;
 
-  if(n===0){
-    // No workouts yet
+  if(n<3){
+    const miss=3-n;
     html+=`<div class="card card-orange">
-      <div style="font-size:14px;font-weight:700;color:var(--orange);margin-bottom:6px">📋 Insira seu primeiro treino</div>
-      <div style="font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:12px">
-        ${USER_GOAL.test_time ? 'Suas zonas já estão definidas pelo teste de 3km. Agora insira seus treinos para acompanhar sua evolução.' : 'Insira seus treinos para começar a análise personalizada.'}
-      </div>
-      <button class="btn btn-orange" onclick="goTab('treino')">➕ Inserir primeiro treino</button>
-    </div>`;
-    html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px">
-      <button class="btn btn-ghost" onclick="goTab('plano')">📅 Ver plano</button>
-      <button class="btn btn-ghost" onclick="goTab('analise')">📊 Análise</button>
+      <div style="font-size:14px;font-weight:700;color:var(--orange);margin-bottom:6px">📋 Insira ${miss} treino${miss>1?'s':''} para ativar a análise completa</div>
+      <div style="font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:12px">Para uma assessoria realmente personalizada preciso dos seus <strong>3 treinos mais recentes</strong>. Com eles calculo seu pace real, tendência e monto o plano específico para você.</div>
+      <button class="btn btn-orange" onclick="goTab('treino')">➕ Inserir treino (${n}/3)</button>
     </div>`;
   } else {
     // Last workout summary
@@ -873,9 +749,7 @@ function renderOnboarding(el){
           <div class="field"><label>Data alvo (opcional)</label><input type="date" id="ob-td" value="${OB_TARGET_DATE}" oninput="OB_TARGET_DATE=this.value"></div>
         </div>
       </div>`:''}
-      <div style="position:sticky;bottom:80px;padding-top:10px;background:linear-gradient(transparent,var(--bg) 40%)">
-        <button class="btn btn-neon" onclick="obNext(1)" ${OB_OBJ?'':'disabled style="opacity:.4;cursor:not-allowed"'}>Próximo →</button>
-      </div>`;
+      <button class="btn btn-neon" style="margin-top:14px" onclick="obNext(1)" ${OB_OBJ?'':'disabled style="opacity:.4;cursor:not-allowed"'}>Próximo →</button>`;
   }
   else if(OB_STEP===2){
     const levels=[
@@ -887,10 +761,10 @@ function renderOnboarding(el){
     ];
     body=`<div class="ob-heading">Qual é o seu nível atual?</div>
       <div class="ob-sub">Seja honesto — isso calibra o volume e o prazo estimado.</div>
-      ${levels.map(lv=>`<div class="obj-card${OB_NIVEL===lv.id?' sel':''}" style="margin-bottom:6px" onclick="OB_NIVEL='${lv.id}';OB_NIVEL_LABEL='${lv.l}';renderHome()">
-        <span class="oi">${lv.l.split(' ')[0]}</span><div><div class="ot">${lv.l.split(' ').slice(1).join(' ')}</div><div class="os">${lv.s}</div></div>
+      ${levels.map(lv=>`<div class="obj-card${OB_NIVEL===lv.id?' sel':''}" style="margin-bottom:8px" onclick="OB_NIVEL='${lv.id}';OB_NIVEL_LABEL='${lv.l}';renderHome()">
+        <div class="ot">${lv.l}</div><div class="os">${lv.s}</div>
       </div>`).join('')}
-      <button class="btn btn-neon" style="margin-top:8px" onclick="obNext(2)" ${OB_NIVEL?'':'disabled style="opacity:.4;cursor:not-allowed"'}>Próximo →</button>
+      <button class="btn btn-neon" style="margin-top:6px" onclick="obNext(2)" ${OB_NIVEL?'':'disabled style="opacity:.4;cursor:not-allowed"'}>Próximo →</button>
       <button class="btn btn-ghost" style="margin-top:8px" onclick="OB_STEP=1;renderHome()">← Voltar</button>`;
   }
   else if(OB_STEP===3){
@@ -920,38 +794,11 @@ function renderOnboarding(el){
         </div>
       </div>
 
-      <div id="test-alert" style="margin-bottom:12px;border-radius:var(--rl);overflow:hidden;border:2px solid var(--orange);animation:pulse-border 1.5s ease-in-out infinite">
-        <div style="background:rgba(255,92,0,.15);padding:12px 14px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,92,0,.2)">
-          <span style="font-size:20px;animation:shake 0.5s ease-in-out infinite">⚠️</span>
-          <div style="font-size:13px;font-weight:700;color:var(--orange)">ATENÇÃO — Leia antes de continuar!</div>
-        </div>
-        <div style="background:rgba(255,92,0,.08);padding:14px">
-          <div style="font-size:13px;color:var(--tx);line-height:1.8;margin-bottom:10px">
-            Suas zonas de treino Z1/Z2/Z3 são calculadas <strong style="color:var(--orange)">exclusivamente</strong> a partir deste teste.<br>
-            Se você inserir um tempo de treino comum (não máximo), <strong style="color:var(--red)">as zonas ficam erradas e todos os treinos são ineficientes.</strong>
-          </div>
-          <div style="background:rgba(0,229,204,.08);border:1px solid rgba(0,229,204,.2);border-radius:var(--r);padding:10px 12px;font-size:12px;color:var(--teal);line-height:1.6">
-            ✅ <strong>O que fazer:</strong> realize o teste de 3km como descrito acima (esforço máximo sustentável) e insira o tempo real aqui.
-          </div>
-        </div>
-      </div>
-
       <div class="card" style="margin-bottom:12px">
         <div style="font-size:13px;font-weight:700;margin-bottom:10px">Insira o resultado do seu teste:</div>
-        
-        <div style="border:2px dashed rgba(232,255,0,.25);border-radius:var(--rl);padding:16px;text-align:center;background:var(--neon-dim);position:relative;margin-bottom:12px;cursor:pointer" id="ob-upload-zone">
-          <input type="file" accept="*" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%" onchange="obHandleFile(this.files[0])">
-          <div style="font-size:20px;margin-bottom:4px">📁</div>
-          <div style="font-size:13px;font-weight:700;color:var(--neon);margin-bottom:2px">Importar arquivo do teste</div>
-          <div style="font-size:11px;color:var(--tx2)">GPX, TCX, CSV ou JSON — preenche o tempo automaticamente</div>
-        </div>
-        <div id="ob-upload-msg" style="display:none;padding:8px 12px;border-radius:var(--r);font-size:12px;margin-bottom:10px"></div>
-
-        <div style="font-size:11px;color:var(--tx3);text-align:center;margin-bottom:10px">— ou preencha manualmente —</div>
-
         <div class="g2" style="margin-bottom:10px">
-          <div class="field"><label>Tempo nos 3km (mm:ss)</label><input type="text" id="ob-test-time" value="${OB_TEST_TIME}" placeholder="ex: 16:30" oninput="OB_TEST_TIME=this.value;renderHome()"></div>
-          <div class="field"><label>FC máxima (opcional)</label><input type="number" id="ob-test-fcmax" value="${OB_TEST_FCMAX||''}" placeholder="ex: 182" oninput="OB_TEST_FCMAX=parseInt(this.value)||0;renderHome()"></div>
+          <div class="field"><label>Tempo nos 3km (mm:ss)</label><input type="text" id="ob-test-time" value="${OB_TEST_TIME}" placeholder="ex: 16:30" oninput="OB_TEST_TIME=this.value"></div>
+          <div class="field"><label>FC máxima (opcional)</label><input type="number" id="ob-test-fcmax" value="${OB_TEST_FCMAX||''}" placeholder="ex: 182" oninput="OB_TEST_FCMAX=parseInt(this.value)||0"></div>
         </div>
         <div style="font-size:11px;color:var(--tx2);line-height:1.6">
           Ainda não fez o teste? <strong style="color:var(--neon)">Faça antes de continuar</strong> — os planos e análises dependem desse dado para ser precisos.<br>
@@ -960,7 +807,7 @@ function renderOnboarding(el){
       </div>
 
       ${OB_TEST_TIME ? `<div class="card card-teal" style="margin-bottom:12px">
-        <div style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:6px">✓ Suas zonas — Modelo Híbrido:</div>
+        <div style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:6px">✓ Pré-visualização das suas zonas:</div>
         ${previewZones(OB_TEST_TIME, OB_TEST_FCMAX)}
       </div>` : ''}
 
@@ -979,989 +826,206 @@ function renderOnboarding(el){
 function previewZones(testTime, fcmax){
   const z = calcZonesFromTest(testTime, fcmax);
   if(!z) return '<div style="font-size:12px;color:var(--tx2)">Tempo inválido.</div>';
-  const z1min = z.e ? sp(z.e.min) : '—', z1max = z.e ? sp(z.e.max) : '—';
-  const z2min = z.t ? sp(z.t.min) : '—', z2max = z.t ? sp(z.t.max) : '—';
-  const z3min = z.i ? sp(z.i.min) : '—', z3max = z.r ? sp(z.r.max) : '—';
-  const vam = z._vam;
-  return `
-    ${vam ? `<div style="font-size:11px;color:var(--neon);margin-bottom:6px">VAM: ${vam.kmh} km/h </div>` : ''}
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:6px;margin-bottom:4px;background:var(--neon-dim);border:1px solid rgba(232,255,0,.2)">
-      <span style="font-size:12px;font-weight:700;color:var(--neon)">Z1 — Base aeróbica</span>
-      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--neon)">${z1min}–${z1max}</span>
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:6px;margin-bottom:4px;background:var(--orange-dim);border:1px solid rgba(255,92,0,.2)">
-      <span style="font-size:12px;font-weight:700;color:var(--orange)">Z2 — Limiar / Threshold</span>
-      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--orange)">${z2min}–${z2max}</span>
-    </div>
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;border-radius:6px;background:var(--red-dim);border:1px solid rgba(255,61,90,.2)">
-      <span style="font-size:12px;font-weight:700;color:var(--red)">Z3 — Alta intensidade / VO2max</span>
-      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:var(--red)">${z3min}–${z3max}</span>
-    </div>
-  `;
+  return Object.values(z).map(zv=>
+    `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;border-radius:6px;margin-bottom:3px;background:${zv.bg}">
+      <span style="font-size:12px;font-weight:600;color:${zv.color}">${zv.emoji} ${zv.label}</span>
+      <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${zv.color}">${sp(zv.min)}–${sp(zv.max)}</span>
+    </div>`
+  ).join('');
 }
 
 function calcZonesFromTest(testTime, fcmax){
-  // Modelo Híbrido VDOT methodology + Canova VAM
-  // Reference: Jack Modelo Híbrido "Running Formula" + Renato Canova periodization
   const secs = t2s(testTime);
   if(!secs || secs < 600 || secs > 2400) return null;
 
-  // VAM (Velocidade Aeróbica Máxima) from 3km time test
-  const vam_ms = 3000 / secs;           // m/s
-  const vam_kmh = vam_ms * 3.6;         // km/h
-  const vam_pace = 1000 / vam_ms;       // sec/km at VAM
+  const vam_ms = 3000 / secs;
+  const vam_kmh = Math.round(vam_ms * 3.6 * 10)/10;
+  const vam_pace = Math.round(1000 / vam_ms);
 
-  // Estimate VDOT from 3km performance (Modelo Híbrido formula approximation)
-  // VDOT ≈ (-4.60 + 0.182258 * v + 0.000104 * v^2) / (0.8 + 0.1894393 * e^(-0.012778*t) + 0.2989558 * e^(-0.1932605*t))
-  // Simplified: estimate from velocity
-  // For 3km: VDOT ≈ (vam_kmh / 0.225) approximately
-  const vdot_est = Math.round(vam_kmh / 0.225);
+  // Anchor zones to athlete's ACTUAL workout pace — never show zones
+  // slower than what the athlete already does
+  let refPace = vam_pace;
+  if(typeof HIST !== 'undefined' && HIST && HIST.length > 0){
+    const recent = HIST.slice(-5).filter(w => w.paceSec > 60 && w.paceSec < 900);
+    if(recent.length > 0){
+      const avg = Math.round(recent.reduce((a,w)=>a+w.paceSec,0)/recent.length);
+      refPace = Math.min(vam_pace, avg);
+    }
+  }
 
-  // Modelo Híbrido Training Paces (sec/km) based on % of vVo2max (= VAM pace)
-  // E  (Easy/Recovery):     59–74% vVo2max → multiply vam_pace by 1.35–1.69
-  // M  (Marathon pace):     75–84% vVo2max → multiply vam_pace by 1.19–1.33  
-  // T  (Threshold/Tempo):   83–88% vVo2max → multiply vam_pace by 1.14–1.20
-  // I  (Interval/VO2max):   95–100% vVo2max → multiply vam_pace by 1.00–1.05
-  // R  (Repetitions/Speed): 105–120% vVo2max → multiply vam_pace by 0.83–0.95
   return {
-    e: {
-      min: Math.round(vam_pace * 1.35),
-      max: Math.round(vam_pace * 1.69),
-      label: 'E — Fácil',
-      emoji: '🟢',
-      desc: 'Conversa normal. Base aeróbica. 70–80% dos seus treinos.',
-      color: 'var(--neon)',
-      bg: 'var(--neon-dim)',
-      daniel: 'Easy'
-    },
-    m: {
-      min: Math.round(vam_pace * 1.19),
-      max: Math.round(vam_pace * 1.33),
-      label: 'M — Maratona',
-      emoji: '🔵',
-      desc: 'Fala frases curtas. Ritmo de provas longas.',
-      color: 'var(--blue)',
-      bg: 'var(--bdim)',
-      daniel: 'Marathon'
-    },
-    t: {
-      min: Math.round(vam_pace * 1.14),
-      max: Math.round(vam_pace * 1.20),
-      label: 'T — Limiar',
-      emoji: '🟡',
-      desc: 'Difícil mas sustentável por 20 min. Desenvolve limiar anaeróbico.',
-      color: 'var(--orange)',
-      bg: 'var(--orange-dim)',
-      daniel: 'Threshold'
-    },
-    i: {
-      min: Math.round(vam_pace * 1.00),
-      max: Math.round(vam_pace * 1.05),
-      label: 'I — Intervalo VO2max',
-      emoji: '🔴',
-      desc: 'Muito difícil. Máximo 10–15 min acumulados por treino.',
-      color: 'var(--red)',
-      bg: 'var(--red-dim)',
-      daniel: 'Interval'
-    },
-    r: {
-      min: Math.round(vam_pace * 0.83),
-      max: Math.round(vam_pace * 0.95),
-      label: 'R — Repetição',
-      emoji: '💀',
-      desc: 'Sprint. Máximo por rep: 400m ou 2 min. Força e velocidade.',
-      color: 'var(--purple)',
-      bg: 'var(--purple-dim)',
-      daniel: 'Repetition'
-    },
-    // Store VAM data for reference
-    _vam: { ms: vam_ms, kmh: Math.round(vam_kmh*10)/10, pace: Math.round(vam_pace), vdot: vdot_est }
+    e: { min:Math.round(refPace*1.10), max:Math.round(refPace*1.25),
+         label:'Z1 — Base aeróbica', emoji:'🟢',
+         desc:'Conversa normal. 70–80% dos treinos.',
+         color:'var(--neon)', bg:'var(--neon-dim)' },
+    m: { min:Math.round(refPace*1.03), max:Math.round(refPace*1.09),
+         label:'Z1+ — Leve/Moderado', emoji:'🔵',
+         desc:'Fala frases curtas. Longões.',
+         color:'#4da6ff', bg:'rgba(77,166,255,.08)' },
+    t: { min:Math.round(refPace*0.95), max:Math.round(refPace*1.02),
+         label:'Z2 — Limiar', emoji:'🟡',
+         desc:'Difícil mas sustentável 20+ min.',
+         color:'var(--orange)', bg:'var(--orange-dim)' },
+    i: { min:Math.round(refPace*0.87), max:Math.round(refPace*0.94),
+         label:'Z3 — Intervalo VO2max', emoji:'🔴',
+         desc:'Muito difícil. Máx 10–15 min acumulados.',
+         color:'var(--red)', bg:'var(--red-dim)' },
+    r: { min:Math.round(refPace*0.80), max:Math.round(refPace*0.86),
+         label:'Z3+ — Sprint', emoji:'💀',
+         desc:'Sprint curto. Máx 400m ou 2 min por rep.',
+         color:'var(--purple)', bg:'var(--purple-dim)' },
+    _vam: { ms:vam_ms, kmh:vam_kmh, pace:vam_pace }
   };
 }
-
-function obHandleFile(file){
-  if(!file) return;
-  const ext = file.name.split('.').pop().toLowerCase();
-  const reader = new FileReader();
-  reader.onload = function(e){
-    try{
-      const content = e.target.result;
-      let d = null;
-      const isGPX = ext==='gpx' || content.includes('<gpx') || content.includes('<trkpt');
-      const isTCX = ext==='tcx' || content.includes('<TrainingCenterDatabase') || content.includes('<Trackpoint>');
-      if(isGPX) d = parseGPX(content);
-      else if(isTCX) d = parseTCX(content);
-      else if(ext==='csv') d = parseCSV(content);
-      else if(ext==='json'||content.trim().startsWith('{')) d = parseJSON(content);
-      else { obUploadMsg('Formato não suportado. Use GPX, TCX, CSV ou JSON.', 'err'); return; }
-      if(!d){ obUploadMsg('Não foi possível ler os dados.', 'err'); return; }
-      if(d.tempo){ 
-        OB_TEST_TIME = d.tempo;
-        if(d.fcmax) OB_TEST_FCMAX = d.fcmax;
-        obUploadMsg('✓ ' + file.name + ' importado! Tempo: ' + d.tempo + (d.fcmax?' · FC máx: '+d.fcmax+' bpm':''), 'ok');
-        renderHome();
-      } else {
-        obUploadMsg('Arquivo importado mas sem tempo detectado. Preencha manualmente.', 'warn');
-      }
-    } catch(err){ obUploadMsg('Erro: ' + err.message, 'err'); }
-  };
-  reader.readAsText(file);
-}
-
-function obUploadMsg(msg, type){
-  const el = document.getElementById('ob-upload-msg');
-  if(!el) return;
-  el.style.display = 'block';
-  el.style.background = type==='ok' ? 'var(--neon-dim)' : type==='err' ? 'var(--red-dim)' : 'var(--orange-dim)';
-  el.style.color = type==='ok' ? 'var(--neon)' : type==='err' ? 'var(--red)' : 'var(--orange)';
-  el.style.border = '1px solid ' + (type==='ok' ? 'rgba(232,255,0,.3)' : type==='err' ? 'rgba(255,61,90,.3)' : 'rgba(255,92,0,.3)');
-  el.textContent = msg;
-}
-
-
-
-let OB_NIVEL_LABEL = '';
-function obPickObj(id){
-  OB_OBJ=OBJS.find(o=>o.id===id);
-  renderHome();
-  setTimeout(()=>{
-    const tp=document.getElementById('ob-tp'),td=document.getElementById('ob-td');
-    if(tp)OB_TARGET_PACE=tp.value;if(td)OB_TARGET_DATE=td.value;
-  },0);
-}
-function obNext(step){
-  if(step===1){
-    if(!OB_OBJ)return;
-    if(OB_OBJ.hasPace){const tp=document.getElementById('ob-tp'),td=document.getElementById('ob-td');if(tp)OB_TARGET_PACE=tp.value;if(td)OB_TARGET_DATE=td.value;}
-    OB_STEP=2;renderHome();
-  } else if(step===2){
-    if(!OB_NIVEL)return;OB_STEP=3;renderHome();
-  } else if(step===3){
-    OB_STEP=4;renderHome();
-  }
-}
-async function obFinish(){
-  const testTime = document.getElementById('ob-test-time')?.value || OB_TEST_TIME;
-  const testFcmax = parseInt(document.getElementById('ob-test-fcmax')?.value) || OB_TEST_FCMAX || 0;
-  OB_TEST_TIME = testTime;
-  OB_TEST_FCMAX = testFcmax;
-  const testSecs = t2s(testTime);
-  const vam_ms = testSecs > 0 ? 3000 / testSecs : 0;
-  const vam_pace = vam_ms > 0 ? Math.round(1000 / vam_ms) : 0;
-
-  await saveGoal({
-    obj_id:OB_OBJ.id, nivel:OB_NIVEL, nivel_label:OB_NIVEL_LABEL||OB_NIVEL,
-    dias_semana:OB_DIAS, target_pace_sec:ps(OB_TARGET_PACE)||0,
-    target_date:OB_TARGET_DATE||null, onboard_done:true,
-    test_time:testTime, test_fcmax:testFcmax, vam_pace:vam_pace
-  });
-
-  // Auto-save test as first workout if not already saved
-  if(testTime && HIST.length === 0){
-    const testPaceSec = vam_pace > 0 ? vam_pace : ps(testTime);
-    const t = {
-      data: new Date().toLocaleDateString('pt-BR'),
-      ts: Date.now(),
-      dist: 3.0,
-      tempo: testTime,
-      pace: sp(testPaceSec),
-      fcmed: Math.round(testFcmax * 0.93) || 0,
-      fcmax: testFcmax || 0,
-      cad: 0,
-      splits: [],
-      paceSec: testPaceSec,
-      isTeste: true
-    };
-    await saveWorkout(t);
-  }
-
-  OB_STEP=1;
-  renderHome();
-  goTab('analise');
-}
-function resetGoal(){
-  if(!confirm('Redefinir objetivo e perfil?'))return;
-  USER_GOAL=null;OB_STEP=1;OB_OBJ=null;OB_NIVEL=null;OB_TARGET_PACE='';OB_TARGET_DATE='';OB_TEST_TIME='';OB_TEST_FCMAX=0;
-  saveGoal({onboard_done:false});renderHome();
-}
-
-// ═══════════════════════════════════════════════════
-//  FILE UPLOAD
-// ═══════════════════════════════════════════════════
-const UZ=document.getElementById('upload-zone')||{addEventListener:()=>{}};
-document.addEventListener('DOMContentLoaded',()=>{
-  const uz=document.querySelector('.upload-zone');
-  if(uz){
-    uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('drag');});
-    uz.addEventListener('dragleave',()=>uz.classList.remove('drag'));
-    uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('drag');if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
-  }
-});
-function handleFile(f){
-  if(!f)return;
-  const ext=f.name.split('.').pop().toLowerCase();
-  const r=new FileReader();
-  r.onload=e=>{
-    try{
-      const content = e.target.result;
-      let d=null;
-      // Detect by content if extension is unknown
-      const isGPX = ext==='gpx' || content.includes('<gpx') || content.includes('<trkpt');
-      const isTCX = ext==='tcx' || content.includes('<TrainingCenterDatabase') || content.includes('<Trackpoint>');
-      const isJSON = ext==='json' || (content.trim().startsWith('{') || content.trim().startsWith('['));
-      const isCSV = ext==='csv';
-
-      if(isGPX) d=parseGPX(content);
-      else if(isTCX) d=parseTCX(content);
-      else if(isCSV) d=parseCSV(content);
-      else if(isJSON) d=parseJSON(content);
-      else if(ext==='fit'){uMsg('Arquivo .FIT é binário. Exporte como GPX no Garmin Connect ou Strava.','err');return;}
-      else{
-        // Last resort: try to detect
-        if(content.includes('<gpx') || content.includes('<trkpt')) d=parseGPX(content);
-        else if(content.includes('<Trackpoint')) d=parseTCX(content);
-        else { uMsg('Formato não reconhecido. Use GPX, TCX, CSV ou JSON.','err'); return; }
-      }
-      if(!d){uMsg('Não foi possível ler os dados do arquivo.','err');return;}
-      fillForm(d,f.name);
-    }catch(err){uMsg('Erro ao ler arquivo: '+err.message,'err');}
-  };
-  r.readAsText(f);
-}
-function getTagVal(el, tagName){
-  const all = el.getElementsByTagName('*');
-  for(let i=0;i<all.length;i++){
-    if(all[i].localName===tagName) return all[i];
-  }
-  return null;
-}
-
-function parseGPX(xml){
-  const doc=new DOMParser().parseFromString(xml,'text/xml');
-  let pts=Array.from(doc.getElementsByTagName('trkpt'));
-  if(!pts.length) pts=Array.from(doc.getElementsByTagName('rtept'));
-  if(!pts.length) return null;
-  const points=[];
-  pts.forEach(pt=>{
-    const lat=parseFloat(pt.getAttribute('lat'));
-    const lon=parseFloat(pt.getAttribute('lon'));
-    if(isNaN(lat)||isNaN(lon)) return;
-    const tEl=getTagVal(pt,'time')||pt.querySelector('time');
-    const hrEl=getTagVal(pt,'hr');
-    const cadEl=getTagVal(pt,'cad');
-    points.push({
-      lat,lon,
-      time:tEl?new Date(tEl.textContent):null,
-      hr:hrEl?parseInt(hrEl.textContent):0,
-      cad:cadEl?parseInt(cadEl.textContent):0
-    });
-  });
-  return calcFromPoints(points);
-}
-function parseTCX(xml){
-  const doc=new DOMParser().parseFromString(xml,'text/xml');
-  const tps=doc.querySelectorAll('Trackpoint');if(!tps.length)return null;
-
-  // Extract HR and cadence from trackpoints
-  const hrs=[], cads=[];
-  tps.forEach(tp=>{
-    // HR can be in multiple places in TCX
-    const hrEl = tp.querySelector('HeartRateBpm Value, HeartRateBpm > Value, Value');
-    if(hrEl){ const v=parseInt(hrEl.textContent); if(v>30&&v<250)hrs.push(v); }
-    const cadEl = tp.querySelector('Cadence') || tp.querySelector('RunCadence');
-    if(cadEl){ const v=parseInt(cadEl.textContent); if(v>0)cads.push(v); }
-  });
-
-  // Get authoritative data from TCX Activity metadata (most accurate)
-  const dEl=doc.querySelector('DistanceMeters');
-  const tEl=doc.querySelector('TotalTimeSeconds');
-  const ahEl=doc.querySelector('AverageHeartRateBpm Value');
-  const mhEl=doc.querySelector('MaximumHeartRateBpm Value');
-  const avgCadEl=doc.querySelector('Cadence'); // activity-level cadence
-
-  // Distance from TCX (in meters → km)
-  let dist = 0;
-  if(dEl){
-    const meters = parseFloat(dEl.textContent);
-    dist = Math.round(meters/10)/100; // e.g. 4380m → 4.38km
-  }
-
-  // Time from TCX (in seconds)
-  let totalSecs = 0;
-  if(tEl){
-    totalSecs = parseFloat(tEl.textContent);
-  } else {
-    // Fallback: use first/last trackpoint time
-    const times=[];
-    tps.forEach(tp=>{ const te=tp.querySelector('Time'); if(te)times.push(new Date(te.textContent)); });
-    if(times.length>=2) totalSecs=(times[times.length-1]-times[0])/1000;
-  }
-
-  const tempo = s2t(Math.round(totalSecs));
-
-  // Pace = time / distance (sec/km), only if both valid
-  let pace = '—';
-  if(dist>0 && totalSecs>0){
-    const paceSec = Math.round(totalSecs/dist);
-    pace = sp(paceSec);
-  }
-
-  // Heart rate: prefer TCX metadata, fallback to trackpoint average
-  let fcmed=0, fcmax=0;
-  if(ahEl) fcmed=parseInt(ahEl.textContent);
-  else if(hrs.length) fcmed=Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length);
-  if(mhEl) fcmax=parseInt(mhEl.textContent);
-  else if(hrs.length) fcmax=Math.max(...hrs);
-
-  // Cadence: prefer activity-level, fallback to trackpoint average
-  let cad=0;
-  if(avgCadEl) cad=parseInt(avgCadEl.textContent);
-  else if(cads.length){ cad=Math.round(cads.reduce((a,b)=>a+b,0)/cads.length); if(cad<100&&cad>0)cad*=2; }
-
-  // Splits from trackpoints (km markers)
-  const splits=[];
-  const positions=[];
-  tps.forEach(tp=>{
-    const pos=tp.querySelector('Position');
-    const te=tp.querySelector('Time');
-    if(pos&&te){
-      try{
-        const lat=parseFloat(pos.querySelector('LatitudeDegrees').textContent);
-        const lon=parseFloat(pos.querySelector('LongitudeDegrees').textContent);
-        positions.push({lat,lon,time:new Date(te.textContent)});
-      }catch(e){}
-    }
-  });
-  if(positions.length>1 && dist>1){
-    let km=1,da=0,lt=positions[0].time;
-    for(let i=1;i<positions.length;i++){
-      da+=haversine(positions[i-1].lat,positions[i-1].lon,positions[i].lat,positions[i].lon)/1000;
-      if(da>=km){
-        splits.push(sp(Math.round((positions[i].time-lt)/1000)));
-        lt=positions[i].time; km++;
-      }
-    }
-  }
-
-  return{dist,tempo,pace,fcmed,fcmax,cad,splits};
-}
-function parseCSV(text){
-  const lines=text.trim().split('\n');if(lines.length<2)return null;
-  const hdr=lines[0].split(',').map(h=>h.trim().toLowerCase().replace(/[^a-z0-9]/g,'_'));
-  const col=ns=>{for(const n of ns){const x=hdr.indexOf(n);if(x>=0)return x;for(let j=0;j<hdr.length;j++)if(hdr[j].includes(n))return j;}return -1;};
-  const iD=col(['distance','distancia','dist']),iT=col(['time','tempo','duration','elapsed_time','moving_time']),iP=col(['pace','ritmo','avg_pace']),iFm=col(['avg_hr','average_hr','fc_media','average_heart_rate']),iFx=col(['max_hr','max_heart_rate','fc_maxima']),iC=col(['cadence','cadencia','avg_cadence']);
-  const row=lines[lines.length-1].split(',').map(v=>v.trim().replace(/^"|"$/g,''));
-  let dist=iD>=0?parseFloat(row[iD]):0;if(dist>500)dist=dist/1000;dist=Math.round(dist*100)/100;
-  const tempo=iT>=0?normTime(row[iT]):'';let pace=iP>=0?normPace(row[iP]):'';
-  if(!pace&&dist&&tempo){const ts=t2s(tempo);if(ts&&dist)pace=sp(Math.round(ts/dist));}
-  return{dist,tempo,pace,fcmed:iFm>=0?parseInt(row[iFm]):0,fcmax:iFx>=0?parseInt(row[iFx]):0,cad:iC>=0?parseInt(row[iC]):0,splits:[]};
-}
-function parseJSON(text){
-  let obj=JSON.parse(text);if(Array.isArray(obj))obj=obj[0];
-  const find=keys=>{for(const k of keys){if(obj[k]!==undefined)return obj[k];const kl=k.toLowerCase();for(const ky in obj)if(ky.toLowerCase()===kl)return obj[ky];}return null;};
-  let dist=find(['distance','distancia','dist'])||0;if(dist>500)dist=dist/1000;dist=Math.round(dist*100)/100;
-  const tRaw=find(['elapsed_time','moving_time','duration','time','tempo'])||0;
-  const tempo=typeof tRaw==='number'?s2t(tRaw):normTime(String(tRaw));
-  const pRaw=find(['average_speed','avg_pace','pace','average_pace']);
-  let pace='';if(pRaw){if(typeof pRaw==='number'&&pRaw<10)pace=sp(Math.round(1000/pRaw));else pace=normPace(String(pRaw));}
-  if(!pace&&dist&&tempo){const ts=t2s(tempo);if(ts&&dist)pace=sp(Math.round(ts/dist));}
-  let cad=parseInt(find(['average_cadence','cadence','cadencia']))||0;if(cad<100&&cad>0)cad*=2;
-  return{dist,tempo,pace,fcmed:parseInt(find(['average_heartrate','avg_hr','average_heart_rate']))||0,fcmax:parseInt(find(['max_heartrate','max_hr','max_heart_rate']))||0,cad,splits:[]};
-}
-function calcFromPoints(pts){
-  const vp=pts.filter(p=>p.time&&p.lat&&p.lon);
-  let dist=0;for(let i=1;i<vp.length;i++)dist+=haversine(vp[i-1].lat,vp[i-1].lon,vp[i].lat,vp[i].lon);
-  dist=Math.round(dist/100)/10;
-  const totalSecs=vp.length>=2?(vp[vp.length-1].time-vp[0].time)/1000:0;
-  const tempo=s2t(totalSecs);const paceSec=dist>0?Math.round(totalSecs/dist):0;
-  const hrs=pts.map(p=>p.hr).filter(h=>h>40&&h<220);
-  const fcmed=hrs.length?Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length):0;
-  const fcmax=hrs.length?Math.max(...hrs):0;
-  const cads=pts.map(p=>p.cad).filter(c=>c>0);
-  let cad=cads.length?Math.round(cads.reduce((a,b)=>a+b,0)/cads.length):0;
-  if(cad<100&&cad>0)cad*=2;
-  const splits=[];
-  if(dist>1&&vp.length>1){let km=1,da=0,lt=vp[0].time;for(let i=1;i<vp.length;i++){da+=haversine(vp[i-1].lat,vp[i-1].lon,vp[i].lat,vp[i].lon)/1000;if(da>=km){splits.push(sp(Math.round((vp[i].time-lt)/1000)));lt=vp[i].time;km++;}}}
-  return{dist,tempo,pace:sp(paceSec),fcmed,fcmax,cad,splits};
-}
-function haversine(la1,lo1,la2,lo2){const R=6371000,dL=(la2-la1)*Math.PI/180,dO=(lo2-lo1)*Math.PI/180,a=Math.sin(dL/2)**2+Math.cos(la1*Math.PI/180)*Math.cos(la2*Math.PI/180)*Math.sin(dO/2)**2;return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));}
-function fillForm(d,fn){
-  const m={dist:'t-dist',tempo:'t-tempo',pace:'t-pace',fcmed:'t-fcmed',fcmax:'t-fcmax',cad:'t-cad'};
-  Object.entries(m).forEach(([k,id])=>{if(d[k]){const el=document.getElementById(id);if(el){el.value=d[k];el.classList.add('ok');}}});
-  if(d.splits?.length){const el=document.getElementById('t-splits');if(el){el.value=d.splits.join(', ');el.classList.add('ok');}}
-  uMsg('✓ '+fn+' importado com sucesso!','ok');
-}
-function uMsg(m,t='ok'){
-  const el=document.getElementById('u-msg');if(!el)return;
-  el.style.display='flex';el.className='alert '+(t==='ok'?'alert-teal':'alert-red');el.textContent=m;
-}
-
-// Render treino panel
-function renderTreino(){
-  const el=document.getElementById('pn-treino');
-  el.innerHTML=`<div style="padding-top:8px;margin-bottom:16px">
-    <div style="font-size:18px;font-weight:700;letter-spacing:-.3px">➕ Inserir Treino</div>
-    <div style="font-size:12px;color:var(--tx2);margin-top:2px">Importe um arquivo ou preencha manualmente</div>
-  </div>
-  <div class="upload-zone" id="upload-zone2">
-    <input type="file" accept="*" onchange="handleFile(this.files[0])">
-    <div style="font-size:24px;margin-bottom:6px">📁</div>
-    <div style="font-size:13px;font-weight:700;color:var(--neon);margin-bottom:3px">Importar arquivo de treino</div>
-    <div style="font-size:11px;color:var(--tx2);margin-bottom:8px">Preenche os campos automaticamente</div>
-    <div style="display:flex;gap:5px;justify-content:center;flex-wrap:wrap">
-      <span class="utype">GPX</span><span class="utype">TCX</span><span class="utype">CSV</span><span class="utype">JSON</span>
-    </div>
-  </div>
-  <div id="u-msg" class="alert alert-teal" style="display:none"></div>
-  <div class="or-div">ou preencha manualmente</div>
-  <div class="card">
-    <div class="clabel">Dados do treino</div>
-    <div class="g3" style="margin-bottom:10px">
-      <div class="field"><label>Distância (km)</label><input type="number" id="t-dist" placeholder="5.2" step="0.1" min="0.5"></div>
-      <div class="field"><label>Tempo</label><input type="text" id="t-tempo" placeholder="32:15"></div>
-      <div class="field"><label>Pace (min/km)</label><input type="text" id="t-pace" placeholder="6:12"></div>
-    </div>
-    <div class="g3">
-      <div class="field"><label>FC média</label><input type="number" id="t-fcmed" placeholder="opcional"></div>
-      <div class="field"><label>FC máx</label><input type="number" id="t-fcmax" placeholder="opcional"></div>
-      <div class="field"><label>Cadência (spm)</label><input type="number" id="t-cad" placeholder="opcional"></div>
-    </div>
-    <div style="margin-top:10px" class="field"><label>Splits por km</label><input type="text" id="t-splits" placeholder="6:20, 6:15, 6:08..."></div>
-    <div style="margin-top:10px" class="field"><label>Ganho de elevação (m) — opcional</label><input type="number" id="t-elev" placeholder="ex: 45"></div>
-    <div style="margin-top:10px" class="field">
-      <label>PSE — Percepção de esforço (1–10)</label>
-      <div style="display:flex;gap:6px;margin-top:6px" id="pse-btns">
-        ${[1,2,3,4,5,6,7,8,9,10].map(n=>`<button type="button" onclick="setPSE(${n})" id="pse-${n}" style="flex:1;padding:6px 2px;border:1px solid var(--bd);border-radius:6px;background:var(--bg3);color:var(--tx2);font-size:11px;font-weight:700;cursor:pointer;transition:all .15s">${n}</button>`).join('')}
-      </div>
-      <div style="font-size:10px;color:var(--tx3);margin-top:4px">1=muito fácil · 5=moderado · 8=difícil · 10=máximo</div>
-      <input type="hidden" id="t-pse" value="0">
-    </div>
-  </div>
-  <button class="btn btn-neon" onclick="addTreino()">Salvar treino ✓</button>
-  <div id="workout-history"></div>`;
-  renderWorkoutHistory();
-
-  // Re-attach drag & drop
-  const uz=document.getElementById('upload-zone2');
-  if(uz){
-    uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('drag');});
-    uz.addEventListener('dragleave',()=>uz.classList.remove('drag'));
-    uz.addEventListener('drop',e=>{e.preventDefault();uz.classList.remove('drag');if(e.dataTransfer.files[0])handleFile(e.dataTransfer.files[0]);});
-  }
-
-  // Render workout history below form
-  renderWorkoutHistory();
-}
-
-function renderWorkoutHistory(){
-  const el = document.getElementById('workout-history');
-  if(!el) return;
-  if(!HIST.length){ el.innerHTML=''; return; }
-
-  const zones = USER_GOAL?.vam_pace ? calcZonesFromTest(USER_GOAL.test_time, USER_GOAL.test_fcmax) : null;
-
-  let html = `<div class="card" style="margin-top:12px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
-      <div class="clabel" style="margin:0">📋 Treinos inseridos (${HIST.length})</div>
-    </div>`;
-
-  HIST.slice().reverse().forEach(t => {
-    const zone = zones ? classifyWorkoutZone(t, zones) : 'z1';
-    const zColor = zone==='z3'?'var(--red)':zone==='z2'?'var(--orange)':'var(--neon)';
-    const zLabel = zone==='z3'?'Z3':'z2'===zone?'Z2':'Z1';
-    html += `<div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--bd)">
-      <div style="width:32px;height:32px;border-radius:50%;background:${zColor}22;border:1px solid ${zColor}44;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:700;color:${zColor};flex-shrink:0">${zLabel}</div>
-      <div style="flex:1;min-width:0">
-        <div style="font-size:13px;font-weight:600">${t.dist}km · ${t.pace}/km</div>
-        <div style="font-size:11px;color:var(--tx2)">${t.data}${t.tempo?' · '+t.tempo:''}${t.fcmed?' · ❤️ '+t.fcmed+' bpm':''}</div>
-      </div>
-      <button onclick="doDelete('${t.id}')" style="background:none;border:1px solid var(--bd);border-radius:6px;padding:4px 8px;color:var(--tx3);cursor:pointer;font-size:12px;flex-shrink:0" onmouseover="this.style.color='var(--red)';this.style.borderColor='rgba(255,61,90,.3)'" onmouseout="this.style.color='var(--tx3)';this.style.borderColor='var(--bd)'">✕</button>
-    </div>`;
-  });
-
-  html += `</div>`;
-  el.innerHTML = html;
-}
-
-// ═══════════════════════════════════════════════════
-//  ADD / DELETE WORKOUT
-// ═══════════════════════════════════════════════════
-async function addTreino(){
-  const dist=parseFloat(document.getElementById('t-dist')?.value);
-  const tempo=document.getElementById('t-tempo')?.value.trim()||'';
-  const pace=document.getElementById('t-pace')?.value.trim()||'';
-  if(!dist||!pace){alert('Preencha pelo menos distância e pace.');return;}
-  const fcmed=parseInt(document.getElementById('t-fcmed')?.value)||0;
-  const fcmax=parseInt(document.getElementById('t-fcmax')?.value)||0;
-  const cad=parseInt(document.getElementById('t-cad')?.value)||0;
-  const raw=document.getElementById('t-splits')?.value||'';
-  const splits=raw?raw.split(',').map(s=>s.trim()).filter(Boolean):[];
-  const elev=parseInt(document.getElementById('t-elev')?.value)||0;
-  const pse=parseInt(document.getElementById('t-pse')?.value)||0;
-  const t={data:new Date().toLocaleDateString('pt-BR'),ts:Date.now(),dist,tempo,pace,fcmed,fcmax,cad,splits,elev,pse,paceSec:ps(pace)};
-  await saveWorkout(t);
-  // Clear
-  ['t-dist','t-tempo','t-pace','t-fcmed','t-fcmax','t-cad','t-splits'].forEach(id=>{const el=document.getElementById(id);if(el){el.value='';el.classList.remove('ok');}});
-  document.getElementById('u-msg').style.display='none';
-  renderHome();goTab('analise');
-}
-
-async function doDelete(id){
-  const t=HIST.find(x=>x.id===id);if(!t)return;
-  if(!confirm(`Excluir treino de ${t.data} (${t.dist}km a ${t.pace}/km)?\n\nEle será removido da análise, plano e evolução.`))return;
-  await deleteWorkout(id);
-  // Refresh all active panels
-  const active = document.querySelector('.panel.active')?.id;
-  renderHome();
-  if(active==='pn-analise') renderAnalise();
-  if(active==='pn-plano') renderPlano();
-  if(active==='pn-evolucao') renderEvolucao();
-  // Always refresh evolucao data
-  renderEvolucao();
-}
-
-// ═══════════════════════════════════════════════════
-//  PACE UTILS
-// ═══════════════════════════════════════════════════
-function ps(p){if(!p)return 0;const x=String(p).split(':');return x.length===2?parseInt(x[0])*60+parseInt(x[1]):0;}
-function sp(s){if(!s)return '—';const m=Math.floor(s/60),sec=Math.round(s%60);return `${m}:${sec<10?'0':''}${sec}`;}
-function s2t(s){const h=Math.floor(s/3600),m=Math.floor((s%3600)/60),sec=Math.round(s%60);return h>0?`${h}:${m<10?'0':''}${m}:${sec<10?'0':''}${sec}`:`${m}:${sec<10?'0':''}${sec}`;}
-function t2s(t){if(!t)return 0;const p=t.split(':').map(Number);if(p.length===3)return p[0]*3600+p[1]*60+p[2];if(p.length===2)return p[0]*60+p[1];return 0;}
-function normTime(t){if(!t)return '';t=t.replace(/[^0-9:]/g,'');if(!t.includes(':')){const s=parseInt(t);return s>0?s2t(s):'';} return t;}
-function normPace(p){if(!p)return '';p=String(p).replace(/[^0-9:.,']/g,'').replace(',','.').replace("'",'​:');if(p.includes(':')){const pts=p.split(':');if(pts.length===2&&parseInt(pts[0])<30)return `${pts[0]}:${pts[1].length===1?pts[1]+'0':pts[1].substring(0,2)}`;}const f=parseFloat(p);if(f>2&&f<30){const m=Math.floor(f),s=Math.round((f-m)*60);return `${m}:${s<10?'0':''}${s}`;}return '';}
-
-// ═══════════════════════════════════════════════════
-//  ANALYSIS ENGINE
-// ═══════════════════════════════════════════════════
-function computeAnalise(){
-  if(!USER_GOAL)return null;
-  if(!HIST.length) return null;
-  const h=HIST, n=h.length, last=h[n-1];
-  const obj=OBJS.find(o=>o.id===USER_GOAL.obj_id)||OBJS[0];
-
-  // Weighted base pace from recent workouts
-  const recent=h.slice(-3);
-  const W=[0.2,0.35,0.45].slice(3-recent.length);
-  const wSum=W.reduce((a,b)=>a+b,0);
-  const basePace=Math.round(recent.reduce((acc,t,i)=>acc+t.paceSec*W[i],0)/wSum);
-  
-  // If we have VAM from fitness test, use that as the authoritative base for zones
-  // basePace is still used for effort classification and trend analysis
-
-  // Trend
-  let evoSt='neutro', evoMag=0;
-  if(n>=2){
-    const prev=h.slice(-4,-1);
-    if(prev.length){
-      const avgP=prev.reduce((a,t)=>a+t.paceSec,0)/prev.length;
-      const avgR=recent.reduce((a,t)=>a+t.paceSec,0)/recent.length;
-      evoMag=Math.round(avgP-avgR);
-      evoSt=evoMag>5?'evolucao':evoMag<-5?'regressao':'manutencao';
-    }
-  }
-
-  // Zones: Use VAM from fitness test if available, else fall back to basePace estimate
-  let z;
-  const vam_pace = USER_GOAL.vam_pace || 0;
-  if(vam_pace > 0){
-    // Scientific zones based on % of VAM (Billat methodology)
-    z = calcZonesFromTest(USER_GOAL.test_time, USER_GOAL.test_fcmax);
-  }
-  if(!z){
-    // Fallback: estimate from basePace using Modelo Híbrido percentages
-    z={
-      e: {min:Math.round(basePace*1.35),max:Math.round(basePace*1.69),label:'E — Fácil',           emoji:'🟢',desc:'Conversa normal. Base aeróbica. 70–80% dos treinos.',       color:'var(--neon)',   bg:'var(--neon-dim)',   daniel:'Easy'},
-      m: {min:Math.round(basePace*1.19),max:Math.round(basePace*1.33),label:'M — Maratona',         emoji:'🔵',desc:'Fala frases curtas. Ritmo de provas longas.',                color:'var(--blue)',   bg:'var(--bdim)',       daniel:'Marathon'},
-      t: {min:Math.round(basePace*1.14),max:Math.round(basePace*1.20),label:'T — Limiar',           emoji:'🟡',desc:'Difícil mas sustentável por 20 min. Limiar anaeróbico.',     color:'var(--orange)', bg:'var(--orange-dim)', daniel:'Threshold'},
-      i: {min:Math.round(basePace*1.00),max:Math.round(basePace*1.05),label:'I — Intervalo VO2max', emoji:'🔴',desc:'Muito difícil. Máximo 10–15 min acumulados por treino.',     color:'var(--red)',    bg:'var(--red-dim)',    daniel:'Interval'},
-      r: {min:Math.round(basePace*0.83),max:Math.round(basePace*0.95),label:'R — Repetição',        emoji:'💀',desc:'Sprint. Máximo por rep: 400m ou 2 min.',                    color:'var(--purple)', bg:'var(--purple-dim)', daniel:'Repetition'},
-    };
-  }
-
-  // Score
-  let score=65;
-  if(n>=3){const paces=h.slice(-5).map(t=>t.paceSec),std=Math.sqrt(paces.reduce((a,b)=>a+Math.pow(b-basePace,2),0)/paces.length);if(std<15)score+=12;else if(std<30)score+=6;else score-=5;}
-  if(last.fcmed>0&&last.fcmed<155)score+=8;else if(last.fcmed>168)score-=5;
-  if(evoSt==='evolucao')score+=10;if(evoSt==='regressao')score-=8;
-  if(last.dist>=5)score+=5;else if(last.dist>=3)score+=3;
-  if(obj.dist>0&&last.dist>=obj.dist*0.4)score+=5;
-  score=Math.min(100,Math.max(15,Math.round(score)));
-
-  // Goal ETA
-  const tp=USER_GOAL.target_pace_sec||0;
-  const gapSec=tp>0?Math.max(0,basePace-tp):0;
-  const lvlF={iniciante:.008,iniciante_ativo:.010,intermediario:.013,avancado:.016,competidor:.018};
-  const wkImprove=basePace*(lvlF[USER_GOAL.nivel]||.012);
-  let weeksETA=tp>0&&gapSec>0?Math.ceil(gapSec/wkImprove):Math.round((obj.weeks||10)*({iniciante:1.4,iniciante_ativo:1.2,intermediario:1.0,avancado:.85,competidor:.75}[USER_GOAL.nivel]||1));
-  weeksETA=Math.max(obj.weeks||6,weeksETA);
-  if(n>=4&&evoSt==='evolucao'&&tp>0&&evoMag>0){const obsr=gapSec/Math.max(1,evoMag);weeksETA=Math.round(weeksETA*.4+obsr*.6);weeksETA=Math.max(4,weeksETA);}
-  if(evoSt==='evolucao')weeksETA=Math.round(weeksETA*.88);
-  if(evoSt==='regressao')weeksETA=Math.round(weeksETA*1.2);
-  if(tp>0&&gapSec===0)weeksETA=0;
-
-  let etaDate='';
-  if(USER_GOAL.target_date){const d=new Date(USER_GOAL.target_date);etaDate=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});}
-  else if(weeksETA>0){const d=new Date();d.setDate(d.getDate()+weeksETA*7);etaDate=d.toLocaleDateString('pt-BR',{day:'2-digit',month:'short',year:'numeric'});}
-
-  let progPct=0;
-  if(n>=2&&tp>0){const fp=h[0].paceSec,tot=fp-tp,ach=fp-basePace;progPct=tot>0?Math.min(100,Math.max(0,Math.round(ach/tot*100))):(basePace<=tp?100:0);}
-  else if(tp>0&&basePace<=tp)progPct=100;
-
-  const raceEst=obj.dist>0?s2t(tp>0?tp*obj.dist:basePace*obj.dist):'';
-
-  // Human-friendly analysis
-  const analysis = buildHumanAnalysis(last, basePace, evoSt, evoMag, obj, n, h);
-
-  // Hybrid model analysis
-  const hybrid = computeHybridAnalysis(h, z, obj, basePace);
-  return{last,basePace,evoSt,evoMag,z,score,gapSec,weeksETA,etaDate,progPct,raceEst,tp,obj,analysis,hybrid,h};
-}
-
-// ═══════════════════════════════════════════════════
-//  HYBRID TRAINING ENGINE
-//  Based on: Polarized/Pyramidal TID + Seiler + Hybrid model
-// ═══════════════════════════════════════════════════
-function classifyWorkoutZone(workout, z){
-  // Classify a workout into Z1/Z2/Z3 based on pace vs zones
-  if(!workout || !workout.paceSec || workout.paceSec === 0) return 'z1';
-  const p = workout.paceSec;
-  
-  // Use Modelo Híbrido zones if available
-  if(z && z.t && z.i){
-    if(p <= z.i.min) return 'z3';           // I/R pace → Z3 (VO2max/intervals)
-    if(p <= z.t.max) return 'z2';           // T pace → Z2 (threshold)
-    return 'z1';                             // E pace → Z1 (base)
-  }
-  // Fallback: relative to basePace
-  const vam = USER_GOAL?.vam_pace || 0;
-  if(vam > 0){
-    if(p <= vam * 1.05) return 'z3';
-    if(p <= vam * 1.18) return 'z2';
-    return 'z1';
-  }
-  return 'z1';
-}
-
-function analyzeTrainingDistribution(workouts, z){
-  // Analyze last 2-3 weeks of training distribution
-  const recent = workouts.slice(-12); // max 12 workouts
-  if(!recent.length) return { z1:0, z2:0, z3:0, total:0, pct:{z1:0,z2:0,z3:0} };
-  
-  let z1=0, z2=0, z3=0;
-  recent.forEach(w => {
-    const zone = classifyWorkoutZone(w, z);
-    if(zone === 'z3') z3++;
-    else if(zone === 'z2') z2++;
-    else z1++;
-  });
-  
-  const total = z1+z2+z3;
-  return {
-    z1, z2, z3, total,
-    pct: {
-      z1: Math.round(z1/total*100),
-      z2: Math.round(z2/total*100),
-      z3: Math.round(z3/total*100)
-    }
-  };
-}
-
-function detectFatigue(workouts, basePace){
-  // Detect fatigue from recent training load
-  if(workouts.length < 2) return { level:'ok', msg:'' };
-  
-  const last3 = workouts.slice(-3);
-  const hardCount = last3.filter(w => classifyWorkoutZone(w) !== 'z1').length;
-  const paceRegression = workouts.slice(-3).reduce((acc,w,i,arr) => {
-    if(i===0) return 0;
-    return acc + (w.paceSec - arr[i-1].paceSec);
-  }, 0);
-  
-  if(hardCount >= 2 && paceRegression > 30) return {
-    level: 'high',
-    msg: 'Dois ou mais treinos intensos recentes com queda de ritmo — sinais de fadiga acumulada. Priorize Z1 e descanso.'
-  };
-  if(hardCount >= 2) return {
-    level: 'moderate',
-    msg: 'Carga intensa acumulada. Próximo treino deve ser leve (Z1) para permitir supercompensação.'
-  };
-  return { level:'ok', msg:'' };
-}
-
-function getNextWorkoutRecommendation(workouts, z, obj, distribution, fatigue){
-  // Dynamic next workout based on hybrid model
-  // Hybrid principle: 80% Z1, 10-20% Z2/threshold, 5-10% Z3/VO2
-  
-  if(fatigue.level === 'high') return { type:'recovery', priority:'RECUPERAÇÃO OBRIGATÓRIA' };
-  
-  // What did the last workout look like?
-  const last = workouts[workouts.length - 1];
-  const lastZone = last ? classifyWorkoutZone(last, z) : 'z1';
-  
-  // What's the distribution imbalance?
-  const pct = distribution.pct;
-  
-  // If too much intensity recently → easy
-  if(pct.z3 > 20 || pct.z2 > 30) return { type:'easy', priority:'TREINO FÁCIL (Z1)' };
-  
-  // Hybrid model logic
-  const n = workouts.length;
-  
-  // Check recent pattern (last 3)
-  const recent3 = workouts.slice(-3).map(w => classifyWorkoutZone(w, z));
-  const hadInterval = recent3.includes('z3');
-  const hadThreshold = recent3.includes('z2');
-  const hadLong = workouts.slice(-7).some(w => w.dist >= 10);
-  
-  // Decision tree (Seiler hybrid)
-  if(lastZone === 'z3') return { type:'easy', priority:'Z1 OBRIGATÓRIO — após alta intensidade' };
-  if(lastZone === 'z2') return { type:'easy', priority:'Z1 RECOMENDADO — após limiar' };
-  
-  // Need long run?
-  if(!hadLong && n >= 3) return { type:'long', priority:'LONGÃO — mais de 7 dias sem distância longa' };
-  
-  // Need VO2max?
-  if(!hadInterval && pct.z3 < 10 && n >= 2) return { type:'interval', priority:'VO2MAX — déficit de alta intensidade' };
-  
-  // Need threshold?
-  if(!hadThreshold && pct.z2 < 15 && n >= 2) return { type:'threshold', priority:'LIMIAR — desenvolver pace de prova' };
-  
-  // Default: easy base
-  return { type:'easy', priority:'Z1 BASE — construção aeróbica' };
-}
-
-function computeHybridAnalysis(workouts, z, obj, basePace){
-  const distribution = analyzeTrainingDistribution(workouts, z);
-  const fatigue = detectFatigue(workouts, basePace);
-  const nextRec = getNextWorkoutRecommendation(workouts, z, obj, distribution, fatigue);
-  
-  // Training load estimate (arbitrary units)
-  const recentLoad = workouts.slice(-4).reduce((acc, w) => {
-    const zone = classifyWorkoutZone(w, z);
-    const intensity = zone==='z3' ? 3 : zone==='z2' ? 2 : 1;
-    return acc + (w.dist * intensity);
-  }, 0);
-  
-  // Model health score
-  const pct = distribution.pct;
-  let modelScore = 100;
-  // Penalize if not enough Z1
-  if(pct.z1 < 60) modelScore -= 20;
-  if(pct.z1 < 40) modelScore -= 20;
-  // Penalize too much Z3
-  if(pct.z3 > 25) modelScore -= 15;
-  // Penalize if no long runs
-  const hasLong = workouts.slice(-7).some(w => w.dist >= 8);
-  if(!hasLong && workouts.length > 3) modelScore -= 10;
-  modelScore = Math.max(20, modelScore);
-  
-  // Phase detection (what phase is the athlete in?)
-  let phase = 'base';
-  if(workouts.length >= 6){
-    if(pct.z3 >= 15) phase = 'peak';
-    else if(pct.z2 >= 15) phase = 'threshold';
-    else phase = 'base';
-  }
-  
-  const phaseLabel = phase==='peak' ? '🔴 Fase de Pico' : phase==='threshold' ? '🟡 Fase de Limiar' : '🟢 Fase de Base';
-  const phaseDesc = phase==='peak' 
-    ? 'Volume intenso elevado. Atenção à recuperação e sinais de fadiga.'
-    : phase==='threshold' 
-    ? 'Construindo limiar anaeróbico. Ideal para desenvolvimento de pace de prova.'
-    : 'Construção aeróbica. 70-80% Z1 é exatamente o que deve ser.';
-  
-  return { distribution, fatigue, nextRec, recentLoad, modelScore, phase, phaseLabel, phaseDesc };
-}
-
 
 function buildHumanAnalysis(last, basePace, evoSt, evoMag, obj, n, h){
-  // ═══════════════════════════════════════════════
-  // STRICT DATA-ONLY ANALYSIS — 4 PILLARS
-  // Only analyze data that exists. Never invent.
-  // ═══════════════════════════════════════════════
+  const pace = last.pace;
+  const dist = last.dist;
+  const tempo = last.tempo;
 
-  const dist = last.dist || 0;
-  const tempo = last.tempo || '';
-  const pace = last.pace || '—';
-  const paceSec = last.paceSec || 0;
-  const fcmed = last.fcmed || 0;
-  const fcmax = last.fcmax || 0;
-  const cad = last.cad || 0;
-  const elev = last.elev || 0;
-  const pse = last.pse || 0;
-  const splits = last.splits || [];
-  const totalSecs = t2s(tempo);
-
-  // Zone classification
-  const zones = USER_GOAL?.vam_pace ? calcZonesFromTest(USER_GOAL.test_time, USER_GOAL.test_fcmax) : null;
-  let workoutZone = 'z1', workoutZoneLabel = 'Z1 — Base aeróbica', workoutZoneColor = 'var(--neon)';
-  if(zones && paceSec > 0){
-    if(paceSec <= (zones.i?.min || 0) * 1.05){ workoutZone='z3'; workoutZoneLabel='Z3 — Alta intensidade'; workoutZoneColor='var(--red)'; }
-    else if(paceSec <= (zones.t?.max || 0) * 1.05){ workoutZone='z2'; workoutZoneLabel='Z2 — Limiar'; workoutZoneColor='var(--orange)'; }
+  // Classify effort in human terms
+  let esforcoLabel, esforcoDesc, esforcoEmoji;
+  if(basePace > 480){ // > 8min/km
+    esforcoLabel='Trote leve / caminhada acelerada';
+    esforcoDesc='Um ritmo bem confortável. Você provavelmente conseguia conversar normalmente durante o treino.';
+    esforcoEmoji='😌';
+  } else if(basePace > 390){ // 6:30–8:00
+    esforcoLabel='Corrida leve';
+    esforcoDesc='Um ritmo tranquilo de corrida. Conseguia falar frases curtas, mas não conversar à vontade.';
+    esforcoEmoji='🟢';
+  } else if(basePace > 330){ // 5:30–6:30
+    esforcoLabel='Corrida moderada';
+    esforcoDesc='Ritmo médio — exige esforço, mas dá pra manter por bastante tempo.';
+    esforcoEmoji='🟡';
+  } else if(basePace > 270){ // 4:30–5:30
+    esforcoLabel='Corrida forte';
+    esforcoDesc='Ritmo forte — difícil de manter por muito tempo. Bom para treinos específicos.';
+    esforcoEmoji='🔴';
+  } else {
+    esforcoLabel='Ritmo de competição';
+    esforcoDesc='Ritmo muito forte. Só sustentável por distâncias curtas.';
+    esforcoEmoji='💀';
   }
 
-  const esforcoEmoji = workoutZone==='z3'?'🔴':workoutZone==='z2'?'🟡':'🟢';
-  const esforcoLabel = workoutZone==='z3'?'Alta intensidade (Z3)':workoutZone==='z2'?'Limiar (Z2)':'Base aeróbica (Z1)';
-  const esforcoDesc = workoutZone==='z3'?'Difícil manter conversa. VO2max — eleva teto aeróbico.':workoutZone==='z2'?'Fala frases curtas. Desenvolve limiar láctico.':'Conversa normal. Constrói base aeróbica fundamental.';
+  // What went well
+  const pontosBons = [];
+  pontosBons.push({
+    titulo: 'Você treinou! 👏',
+    texto: `${dist}km em ${tempo||'—'} é um ótimo trabalho. O maior passo é sair de casa — você fez isso.`,
+    dica: 'Consistência semana a semana é o que transforma iniciantes em corredores.'
+  });
 
-  // ── PILLAR 1: CARGA EXTERNA ────────────────────
-  const pilar1 = [];
-
-  // Pace analysis
-  if(paceSec > 0){
-    const paceDesc = paceSec > 540 ? 'Trote leve — base aeróbica Z1' :
-                     paceSec > 450 ? 'Corrida confortável — Z1/Z2' :
-                     paceSec > 390 ? 'Ritmo moderado — Z2' :
-                     paceSec > 330 ? 'Ritmo forte — Z2/Z3' : 'Ritmo alto — Z3';
-    pilar1.push({ ok: true, titulo: `Pace: ${pace}/km`, detalhe: paceDesc, dado: true });
-  }
-
-  // Cadence analysis (only if data exists)
-  if(cad > 0){
-    const cadOk = cad >= 160 && cad <= 190;
-    const cadDesc = cad < 150 ? `⚠️ Abaixo de 150 spm — passos muito longos, maior impacto articular. Meta: aumentar 5 spm/semana.` :
-                    cad < 160 ? `⚠️ ${cad} spm — abaixo do ideal. Passos longos aumentam impacto. Meta progressiva: 170–180 spm.` :
-                    cad <= 175 ? `✅ ${cad} spm — dentro da faixa eficiente (160–175). Corrida fluida.` :
-                    cad <= 185 ? `✅ ${cad} spm — faixa ideal (175–185). Excelente eficiência.` :
-                    `ℹ️ ${cad} spm — acima de 185. Normal em ritmos mais fortes.`;
-    pilar1.push({ ok: cadOk, titulo: `Cadência: ${cad} spm`, detalhe: cadDesc, dado: true });
-  }
-
-  // Elevation (only if data exists)
-  if(elev > 0){
-    const elevDesc = elev < 20 ? `${elev}m — percurso praticamente plano. Impacto mínimo no esforço.` :
-                     elev < 60 ? `${elev}m — elevação leve. Eleva FC em ~3–5 bpm em relação ao plano.` :
-                     elev < 150 ? `${elev}m — elevação moderada. Esforço equivale a um pace ~15–20 seg mais rápido no plano.` :
-                     `${elev}m — elevação significativa. O pace não reflete o esforço real — compare sempre com FC.`;
-    pilar1.push({ ok: true, titulo: `Elevação: ${elev}m`, detalhe: elevDesc, dado: true });
-  }
-
-  // ── PILLAR 2: CARGA INTERNA ────────────────────
-  const pilar2 = [];
-
-  if(fcmed > 0 && fcmax > 0){
-    // FC zones based on FCmax
-    const fcPct = Math.round(fcmed/fcmax*100);
-    const fcZone = fcPct > 87 ? 'Z3 (>87% FCmax)' : fcPct > 77 ? 'Z2 (77–87%)' : 'Z1 (<77%)';
-    const fcDesc = fcPct > 90 ? `${fcmed}/${fcmax} bpm (${fcPct}%) — Z3. Esforço muito elevado. Recuperação Z1 nas próximas 24–48h.` :
-                   fcPct > 83 ? `${fcmed}/${fcmax} bpm (${fcPct}%) — Z2/Z3. Esforço significativo. Dia Z1 amanhã.` :
-                   fcPct > 75 ? `${fcmed}/${fcmax} bpm (${fcPct}%) — Z2. Esforço moderado-alto. Normal para treino de qualidade.` :
-                   `${fcmed}/${fcmax} bpm (${fcPct}%) — Z1. Esforço controlado. Boa eficiência aeróbica.`;
-    pilar2.push({ titulo: 'FC média/máx', detalhe: fcDesc, dado: true });
-  } else if(fcmed > 0){
-    pilar2.push({ titulo: `FC média: ${fcmed} bpm`, detalhe: 'FC máxima não registrada — impossível calcular % de esforço com precisão.', dado: true });
-  }
-
-  // Cardiac drift (pace drop vs FC) — from splits
-  let cardiacDrift = null;
-  if(splits.length >= 3 && fcmax > 0 && fcmed > 0){
-    const svPace = splits.map(ps);
-    const firstPace = svPace[0];
-    const lastPace = svPace[svPace.length-1];
-    const driftSec = lastPace - firstPace;
-    if(Math.abs(driftSec) > 15){
-      if(driftSec > 0){
-        cardiacDrift = {
-          detected: true,
-          tipo: 'fadiga progressiva',
-          desc: `Ritmo caiu ${sp(driftSec)}/km do 1º para o último km (${splits[0]} → ${splits[splits.length-1]}). ${fcmax >= 170 ? `FC chegou a ${fcmax} bpm no final — drift cardíaco detectado.` : 'Queda de ritmo progressiva.'} Indica que a base aeróbica ainda precisa ser fortalecida — o coração não consegue manter o ritmo sem elevar a FC.`
-        };
-      } else {
-        cardiacDrift = {
-          detected: false,
-          tipo: 'negative split',
-          desc: `Ritmo melhorou ${sp(Math.abs(driftSec))}/km do 1º para o último km (${splits[0]} → ${splits[splits.length-1]}). Negative split — controlou o esforço e acelerou no final. Excelente gestão de energia.`
-        };
-      }
-    }
-  }
-
-  if(cardiacDrift){
-    pilar2.push({ titulo: cardiacDrift.detected?'⚠️ Drift cardíaco detectado':'✅ Negative split', detalhe: cardiacDrift.desc, dado: true, alert: cardiacDrift.detected });
-  }
-
-  // PSE analysis (only if provided)
-  if(pse > 0){
-    const pseDesc = pse <= 3 ? `PSE ${pse}/10 — muito fácil. Esforço subjetivo baixo. Confirma Z1.` :
-                    pse <= 5 ? `PSE ${pse}/10 — moderado. Compatível com Z1/Z2.` :
-                    pse <= 7 ? `PSE ${pse}/10 — difícil. Compatível com Z2/Z3.` :
-                    `PSE ${pse}/10 — muito difícil. Confirma Z3. Recuperação essencial.`;
-    // Cross-check PSE vs zone
-    const pseZone = pse<=4?'z1':pse<=6?'z2':'z3';
-    const mismatch = pseZone !== workoutZone;
-    pilar2.push({
-      titulo: `PSE (percepção de esforço): ${pse}/10`,
-      detalhe: pseDesc + (mismatch ? ` ⚠️ Divergência: pace indica ${workoutZoneLabel} mas PSE indica ${pseZone.toUpperCase()}. Possível fadiga acumulada ou calor.` : ''),
-      dado: true,
-      alert: mismatch
+  if(basePace > 420){
+    pontosBons.push({
+      titulo: 'Ritmo confortável ✅',
+      texto: 'Correr no ritmo certo (sem se matar) é a coisa mais importante para quem está começando.',
+      dica: 'Esse ritmo leve ajuda o corpo a se adaptar, evita lesões e constrói a base que você vai precisar depois.'
     });
   }
 
-  // ── PILLAR 3: SPLITS ANALYSIS ─────────────────
-  const pilar3 = [];
-  if(splits.length >= 2){
-    const sv = splits.map(ps);
-    const minPace = Math.min(...sv), maxPace = Math.max(...sv);
-    const variation = maxPace - minPace;
-    const variationDesc = variation < 20 ? `Variação de ${sp(variation)}/km entre o km mais rápido (${sp(minPace)}) e mais lento (${sp(maxPace)}). Ritmo muito uniforme — excelente controle.` :
-                          variation < 45 ? `Variação de ${sp(variation)}/km (${sp(minPace)}–${sp(maxPace)}). Variação normal para corredores.` :
-                          variation < 75 ? `Variação de ${sp(variation)}/km (${sp(minPace)}–${sp(maxPace)}). Variação considerável — saída possivelmente rápida demais.` :
-                          `Variação de ${sp(variation)}/km (${sp(minPace)}–${sp(maxPace)}). Alta variação. Típico de quem começa rápido e não sustenta.`;
-    pilar3.push({ titulo: 'Análise km a km', detalhe: variationDesc, splits: splits, dado: true });
+  if(dist >= 4){
+    pontosBons.push({
+      titulo: `Boa distância — ${dist}km! 📏`,
+      texto: 'Para o seu objetivo, o tempo em movimento importa mais que a velocidade nesse momento.',
+      dica: 'Seu corpo está aprendendo a ser eficiente. Continue aumentando a distância aos poucos.'
+    });
   }
 
-  // ── PILLAR 4: CONSISTÊNCIA ────────────────────
-  const pilar4 = [];
-  if(n >= 2){
-    // Weekly volume
-    const weekDist = h.slice(-4).reduce((a,w)=>a+w.dist,0);
-    pilar4.push({ titulo: `Volume recente (4 treinos): ${Math.round(weekDist*10)/10}km`, detalhe: `Média de ${Math.round(weekDist/4*10)/10}km por treino. Aumento máximo recomendado: 10% por semana.`, dado: true });
+  if(last.fcmed > 0 && last.fcmed < 155){
+    pontosBons.push({
+      titulo: 'Coração trabalhando bem 💚',
+      texto: `Frequência cardíaca de ${last.fcmed} bpm é ótima para esse ritmo.`,
+      dica: 'Isso mostra que você está na zona certa de esforço — nem fácil demais, nem pesado demais.'
+    });
+  }
 
-    // Trend
-    if(n >= 3 && evoSt !== 'neutro'){
-      const trendDesc = evoSt==='evolucao' ? `↑ Pace melhorou ${sp(Math.abs(evoMag))}/km em relação à média recente. Adaptação positiva em andamento.` :
-                        evoSt==='regressao' ? `↓ Pace piorou ${sp(Math.abs(evoMag))}/km. Possíveis causas: fadiga acumulada, sono insuficiente, volume excessivo.` :
-                        '→ Ritmo estável nos últimos treinos.';
-      pilar4.push({ titulo: 'Tendência de ritmo', detalhe: trendDesc, dado: true, alert: evoSt==='regressao' });
+  if(evoSt === 'evolucao'){
+    pontosBons.push({
+      titulo: 'Você está evoluindo! 📈',
+      texto: `Seu ritmo melhorou ${sp(Math.abs(evoMag))}/km em relação aos últimos treinos.`,
+      dica: 'O treino está funcionando. Mantenha a frequência e os resultados vão continuar aparecendo.'
+    });
+  }
+
+  // What to improve
+  const melhorar = [];
+
+  if(basePace > 480){
+    melhorar.push({
+      titulo: 'Inclua trechos de corrida contínua 🏃',
+      problema: 'No ritmo atual, seu corpo não está sendo estimulado o suficiente para evoluir na corrida.',
+      solucao: 'No próximo treino, tente: 2 minutos correndo + 2 minutos caminhando, repetindo por 20–30 min. A cada semana, aumente 1 minuto na corrida.',
+      icon: '💡'
+    });
+  }
+
+  if(evoSt === 'regressao'){
+    melhorar.push({
+      titulo: 'Seu ritmo piorou um pouco ⚠️',
+      problema: `Comparado com os treinos anteriores, você correu ${sp(Math.abs(evoMag))}/km mais devagar.`,
+      solucao: 'Isso é normal e acontece com todo mundo! Pode ser cansaço, sono ruim ou estresse. Descanse bem, beba água e não force essa semana.',
+      icon: '😴'
+    });
+  }
+
+  if(last.cad > 0 && last.cad < 165){
+    melhorar.push({
+      titulo: 'Experimente dar passos mais curtos e rápidos 👣',
+      problema: `Você está dando passos longos (${last.cad} passos por minuto). Passos muito longos forçam mais os joelhos.`,
+      solucao: 'Pense em "pisar leve, como se o chão estivesse quente". Passos curtos e rápidos são mais econômicos e reduzem muito o risco de lesão. Não precisa de sensor — só preste atenção.',
+      icon: '💡'
+    });
+  }
+
+  if(last.splits && last.splits.length > 2){
+    const sv = last.splits.map(ps);
+    const maxS = Math.max(...sv), minS = Math.min(...sv);
+    const diff = maxS - minS;
+    if(diff > 60){
+      melhorar.push({
+        titulo: 'Saia mais devagar no começo 🐢➡️🐇',
+        problema: `Sua velocidade variou muito — ${sp(minS)}/km no mais rápido e ${sp(maxS)}/km no mais lento. Provavelmente saiu muito rápido e foi diminuindo.`,
+        solucao: 'Na próxima corrida: saia mais devagar do que acha que deveria. Nos últimos km, acelere. Esse é o segredo dos corredores experientes.',
+        icon: '🎯'
+      });
     }
   }
 
-  // ── COACH MESSAGE ─────────────────────────────
-  const coachMsg = getCoachMsg(obj, evoSt, basePace, dist, n, cardiacDrift, fcmed, fcmax, pse);
+  if(melhorar.length === 0){
+    melhorar.push({
+      titulo: 'Aumente a distância gradualmente 📈',
+      problema: 'Para continuar evoluindo, o corpo precisa de novos estímulos.',
+      solucao: `Na próxima semana, tente correr mais ${Math.round(dist * 0.1 * 10) / 10}km do que hoje. Nunca aumente mais de 10% por semana — isso protege seus joelhos e tornozelos.`,
+      icon: '💡'
+    });
+  }
 
-  return {
-    esforcoLabel, esforcoDesc, esforcoEmoji,
-    workoutZone, workoutZoneLabel, workoutZoneColor,
-    pilar1, pilar2, pilar3, pilar4,
-    cardiacDrift, coachMsg,
-    // Legacy compat
-    pontosBons: [], melhorar: []
-  };
+  // Main coaching message
+  const coachMsg = getCoachMsg(obj, evoSt, basePace, dist, n);
+
+  return { esforcoLabel, esforcoDesc, esforcoEmoji, pontosBons, melhorar, coachMsg };
 }
 
-
-function getCoachMsg(obj, evoSt, basePace, dist, n, drift, fcmed, fcmax, pse){
+function getCoachMsg(obj, evoSt, basePace, dist, n){
   const msgs = {
-    'primeiro5k': n < 2
-      ? 'Primeiros passos! O objetivo agora é criar o hábito. Não se preocupe com velocidade — foque em aparecer 3x por semana. Cada treino conta.'
-      : `Você já tem ${n} treinos! Quando conseguir correr 20 min sem parar, o 5km está perto. Continue!`,
-    '5k_sub30': `5km abaixo de 30 min = pace ~6:00/km. Seu plano inclui: corrida base (E), intervalados 200m e longão semanal. A chave é a consistência — apareça toda semana.`,
-    '5k_sub25': `5km abaixo de 25 min exige treinamento estruturado. Modelo Híbrido: 1 sessão de Tempo Run + 1 intervalado por semana são o coração do progresso. 80% do volume em E.`,
-    'primeiro10k': `Para os 10km, aumente a distância máximo 10% por semana. O longão do domingo é o treino mais importante. Os strides de velocidade na subida desenvolvem força sem lesão.`,
-    '10k_sub60': `10km abaixo de 1 hora = pace 6:00/km. Combine corridas base, intervalados 400m e longões progressivos. Consistência semana a semana é o que leva você lá.`,
-    '10k_sub50': `10km abaixo de 50 min é território de corredor experiente. Tempo Runs e intervalados 1000m são seus melhores aliados. Durma 8h — é onde a adaptação acontece.`,
-    'meia': `Meia maratona: o treino longo semanal é o coração do plano. Nos últimos 30% do longão, pratica o pace de prova. Hidratação e nutrição nos treinos longos são treináveis.`,
-    'maratona': `Maratona é a prova da consistência. Volume total semanal importa mais que qualquer treino isolado. Canova: "o corpo aprende a correr maratona correndo distâncias longas regularmente".`,
-    'emagrecimento': `Correr em ritmo E por mais tempo queima mais gordura do que treinos intensos curtos. Volume + constância + sono de qualidade = resultado.`,
-    'volta': `Voltar exige paciência. Músculos voltam rápido, tendões levam 3-4x mais tempo. Os strides em subida são perfeitos: ativam força sem impacto no solo.`,
-    'condicionamento': `Correr em ritmo E 3-4x por semana é uma das melhores coisas para saúde cardiovascular e longevidade. Você está fazendo a coisa certa.`,
-    'trail10k': `Trail 10km exige força em subida e técnica de descida. Os hill repeats constroem isso. Em subidas >8%: caminhe rápido — é mais econômico que correr.`,
+    'primeiro5k': n < 3
+      ? 'Você está nos primeiros passos! O objetivo agora é criar o hábito. Não se preocupe com velocidade — foque em aparecer para treinar 3x por semana.'
+      : `Você já tem ${n} treinos! Continue assim. Quando conseguir correr 20 minutos sem parar, o 5km vai estar bem perto.`,
+    'primeiro10k': `Para chegar nos 10km, o segredo é aumentar a distância devagar — máximo 10% por semana. O treino mais importante é o "treino longo" do final de semana. Sem pressa!`,
+    'primeiro15k': `15km é uma ótima meta! Você vai chegar lá aumentando seu treino longo gradualmente. Quando os 10km ficarem confortáveis, os 15km virão naturalmente.`,
+    'melhorar5k': `Para melhorar o 5km, você precisa treinar em ritmos diferentes. Não só correr "normal" — inclua momentos mais rápidos e momentos de recuperação. O plano vai te guiar.`,
+    'melhorar10k': `Para bater seu tempo no 10km, 80% dos seus treinos devem ser leves (parece fácil demais, mas funciona!) e 20% fortes. Isso é o que os melhores corredores fazem.`,
+    'meia': `Meia maratona é um objetivo incrível! O treino longo semanal é o coração do plano. Durma bem — é dormindo que o corpo se adapta.`,
+    'maratona': `Maratona é uma jornada longa. Consistência supera intensidade — apareça para treinar toda semana, mesmo que devagar.`,
+    'emagrecimento': `Para emagrecer com corrida, o segredo não é correr rápido — é correr por mais tempo, em ritmo confortável. Quanto mais tempo você passa se movendo, mais calorias queima.`,
+    'condicionamento': `Correr regularmente em ritmo confortável é uma das melhores coisas que você pode fazer pela saúde. Você está no caminho certo!`,
+    'volta': `Voltar a correr depois de uma pausa exige paciência. Seu fôlego volta rápido, mas músculos e articulações precisam de mais tempo. Comece devagar e aumente gradualmente.`,
+    'trail10k': `Trail é divertido e desafiador! Em subidas, caminhe rápido — é mais econômico que correr. Nas descidas, passos curtos e rápidos para proteger os joelhos.`,
+    'velocidade': `Para ficar mais rápido, paradoxalmente você precisa correr mais devagar na maioria dos treinos. Reserve apenas 1-2 dias por semana para treinos fortes.`,
   };
   let msg = msgs[obj.id] || 'Continue treinando com consistência — é o que faz a diferença no longo prazo.';
   if(evoSt === 'evolucao') msg += ' 🔥 Você está evoluindo — continue!';
-  if(evoSt === 'regressao') msg += ' ⚠️ Descanse bem antes de retomar carga.';
-  if(drift && drift.detected) msg += ' O drift cardíaco indica que o treino mais eficiente agora é volume Z1 — manter pace constante sem elevar FC.';
-  if(fcmed > 0 && fcmax > 0 && Math.round(fcmed/fcmax*100) > 88) msg += ' FC elevada — priorize recuperação Z1 antes do próximo treino de qualidade.';
+  if(evoSt === 'regressao') msg += ' Descanse bem essa semana antes de retomar.';
   return msg;
 }
 
@@ -1970,7 +1034,7 @@ function getCoachMsg(obj, evoSt, basePace, dist, n, drift, fcmed, fcmax, pse){
 // ═══════════════════════════════════════════════════
 function renderAnalise(){
   const a=computeAnalise();const el=document.getElementById('pn-analise');
-  if(!a){el.innerHTML=`<div class="empty"><div class="empty-icon">📊</div><div class="empty-title">Sem treinos</div><div class="empty-sub">Insira seu primeiro treino para ver a análise.</div></div>`;return;}
+  if(!a){el.innerHTML=`<div class="empty"><div class="empty-icon">📊</div><div class="empty-title">Sem dados</div><div class="empty-sub">Adicione treinos para ver a análise.</div></div>`;return;}
 
   const sc=a.score>=90?{c:'var(--neon)',l:'EXCELENTE'}:a.score>=70?{c:'var(--teal)',l:'BOM'}:a.score>=50?{c:'var(--orange)',l:'ATENÇÃO'}:{c:'var(--red)',l:'REVISAR'};
   const ecBadge=a.evoSt==='evolucao'?'badge-neon':a.evoSt==='regressao'?'badge-red':'badge-orange';
@@ -1984,22 +1048,17 @@ function renderAnalise(){
     <div style="font-size:12px;color:var(--tx2);margin-top:2px">${a.h.length} treino${a.h.length!==1?'s':''} registrados</div>
   </div>`;
 
-  const isTestWorkout = a.last.isTeste || (USER_GOAL.test_time && a.h.length === 1);
-  const wZone = a.analysis.workoutZone || 'z1';
-  const wZoneColor = a.analysis.workoutZoneColor || 'var(--neon)';
-  const wZoneLabel = a.analysis.workoutZoneLabel || 'Z1 — Base aeróbica';
-  
-  html+=`<div class="card" style="border-color:${wZoneColor}33;background:linear-gradient(135deg,var(--bg2),${wZoneColor}06)">
+  // Score card
+  html+=`<div class="card card-accent">
     <div class="score-wrap">
       <div class="score-ring-wrap">${ring}
         <div class="score-center"><span class="score-num" style="color:${sc.c}">${a.score}</span><span class="score-lbl" style="color:${sc.c}">${sc.l}</span></div>
       </div>
       <div style="flex:1">
-        <div style="margin-bottom:6px">
-          <span style="display:inline-block;padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:${wZoneColor}22;color:${wZoneColor};border:1px solid ${wZoneColor}44">${a.analysis.esforcoEmoji} ${wZoneLabel}</span>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+          <span style="font-size:14px;font-weight:700">${a.analysis.esforcoEmoji} ${a.analysis.esforcoLabel}</span>
         </div>
-        <div style="font-size:13px;font-weight:600;margin-bottom:4px">${isTestWorkout ? '🏁 Treino de diagnóstico (teste 3km)' : a.analysis.esforcoLabel}</div>
-        <div style="font-size:12px;color:var(--tx2);line-height:1.5">${isTestWorkout ? 'Este treino define suas zonas Z1/Z2/Z3 e serve como linha de base para toda a evolução.' : a.analysis.esforcoDesc}</div>
+        <div style="font-size:12px;color:var(--tx2);line-height:1.6">${a.analysis.esforcoDesc}</div>
         <div style="margin-top:6px"><span class="badge ${ecBadge}">${ecLabel}</span></div>
       </div>
     </div>
@@ -2011,19 +1070,6 @@ function renderAnalise(){
     <div class="metric metric-orange"><div class="mlabel">Distância</div><div class="mval">${a.last.dist}</div><div class="msub">km</div></div>
     <div class="metric metric-teal"><div class="mlabel">${a.last.fcmed?'Freq. cardíaca':'Duração'}</div><div class="mval" style="font-size:${a.last.fcmed?20:15}px">${a.last.fcmed?a.last.fcmed:a.last.tempo||'—'}</div><div class="msub">${a.last.fcmed?'batimentos/min':''}</div></div>
   </div>`;
-
-  // Fitness test banner if available
-  const vamPace = USER_GOAL.vam_pace || 0;
-  if(vamPace > 0){
-    const vamKmh = Math.round((3600/vamPace)*10)/10;
-    html+=`<div style="background:var(--neon-dim);border:1px solid rgba(232,255,0,.25);border-radius:var(--rl);padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px">
-      <span style="font-size:24px">🏃</span>
-      <div style="flex:1">
-        <div style="font-size:12px;font-weight:700;color:var(--neon);margin-bottom:2px">ZONAS BASEADAS NO SEU TESTE DE 3KM</div>
-        <div style="font-size:12px;color:var(--tx2)">Tempo: <strong style="color:var(--tx)">${USER_GOAL.test_time}</strong> · VAM: <strong style="color:var(--neon)">${vamKmh} km/h</strong>${USER_GOAL.test_fcmax?` · FC máx: <strong style="color:var(--tx)">${USER_GOAL.test_fcmax} bpm</strong>`:''}</div>
-      </div>
-    </div>`;
-  }
 
   // Goal box
   html+=`<div class="goal-box ${a.tp>0?'gb-neon':'gb-teal'}">
@@ -2044,196 +1090,47 @@ function renderAnalise(){
     <div style="font-size:14px;line-height:1.8;color:var(--tx)">${a.analysis.coachMsg}</div>
   </div>`;
 
-  // ── HYBRID MODEL DASHBOARD ──────────────────────────
-  if(a.hybrid && a.h.length >= 1){
-    const hy = a.hybrid;
-    const dist = hy.distribution;
-    const barW = (n) => Math.max(4, n);
-    
-    // Phase card
-    html+=`<div class="card" style="border-color:${hy.phase==='peak'?'rgba(255,61,90,.2)':hy.phase==='threshold'?'rgba(255,92,0,.2)':'rgba(232,255,0,.15)'}">
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-        <div>
-          <div style="font-size:13px;font-weight:700">${hy.phaseLabel}</div>
-          <div style="font-size:11px;color:var(--tx2);margin-top:2px">${hy.phaseDesc}</div>
-        </div>
-        <div style="text-align:right">
-          <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:2px">Equilíbrio</div>
-          <div style="font-size:11px;font-weight:700;color:${hy.modelScore>=80?'var(--neon)':hy.modelScore>=60?'var(--orange)':'var(--red)'}">${hy.modelScore}/100</div>
-        </div>
-      </div>
-      
-      <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Distribuição de intensidade (últimos ${dist.total} treinos)</div>
-      
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-        <div style="width:28px;font-size:10px;color:var(--neon);font-weight:700;text-align:right">Z1</div>
-        <div style="flex:1;background:var(--bg3);border-radius:4px;height:18px;overflow:hidden">
-          <div style="width:${barW(dist.pct.z1)}%;height:100%;background:var(--neon);border-radius:4px;display:flex;align-items:center;padding-left:6px">
-            <span style="font-size:10px;font-weight:700;color:#000">${dist.pct.z1}%</span>
-          </div>
-        </div>
-        <div style="font-size:10px;color:var(--tx2);width:60px">Fácil (${dist.z1}x)</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:4px">
-        <div style="width:28px;font-size:10px;color:var(--orange);font-weight:700;text-align:right">Z2</div>
-        <div style="flex:1;background:var(--bg3);border-radius:4px;height:18px;overflow:hidden">
-          <div style="width:${barW(dist.pct.z2)}%;height:100%;background:var(--orange);border-radius:4px;display:flex;align-items:center;padding-left:6px">
-            <span style="font-size:10px;font-weight:700;color:#fff">${dist.pct.z2 > 5 ? dist.pct.z2+'%' : ''}</span>
-          </div>
-        </div>
-        <div style="font-size:10px;color:var(--tx2);width:60px">Limiar (${dist.z2}x)</div>
-      </div>
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:10px">
-        <div style="width:28px;font-size:10px;color:var(--red);font-weight:700;text-align:right">Z3</div>
-        <div style="flex:1;background:var(--bg3);border-radius:4px;height:18px;overflow:hidden">
-          <div style="width:${barW(dist.pct.z3)}%;height:100%;background:var(--red);border-radius:4px;display:flex;align-items:center;padding-left:6px">
-            <span style="font-size:10px;font-weight:700;color:#fff">${dist.pct.z3 > 5 ? dist.pct.z3+'%' : ''}</span>
-          </div>
-        </div>
-        <div style="font-size:10px;color:var(--tx2);width:60px">Intenso (${dist.z3}x)</div>
-      </div>
-      
-      <div style="font-size:11px;color:var(--tx2);padding:8px 10px;background:var(--bg3);border-radius:var(--r)">
-        🎯 <strong style="color:var(--tx)">Meta ideal:</strong> ~80% Z1 · ~10-15% Z2 · ~5-10% Z3 
-        <span style="color:var(--tx3)"> (Seiler / Modelo Híbrido)</span>
-      </div>
-    </div>`;
-
-    // Fatigue alert
-    if(hy.fatigue.level !== 'ok'){
-      html+=`<div class="alert ${hy.fatigue.level==='high'?'alert-red':'alert-orange'}">${hy.fatigue.level==='high'?'⚠️':'😴'} ${hy.fatigue.msg}</div>`;
-    }
-    
-    // Next workout recommendation from hybrid engine
-    const nrec = hy.nextRec;
-    const nrecColor = nrec.type==='recovery'?'var(--purple)':nrec.type==='interval'?'var(--red)':nrec.type==='threshold'?'var(--orange)':nrec.type==='long'?'var(--teal)':'var(--neon)';
-    html+=`<div class="card" style="border-color:${nrecColor}33;background:linear-gradient(135deg,var(--bg2),${nrecColor}08)">
-      <div class="clabel">🤖 Recomendação do modelo híbrido</div>
-      <div style="display:flex;align-items:center;gap:10px">
-        <span style="font-size:24px">${nrec.type==='recovery'?'😴':nrec.type==='interval'?'⚡':nrec.type==='threshold'?'🔥':nrec.type==='long'?'🏃':'🟢'}</span>
-        <div>
-          <div style="font-size:13px;font-weight:700;color:${nrecColor}">${nrec.priority}</div>
-          <div style="font-size:12px;color:var(--tx2);margin-top:2px">${
-            nrec.type==='recovery' ? 'Descanso ou corrida muito leve. Supercompensação acontece no descanso.' :
-            nrec.type==='interval' ? 'Intervalados curtos (400m) ou longos (1000m) no ritmo I. VO2max é seu teto aeróbico.' :
-            nrec.type==='threshold' ? 'Tempo Run ou corrida de ritmo. 20 min no limiar = maior ganho de pace.' :
-            nrec.type==='long' ? 'Longão em Z1. Base aeróbica é a fundação de toda melhoria de performance.' :
-            'Corrida leve Z1. 70-80% do volume aqui é o que os melhores corredores do mundo fazem.'
-          }</div>
-        </div>
-      </div>
-    </div>`;
-  }
-
   // O que você fez bem
-  // ── 4 PILLARS ANALYSIS ──────────────────────────
-  const an = a.analysis;
-
-  function renderPillarItem(item){
-    const alertColor = item.alert ? 'rgba(255,92,0,.1)' : item.ok===false ? 'rgba(255,61,90,.06)' : 'rgba(255,255,255,.03)';
-    const borderColor = item.alert ? 'rgba(255,92,0,.25)' : item.ok===false ? 'rgba(255,61,90,.2)' : 'var(--bd)';
-    return `<div style="padding:10px 12px;border-radius:var(--r);margin-bottom:6px;background:${alertColor};border:1px solid ${borderColor}">
-      <div style="font-size:12px;font-weight:700;color:var(--tx);margin-bottom:4px">${item.titulo}</div>
-      <div style="font-size:12px;color:var(--tx2);line-height:1.6">${item.detalhe}</div>
-      ${item.splits ? `<div style="display:flex;gap:4px;flex-wrap:wrap;margin-top:6px">${item.splits.map((s,i)=>{const best=ps(s)===Math.min(...item.splits.map(ps));return `<span style="padding:3px 8px;border-radius:12px;font-family:var(--mono);font-size:10px;font-weight:700;background:${best?'var(--neon-dim)':'var(--bg3)'};color:${best?'var(--neon)':'var(--tx2)'};border:1px solid ${best?'rgba(232,255,0,.3)':'var(--bd)'}">km${i+1} ${s}</span>`;}).join('')}</div>` : ''}
-    </div>`;
-  }
-
-  // Pillar 1: External Load
-  if(an.pilar1 && an.pilar1.length){
-    html+=`<div class="card">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <span style="width:24px;height:24px;border-radius:50%;background:var(--neon-dim);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--neon)">1</span>
-        <div style="font-size:12px;font-weight:700;color:var(--neon);text-transform:uppercase;letter-spacing:.8px">Carga externa — O que você fez</div>
-      </div>`;
-    an.pilar1.forEach(item => { html += renderPillarItem(item); });
-    html+=`</div>`;
-  }
-
-  // Pillar 2: Internal Load
-  if(an.pilar2 && an.pilar2.length){
-    html+=`<div class="card">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <span style="width:24px;height:24px;border-radius:50%;background:var(--orange-dim);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--orange)">2</span>
-        <div style="font-size:12px;font-weight:700;color:var(--orange);text-transform:uppercase;letter-spacing:.8px">Carga interna — Como seu corpo reagiu</div>
-      </div>`;
-    an.pilar2.forEach(item => { html += renderPillarItem(item); });
-    html+=`</div>`;
-  }
-
-  // Pillar 3: Splits
-  if(an.pilar3 && an.pilar3.length){
-    html+=`<div class="card">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <span style="width:24px;height:24px;border-radius:50%;background:var(--teal-dim);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--teal)">3</span>
-        <div style="font-size:12px;font-weight:700;color:var(--teal);text-transform:uppercase;letter-spacing:.8px">Ritmo por km</div>
-      </div>`;
-    an.pilar3.forEach(item => { html += renderPillarItem(item); });
-    html+=`</div>`;
-  }
-
-  // Pillar 4: Consistency
-  if(an.pilar4 && an.pilar4.length){
-    html+=`<div class="card">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px">
-        <span style="width:24px;height:24px;border-radius:50%;background:var(--purple-dim);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--purple)">4</span>
-        <div style="font-size:12px;font-weight:700;color:var(--purple);text-transform:uppercase;letter-spacing:.8px">Consistência — Histórico</div>
-      </div>`;
-    an.pilar4.forEach(item => { html += renderPillarItem(item); });
-    html+=`</div>`;
-  }
-
-  // Zones — Hybrid model display (Z1/Z2/Z3)
-  const vamData = a.z._vam || null;
-  const z1min = a.z.e ? sp(a.z.e.min) : '—';
-  const z1max = a.z.e ? sp(a.z.e.max) : '—';
-  const z2min = a.z.t ? sp(a.z.t.min) : '—';
-  const z2max = a.z.t ? sp(a.z.t.max) : '—';
-  const z3min = a.z.i ? sp(a.z.i.min) : '—';
-  const z3max = a.z.r ? sp(a.z.r.max) : '—';
-
   html+=`<div class="card">
-    <div class="clabel">⚡ Suas zonas — Modelo Híbrido</div>
-    ${vamData ? `<div style="background:var(--neon-dim);border:1px solid rgba(232,255,0,.2);border-radius:var(--r);padding:8px 12px;margin-bottom:10px;font-size:12px;display:flex;gap:16px;flex-wrap:wrap">
-      <span><strong style="color:var(--neon)">VAM: ${vamData.kmh} km/h</strong></span>
-      <span style="color:var(--tx2)">VDOT ~${vamData.vdot}</span>
-      <span style="color:var(--tx2)">Base: teste 3km</span>
-    </div>` : ''}
+    <div class="clabel" style="color:var(--neon)">👍 O que você fez bem</div>`;
+  a.analysis.pontosBons.forEach((p,i)=>{
+    html+=`<div style="padding:10px 0;border-bottom:1px solid var(--bd)">
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px">${i+1}. ${p.titulo}</div>
+      <div style="font-size:13px;color:var(--tx);margin-bottom:4px;line-height:1.6">${p.texto}</div>
+      <div style="font-size:12px;color:var(--neon);line-height:1.5">➡️ ${p.dica}</div>
+    </div>`;
+  });
+  html+=`</div>`;
 
-    <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--r);margin-bottom:6px;background:var(--neon-dim);border:1px solid rgba(232,255,0,.2)">
-      <div style="width:32px;height:32px;border-radius:50%;background:var(--neon);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#000;flex-shrink:0">Z1</div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:700;color:var(--neon)">Baixa intensidade — Base aeróbica</div>
-        <div style="font-size:11px;color:var(--tx2);margin-top:2px">70–80% dos seus treinos aqui. Conversa normal. Constrói mitocôndrias e capilarização.</div>
-        <div style="font-size:10px;color:var(--tx3);margin-top:2px">RPE 2–4 · FC &lt;75% FCmax · Inclui: corrida fácil, aquecimento, desaquecimento, longão</div>
+  // O que melhorar
+  html+=`<div class="card">
+    <div class="clabel" style="color:var(--orange)">⚠️ O que melhorar</div>`;
+  a.analysis.melhorar.forEach((m,i)=>{
+    html+=`<div style="padding:10px 0;border-bottom:1px solid var(--bd)">
+      <div style="font-size:14px;font-weight:700;margin-bottom:4px">${i+1}. ${m.titulo}</div>
+      <div style="font-size:13px;color:var(--tx2);margin-bottom:6px;line-height:1.6">${m.problema}</div>
+      <div style="background:var(--bg3);border-radius:var(--r);padding:8px 12px;font-size:12px;color:var(--tx);line-height:1.6;border-left:3px solid var(--neon)">
+        ${m.icon} <strong>Como fazer:</strong> ${m.solucao}
       </div>
-      <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--neon);text-align:right">${z1min}–${z1max}</div>
-    </div>
+    </div>`;
+  });
+  html+=`</div>`;
 
-    <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--r);margin-bottom:6px;background:var(--orange-dim);border:1px solid rgba(255,92,0,.2)">
-      <div style="width:32px;height:32px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">Z2</div>
+  // Zones — simple version
+  html+=`<div class="card">
+    <div class="clabel">🏃 Seus ritmos de treino</div>
+    <div style="font-size:12px;color:var(--tx2);margin-bottom:10px">Use esses ritmos como referência nos próximos treinos:</div>`;
+  Object.values(a.z).forEach(zv=>{
+    html+=`<div style="display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:var(--r);margin-bottom:5px;background:${zv.bg}">
+      <span style="font-size:16px">${zv.emoji}</span>
       <div style="flex:1">
-        <div style="font-size:13px;font-weight:700;color:var(--orange)">Limiar — Threshold</div>
-        <div style="font-size:11px;color:var(--tx2);margin-top:2px">10–20% do volume. Fala frases curtas. Desenvolve limiar láctico e pace de prova.</div>
-        <div style="font-size:10px;color:var(--tx3);margin-top:2px">RPE 6–7 · FC 75–87% FCmax · Inclui: Tempo Run, corrida de ritmo, progressivo</div>
+        <div style="font-size:13px;font-weight:700;color:${zv.color}">${zv.label}</div>
+        <div style="font-size:11px;color:var(--tx2)">${zv.desc}</div>
       </div>
-      <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--orange);text-align:right">${z2min}–${z2max}</div>
-    </div>
-
-    <div style="display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:var(--r);margin-bottom:10px;background:var(--red-dim);border:1px solid rgba(255,61,90,.2)">
-      <div style="width:32px;height:32px;border-radius:50%;background:var(--red);display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;color:#fff;flex-shrink:0">Z3</div>
-      <div style="flex:1">
-        <div style="font-size:13px;font-weight:700;color:var(--red)">Alta intensidade — VO2max</div>
-        <div style="font-size:11px;color:var(--tx2);margin-top:2px">5–10% do volume. Muito difícil de falar. Eleva teto aeróbico e capacidade anaeróbica.</div>
-        <div style="font-size:10px;color:var(--tx3);margin-top:2px">RPE 8–10 · FC &gt;87% FCmax · Inclui: intervalados 400m/1000m, strides, sprints</div>
-      </div>
-      <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--red);text-align:right">${z3min}–${z3max}</div>
-    </div>
-
-    <div style="font-size:11px;color:var(--tx3);line-height:1.6;padding:8px 10px;background:var(--bg3);border-radius:var(--r)">
-      📊 Modelo baseado em <strong style="color:var(--tx2)">Distribuição de Intensidade Híbrida</strong> (Seiler, 2010 + Stöggl & Sperlich, 2014): combinação polarizada (Z1+Z3) e piramidal (Z1+Z2+Z3) que maximiza adaptações fisiológicas e minimiza risco de lesão.
-    </div>
-  </div>`;
+      <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:${zv.color}">${sp(zv.min)}–${sp(zv.max)}</div>
+    </div>`;
+  });
+  html+=`</div>`;
 
   // Splits if available
   if(a.last.splits&&a.last.splits.length>1){
@@ -2252,193 +1149,285 @@ function renderAnalise(){
 //  RENDER PLAN
 // ═══════════════════════════════════════════════════
 function renderPlano(){
-  const a = computeAnalise();
-  const el = document.getElementById('pn-plano');
-  if(!a){ el.innerHTML=`<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Sem dados</div><div class="empty-sub">Configure seu objetivo e adicione treinos.</div></div>`; return; }
+  const a=computeAnalise();
+  const el=document.getElementById('pn-plano');
+  if(!a){el.innerHTML=`<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Sem dados</div><div class="empty-sub">Configure seu objetivo e adicione treinos.</div></div>`;return;}
 
-  const z = a.z, obj = a.obj, h = a.h, n = h.length;
-  const z1 = z.e ? `${sp(z.e.min)}–${sp(z.e.max)}/km` : '—';
-  const z2 = z.t ? `${sp(z.t.min)}–${sp(z.t.max)}/km` : '—';
-  const z3 = z.i ? `${sp(z.i.min)}–${sp(z.i.max)}/km` : '—';
-  const z1max = z.e ? sp(z.e.max) : '—';
-  const z3min = z.i ? sp(z.i.min) : '—';
-  const dias = USER_GOAL.dias_semana || 3;
-  const hybrid = a.hybrid;
-  const lastZone = h.length > 0 ? classifyWorkoutZone(h[h.length-1], z) : 'none';
-  const recentZones = h.slice(-4).map(w => classifyWorkoutZone(w, z));
-  const z3count = recentZones.filter(x=>x==='z3').length;
-  const z2count = recentZones.filter(x=>x==='z2').length;
-  const dist_list = h.map(w => w.dist);
-  const avgDist = dist_list.length ? Math.round(dist_list.reduce((a,b)=>a+b,0)/dist_list.length*10)/10 : 4;
-  const maxDist = dist_list.length ? Math.max(...dist_list) : 4;
-  const hadLongRecent = h.slice(-5).some(w => w.dist >= Math.max(7, maxDist * 0.9));
-  const fatigue = hybrid ? hybrid.fatigue : {level:'ok', msg:''};
-  const dist_pct = hybrid ? hybrid.distribution.pct : {z1:0,z2:0,z3:0};
-  const phaseLabel = hybrid ? hybrid.phaseLabel : '🟢 Fase de Base';
+  const z=a.z, obj=a.obj, h=a.h, n=h.length;
+  const dias=USER_GOAL.dias_semana||3;
 
-  let html = `<div style="padding-top:8px;margin-bottom:14px">
-    <div style="font-size:18px;font-weight:700;letter-spacing:-.3px">📅 Plano de Treinamento</div>
-    <div style="font-size:12px;color:var(--tx2);margin-top:2px">${obj.t} · ${dias} dias/semana · Modelo Híbrido</div>
-  </div>`;
+  // Zone paces
+  const z1min=z.e?sp(z.e.min):'—', z1max=z.e?sp(z.e.max):'—';
+  const z2min=z.t?sp(z.t.min):'—', z2max=z.t?sp(z.t.max):'—';
+  const z3min=z.i?sp(z.i.min):'—', z3max=z.i?sp(z.i.max):'—';
+  const z1=z.e?`${z1min}–${z1max}/km`:'—';
+  const z2=z.t?`${z2min}–${z2max}/km`:'—';
+  const z3=z.i?`${z3min}–${z3max}/km`:'—';
+  const z3fast=z.r?sp(z.r.min):'—';
 
-  // ── ASSESSMENT ───────────────────────────────────────
-  html += `<div class="card card-accent" style="margin-bottom:12px">
-    <div style="font-size:13px;font-weight:700;margin-bottom:8px">🤖 Avaliação do treinador</div>
-    <div style="font-size:12px;color:var(--tx2);line-height:1.7;margin-bottom:10px">${
-      n === 0 ? 'Nenhum treino ainda. Insira seu primeiro treino para receber prescrição personalizada.' :
-      n === 1 ? `Primeiro treino registrado: ${h[0].dist}km a ${h[0].pace}/km (${lastZone.toUpperCase()}). Prescrevendo próximos treinos.` :
-      n < 4 ? `${n} treinos registrados. Distribuição: ${dist_pct.z1}% Z1 · ${dist_pct.z2}% Z2 · ${dist_pct.z3}% Z3. Insira mais treinos para prescrição mais precisa.` :
-      `${n} treinos analisados. Distribuição Z1/Z2/Z3: ${dist_pct.z1}% · ${dist_pct.z2}% · ${dist_pct.z3}%. Último treino: ${h[n-1].dist}km a ${h[n-1].pace}/km (${lastZone.toUpperCase()}).`
-    }</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap">
-      <span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(232,255,0,.1);color:var(--neon)">${phaseLabel}</span>
-      ${fatigue.level !== 'ok' ? `<span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(255,92,0,.1);color:var(--orange)">⚠ Fadiga detectada</span>` : ''}
-      ${dist_pct.z3 > 20 ? `<span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(255,61,90,.1);color:var(--red)">Z3 acima do ideal</span>` : ''}
-      ${n >= 3 && dist_pct.z1 >= 70 ? `<span style="padding:3px 10px;border-radius:20px;font-size:11px;font-weight:700;background:rgba(0,229,204,.1);color:var(--teal)">✓ Distribuição equilibrada</span>` : ''}
+  // Workout history analysis for dynamic prescription
+  const recentZones=h.slice(-4).map(w=>{
+    if(!z.i||!w.paceSec)return'z1';
+    if(w.paceSec<=z.i.min*1.05)return'z3';
+    if(w.paceSec<=z.t.max*1.05)return'z2';
+    return'z1';
+  });
+  const z3cnt=recentZones.filter(x=>x==='z3').length;
+  const z2cnt=recentZones.filter(x=>x==='z2').length;
+  const lastZ=recentZones[recentZones.length-1]||'none';
+  const maxDist=h.length?Math.max(...h.map(w=>w.dist)):4;
+  const avgDist=h.length?Math.round(h.slice(-4).reduce((a,w)=>a+w.dist,0)/Math.min(4,h.length)*10)/10:4;
+  const hadLong=h.slice(-5).some(w=>w.dist>=Math.max(7,maxDist*0.9));
+
+  // View toggle state
+  const viewMode=window._planView||'dist';
+
+  let html=`<div style="padding-top:8px;margin-bottom:12px">
+    <div style="display:flex;justify-content:space-between;align-items:center">
+      <div>
+        <div style="font-size:18px;font-weight:700;letter-spacing:-.3px">📅 Plano de Treinamento</div>
+        <div style="font-size:12px;color:var(--tx2);margin-top:2px">${obj.t} · ${dias} dias/semana</div>
+      </div>
+      <div style="display:flex;gap:6px">
+        <button onclick="window._planView='dist';renderPlano()" style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);border:1px solid ${viewMode==='dist'?'var(--neon)':'var(--bd)'};background:${viewMode==='dist'?'var(--neon-dim)':'var(--bg3)'};color:${viewMode==='dist'?'var(--neon)':'var(--tx2)'}">📏 Distância</button>
+        <button onclick="window._planView='time';renderPlano()" style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);border:1px solid ${viewMode==='time'?'var(--neon)':'var(--bd)'};background:${viewMode==='time'?'var(--neon-dim)':'var(--bg3)'};color:${viewMode==='time'?'var(--neon)':'var(--tx2)'}">⏱ Tempo</button>
+      </div>
     </div>
-    ${fatigue.level !== 'ok' ? `<div style="margin-top:8px;font-size:11px;color:var(--orange);line-height:1.5">${fatigue.msg}</div>` : ''}
   </div>`;
 
-  // ── DYNAMIC WORKOUT BUILDER ───────────────────────────
-  function buildW(type, num){
-    const nextLong = Math.round(Math.max(maxDist, 5) * 1.1 * 10)/10;
-    const baseKm = Math.round(Math.max(avgDist, 3) * 10)/10;
+  // Zone reference card
+  html+=`<div class="card" style="margin-bottom:10px;padding:12px 14px">
+    <div class="clabel" style="margin-bottom:8px">⚡ Seus paces de treino</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
+      <div style="padding:8px;border-radius:var(--r);background:var(--neon-dim);border:1px solid rgba(232,255,0,.2);text-align:center">
+        <div style="font-size:10px;font-weight:700;color:var(--neon);margin-bottom:2px">Z1 BASE</div>
+        <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--neon)">${z1min}–${z1max}</div>
+        <div style="font-size:9px;color:var(--tx3)">conversa normal</div>
+      </div>
+      <div style="padding:8px;border-radius:var(--r);background:var(--orange-dim);border:1px solid rgba(255,92,0,.2);text-align:center">
+        <div style="font-size:10px;font-weight:700;color:var(--orange);margin-bottom:2px">Z2 LIMIAR</div>
+        <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--orange)">${z2min}–${z2max}</div>
+        <div style="font-size:9px;color:var(--tx3)">difícil, sustentável</div>
+      </div>
+      <div style="padding:8px;border-radius:var(--r);background:var(--red-dim);border:1px solid rgba(255,61,90,.2);text-align:center">
+        <div style="font-size:10px;font-weight:700;color:var(--red);margin-bottom:2px">Z3 TIRO</div>
+        <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--red)">${z3min}–${z3fast}</div>
+        <div style="font-size:9px;color:var(--tx3)">muito difícil</div>
+      </div>
+    </div>
+  </div>`;
 
-    const w = {
-      recovery: {
-        titulo:`Dia ${num} — Z1 Recuperação`,
-        zona:'Z1', cor:'var(--neon)', border:'rgba(232,255,0,.15)', bg:'rgba(232,255,0,.03)',
-        obj:'⚠️ Recuperação ativa após intensidade recente. O corpo se adapta no descanso — não force.',
-        dist_:`${Math.max(3,Math.round(baseKm*0.7))}–${Math.max(4,Math.round(baseKm*0.8))} km`, dur:'20–30 min',
-        inst:`Corrida Z1 (${z1}). FC <65% FCmax. Se sentir pernas pesadas: reduza ainda mais. Caminhe se necessário. Este treino é tão importante quanto o intenso.`
+  // Dynamic prescription
+  function buildWorkout(type, num){
+    const nextDist=Math.round(maxDist*1.1*10)/10;
+    const baseKm=Math.max(avgDist,3);
+
+    const workouts={
+      recovery:{
+        nome:'Treino de Recuperação',
+        tipo:'Z1 — Recuperação Ativa',
+        cor:'var(--neon)',bg:'rgba(232,255,0,.04)',border:'rgba(232,255,0,.15)',
+        obs:'⚠️ Recuperação após intensidade. Não force — a adaptação acontece no descanso.',
+        dist_km:`${Math.max(3,Math.round(baseKm*.7*10)/10)}`,
+        dur_min:25,
+        blocos_dist:[
+          {label:'Corrida Z1',km:Math.max(3,Math.round(baseKm*.7*10)/10),pace:z1max,zone:'Z1',desc:'Ritmo completamente confortável'}
+        ],
+        blocos_time:[
+          {label:'Corrida Z1',min:25,pace:z1max,zone:'Z1',desc:'FC <65% FCmax. Se sentir pernas pesadas, caminhe.'}
+        ]
       },
-      z1_base: {
-        titulo:`Dia ${num} — Z1 Base Aeróbica`,
-        zona:'Z1', cor:'var(--neon)', border:'rgba(232,255,0,.15)', bg:'rgba(232,255,0,.03)',
-        obj:`Base aeróbica — motor principal de toda evolução. 70–80% do volume total aqui.`,
-        dist_:`${baseKm}–${Math.round(baseKm*1.1*10)/10} km`, dur:'30–45 min',
-        inst:`Corrida Z1 contínua (${z1}). Ritmo onde conversa normalmente. Se ficar ofegante: reduza. Aumente distância máximo +10% por semana.`
+      z1_base:{
+        nome:'Treino de Base',
+        tipo:'Z1 — Base Aeróbica',
+        cor:'var(--neon)',bg:'rgba(232,255,0,.04)',border:'rgba(232,255,0,.15)',
+        obs:'70–80% do volume total deve ser Z1. Constrói a fundação de toda melhoria.',
+        dist_km:`${baseKm}`,
+        dur_min:35,
+        blocos_dist:[
+          {label:'Aquecimento',km:.5,pace:z1max,zone:'Z1',desc:'Trote leve para ativar'},
+          {label:'Corrida Z1',km:Math.max(3,Math.round((baseKm-.5)*10)/10),pace:z1,zone:'Z1',desc:'Conversa normal o tempo todo'},
+          {label:'Desaquecimento',km:.5,pace:z1max,zone:'Z1',desc:'Trote + alongamento'}
+        ],
+        blocos_time:[
+          {label:'Aquecimento',min:5,pace:z1max,zone:'Z1',desc:'Trote leve'},
+          {label:'Corrida Z1',min:25,pace:z1,zone:'Z1',desc:'Conversa normal. Não acelere.'},
+          {label:'Desaquecimento',min:5,pace:z1max,zone:'Z1',desc:'Trote + alongamento'}
+        ]
       },
-      z1_long: {
-        titulo:`Dia ${num} — Z1 Longão`,
-        zona:'Z1', cor:'var(--neon)', border:'rgba(232,255,0,.15)', bg:'rgba(232,255,0,.03)',
-        obj:`Treino mais importante da semana. Constrói resistência, eficiência metabólica e base de toda melhoria.`,
-        dist_:`${maxDist}–${nextLong} km`, dur:'50–80 min',
-        inst:`Corrida Z1 (${z1}) do início ao fim. Meta de distância: ${nextLong}km (+10% do máximo anterior). Hidrate a cada 20 min. Termine com energia sobrando.`
+      z1_long:{
+        nome:'Longão',
+        tipo:'Z1 — Treino Longo',
+        cor:'var(--teal)',bg:'rgba(0,229,204,.04)',border:'rgba(0,229,204,.15)',
+        obs:`O treino mais importante da semana. Meta: ${nextDist}km (+10% do máximo anterior).`,
+        dist_km:`${nextDist}`,
+        dur_min:Math.round(nextDist*parseFloat(z1min.replace(':','.'))*60/60)||60,
+        blocos_dist:[
+          {label:'Aquecimento',km:.5,pace:z1max,zone:'Z1',desc:'Trote leve'},
+          {label:'Longão Z1',km:Math.max(maxDist,6),pace:z1,zone:'Z1',desc:'Mesmo ritmo do início ao fim. Hidrate a cada 20 min.'},
+          {label:'Desaquecimento',km:.5,pace:z1max,zone:'Z1',desc:'Caminhe + alongamento completo'}
+        ],
+        blocos_time:[
+          {label:'Aquecimento',min:5,pace:z1max,zone:'Z1',desc:'Trote leve'},
+          {label:'Longão Z1',min:Math.max(45,Math.round(nextDist*6)),pace:z1,zone:'Z1',desc:'Ritmo Z1 uniforme. Não acelere no final.'},
+          {label:'Desaquecimento',min:5,pace:z1max,zone:'Z1',desc:'Caminhada + alongamento'}
+        ]
       },
-      z2_threshold: {
-        titulo:`Dia ${num} — Z2 Limiar`,
-        zona:'Z2', cor:'var(--orange)', border:'rgba(255,92,0,.2)', bg:'rgba(255,92,0,.03)',
-        obj:`Desenvolve limiar láctico — principal motor de melhoria de pace. 10–15% do volume total.`,
-        dist_:`${Math.round(baseKm*1.1*10)/10}–${Math.round(baseKm*1.2*10)/10} km`, dur:'40–55 min',
-        inst:`10 min Z1 (${z1}) → 20 min Z2 (${z2}) → 10 min Z1. Z2: fala só palavras isoladas, desconfortável mas sustentável. Não acelere nos primeiros 5 min.`
+      z2_tempo:{
+        nome:'Treino Ritmado (Tempo Run)',
+        tipo:'Z2 — Limiar',
+        cor:'var(--orange)',bg:'rgba(255,92,0,.04)',border:'rgba(255,92,0,.2)',
+        obs:'Desenvolve limiar láctico — maior motor de melhoria de pace. 10–20% do volume.',
+        dist_km:`${Math.round((baseKm+2)*10)/10}`,
+        dur_min:45,
+        blocos_dist:[
+          {label:'Aquecimento',km:1.5,pace:z1,zone:'Z1',desc:'Trote leve Z1'},
+          {label:'Ritmo Z2',km:Math.max(3,Math.round(baseKm*10)/10),pace:z2,zone:'Z2',desc:'"Comfortably hard" — difícil mas sustentável. Fala só palavras isoladas.'},
+          {label:'Desaquecimento',km:1,pace:z1,zone:'Z1',desc:'Trote Z1 + alongamento'}
+        ],
+        blocos_time:[
+          {label:'Aquecimento',min:10,pace:z1,zone:'Z1',desc:'Trote Z1'},
+          {label:'Tempo Run Z2',min:20,pace:z2,zone:'Z2',desc:'"Comfortably hard" — fala só palavras. Mantenha o pace.'},
+          {label:'Moderado',min:8,pace:z1,zone:'Z1',desc:'Baixe o ritmo gradualmente'},
+          {label:'Desaquecimento',min:5,pace:z1max,zone:'Z1',desc:'Caminhada + alongamento'}
+        ]
       },
-      z3_strides: {
-        titulo:`Dia ${num} — Z3 Strides (Subida)`,
-        zona:'Z3', cor:'var(--red)', border:'rgba(255,61,90,.2)', bg:'rgba(255,61,90,.03)',
-        obj:`Ativa fibras rápidas e força neuromuscular sem fadiga excessiva (Correfix). Máx: 1–2×/semana.`,
-        dist_:'4–5 km', dur:'35–40 min',
-        inst:`2km Z1 (${z1}) → 10×60m em velocidade máxima em subida suave, descanso: 1min30 caminhando de volta → 1km Z1 + alongamento. Total Z3 acumulado: ~600m.`
+      z3_strides:{
+        nome:'Treino de Tiro em Subida',
+        tipo:'Z3 — Strides / Força',
+        cor:'var(--red)',bg:'rgba(255,61,90,.04)',border:'rgba(255,61,90,.2)',
+        obs:'Força neuromuscular sem fadiga excessiva. Método Correfix. 1–2x/semana no máximo.',
+        dist_km:'5',
+        dur_min:40,
+        blocos_dist:[
+          {label:'Aquecimento',km:2,pace:z1,zone:'Z1',desc:'Trote Z1'},
+          {label:'10× Tiro subida',km:'10×60m',pace:z3fast+'/km',zone:'Z3',desc:'Velocidade máxima em subida suave. Descanso: 1min30 caminhando de volta.'},
+          {label:'Desaquecimento',km:1,pace:z1,zone:'Z1',desc:'Trote Z1 + alongamento'}
+        ],
+        blocos_time:[
+          {label:'Aquecimento',min:15,pace:z1,zone:'Z1',desc:'Trote Z1'},
+          {label:'10× Tiro subida',min:20,pace:z3fast+'/km',zone:'Z3',desc:'60m subida em velocidade máxima. 1min30 de caminhada entre cada.'},
+          {label:'Desaquecimento',min:5,pace:z1,zone:'Z1',desc:'Trote Z1 + alongamento'}
+        ]
       },
-      z3_interval: {
-        titulo:`Dia ${num} — Z3 Intervalado VO2max`,
-        zona:'Z3', cor:'var(--red)', border:'rgba(255,61,90,.2)', bg:'rgba(255,61,90,.03)',
-        obj:`Eleva teto aeróbico (VO2max). 5–10% do volume total. Nunca dois dias Z3 consecutivos.`,
-        dist_:'5–6 km', dur:'40–50 min',
-        inst:`10 min Z1 (${z1}) → 5×1000m Z3 (${z3min}/km, RPE 8–9), recuperação: 2 min Z1 entre cada → 10 min Z1. Se não conseguir manter o pace: pare e recupere mais.`
+      z3_interval:{
+        nome:'Treino Intervalado VO2max',
+        tipo:'Z3 — Intervalado',
+        cor:'var(--red)',bg:'rgba(255,61,90,.04)',border:'rgba(255,61,90,.2)',
+        obs:'Eleva teto aeróbico. 5–10% do volume total. Nunca 2 dias Z3 seguidos.',
+        dist_km:'6',
+        dur_min:45,
+        blocos_dist:[
+          {label:'Aquecimento',km:2,pace:z1,zone:'Z1',desc:'Trote Z1. Inclua 3×20seg aceleração.'},
+          {label:'5 × 1000m Z3',km:'5×1km',pace:z3,zone:'Z3',desc:`Pace Z3 (${z3}). Rec: 2 min trote Z1 entre cada. RPE 8–9.`},
+          {label:'Desaquecimento',km:1,pace:z1,zone:'Z1',desc:'Trote Z1 + alongamento'}
+        ],
+        blocos_time:[
+          {label:'Aquecimento',min:12,pace:z1,zone:'Z1',desc:'Trote Z1'},
+          {label:'5 × 4 min Z3',min:25,pace:z3,zone:'Z3',desc:`4 min em Z3 (${z3}) + 2 min trote Z1 entre cada. RPE 8–9.`},
+          {label:'Desaquecimento',min:8,pace:z1,zone:'Z1',desc:'Trote Z1 + alongamento'}
+        ]
       }
     };
-    return w[type] || w.z1_base;
+    return workouts[type]||workouts.z1_base;
   }
 
-  // ── PRESCRIPTION LOGIC ───────────────────────────────
-  // Based on what happened, prescribe next workouts
-  let sequence = [];
-
-  if(n === 0){
-    sequence = ['z1_base','z3_strides','z1_long'].slice(0,dias);
+  // Prescription logic
+  let seq=[];
+  if(n===0){
+    seq=['z1_base','z3_strides','z1_long'].slice(0,dias);
   } else {
-    // Always respect recovery after Z3
-    if(lastZone === 'z3' || fatigue.level === 'high'){
-      sequence.push('recovery');
-    } else if(lastZone === 'z2'){
-      sequence.push('z1_base');
-    } else {
-      // After Z1: check what's needed
-      if(!hadLongRecent) sequence.push('z1_long');
-      else sequence.push('z1_base');
-    }
+    if(lastZ==='z3'||a.evoSt==='regressao') seq.push('recovery');
+    else if(lastZ==='z2') seq.push('z1_base');
+    else if(!hadLong) seq.push('z1_long');
+    else seq.push('z1_base');
 
-    // Second workout: quality based on deficit
-    if(z3count === 0 && n >= 1){
-      sequence.push('z3_strides'); // lighter Z3 first
-    } else if(z3count >= 2){
-      sequence.push('z1_base'); // too much Z3
-    } else if(z2count === 0 && n >= 2){
-      sequence.push('z2_threshold');
-    } else {
-      sequence.push('z2_threshold');
-    }
+    if(z3cnt===0) seq.push('z3_strides');
+    else if(z3cnt>=2) seq.push('z1_base');
+    else seq.push('z2_tempo');
 
-    // Third: long or interval based on gaps
-    if(!hadLongRecent && !sequence.includes('z1_long')){
-      sequence.push('z1_long');
-    } else if(z3count < 1){
-      sequence.push('z3_interval');
-    } else {
-      sequence.push('z1_base');
-    }
+    if(!hadLong&&!seq.includes('z1_long')) seq.push('z1_long');
+    else if(z3cnt<1) seq.push('z3_interval');
+    else seq.push('z1_base');
 
-    // Extra days
-    const extras = ['z1_base','z3_strides','z2_threshold','z1_long','z1_base'];
-    while(sequence.length < dias){
-      sequence.push(extras[sequence.length % extras.length]);
-    }
+    const extras=['z1_base','z3_strides','z2_tempo','z1_long','z1_base'];
+    while(seq.length<dias) seq.push(extras[seq.length%extras.length]);
   }
+  seq=seq.slice(0,dias);
 
-  sequence = sequence.slice(0, dias);
+  // Assessment
+  html+=`<div class="card card-accent" style="margin-bottom:10px">
+    <div style="font-size:12px;font-weight:700;margin-bottom:6px">🤖 Análise do treinador</div>
+    <div style="font-size:12px;color:var(--tx2);line-height:1.6">${
+      n===0?'Nenhum treino inserido. Plano baseado no seu perfil.':
+      `${n} treino${n>1?'s':''} analisado${n>1?'s':''}. Último: ${h[n-1].dist}km a ${h[n-1].pace}/km. Distribuição recente: ${recentZones.filter(z=>z==='z1').length} Z1 · ${z2cnt} Z2 · ${z3cnt} Z3.`
+    }</div>
+  </div>`;
 
-  // ── RENDER WORKOUTS ──────────────────────────────────
-  html += `<div class="card" style="margin-bottom:12px">
-    <div class="clabel">Próximos ${dias} treinos — prescrição atualizada a cada treino</div>`;
+  // Render workouts as table
+  seq.forEach((type,i)=>{
+    const w=buildWorkout(type,i+1);
+    const blocos=viewMode==='dist'?w.blocos_dist:w.blocos_time;
+    const zBadge=type.startsWith('recovery')||type.startsWith('z1')?'Z1':type.startsWith('z2')?'Z2':'Z3';
+    const zColor=zBadge==='Z1'?'var(--neon)':zBadge==='Z2'?'var(--orange)':'var(--red)';
 
-  sequence.forEach((type, i) => {
-    const w = buildW(type, i+1);
-    html += `<div style="border:1px solid ${w.border};border-radius:var(--rl);padding:14px;margin-bottom:8px;background:${w.bg};position:relative;overflow:hidden">
-      <div style="position:absolute;left:0;top:0;bottom:0;width:3px;background:${w.cor}"></div>
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:6px">
-        <div>
-          <div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px">${w.titulo}</div>
-          <span style="padding:2px 8px;border-radius:12px;font-size:10px;font-weight:700;background:${w.cor}22;color:${w.cor};border:1px solid ${w.cor}33">${w.zona}</span>
+    html+=`<div style="border:1px solid ${w.border};border-radius:var(--rl);margin-bottom:10px;overflow:hidden">
+      <div style="background:${w.bg};padding:12px 14px;border-bottom:1px solid ${w.border}">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start">
+          <div>
+            <div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Dia ${i+1}</div>
+            <div style="font-size:14px;font-weight:700;color:var(--tx)">${w.nome}</div>
+            <div style="font-size:11px;color:${w.cor};font-weight:600;margin-top:2px">${w.tipo}</div>
+          </div>
+          <div style="text-align:right">
+            <span style="padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;background:${zColor}22;color:${zColor};border:1px solid ${zColor}33">${zBadge}</span>
+            <div style="font-size:10px;color:var(--tx3);margin-top:4px">${viewMode==='dist'?w.dist_km+' km':w.dur_min+' min'}</div>
+          </div>
         </div>
-        <div style="text-align:right;flex-shrink:0;margin-left:8px">
-          <div style="font-size:12px;font-weight:700;color:var(--tx2)">${w.dist_}</div>
-          <div style="font-size:10px;color:var(--tx3)">${w.dur}</div>
-        </div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:6px;line-height:1.5">${w.obs}</div>
       </div>
-      <div style="font-size:11px;color:var(--tx2);margin-bottom:8px;line-height:1.5">${w.obj}</div>
-      <div style="font-size:12px;color:var(--tx);background:var(--bg4);border-radius:var(--r);padding:8px 10px;line-height:1.7">${w.inst}</div>
+      <div style="background:var(--bg2)">
+        <table style="width:100%;border-collapse:collapse;font-size:12px">
+          <thead>
+            <tr style="background:var(--bg3)">
+              <th style="padding:6px 10px;text-align:left;color:var(--tx3);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd)">${viewMode==='dist'?'Bloco':'Bloco'}</th>
+              <th style="padding:6px 10px;text-align:center;color:var(--tx3);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd)">${viewMode==='dist'?'Distância':'Duração'}</th>
+              <th style="padding:6px 10px;text-align:center;color:var(--tx3);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd)">Pace</th>
+              <th style="padding:6px 10px;text-align:center;color:var(--tx3);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd)">Zona</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${blocos.map((b,bi)=>{
+              const bz=b.zone==='Z1'?'var(--neon)':b.zone==='Z2'?'var(--orange)':'var(--red)';
+              return `<tr style="border-bottom:1px solid var(--bd)${bi===blocos.length-1?';border-bottom:none':''}">
+                <td style="padding:8px 10px">
+                  <div style="font-weight:600;color:var(--tx)">${b.label}</div>
+                  <div style="font-size:10px;color:var(--tx2);margin-top:1px">${b.desc}</div>
+                </td>
+                <td style="padding:8px 10px;text-align:center;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--tx2)">${viewMode==='dist'?b.km:b.min+' min'}</td>
+                <td style="padding:8px 10px;text-align:center;font-family:var(--mono);font-size:12px;font-weight:700;color:${bz}">${b.pace}</td>
+                <td style="padding:8px 10px;text-align:center"><span style="padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;background:${bz}22;color:${bz}">${b.zone}</span></td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
     </div>`;
   });
 
-  html += `</div>`;
-
-  // ── SCIENCE BASE ─────────────────────────────────────
-  const vamRef = USER_GOAL.vam_pace ? `VAM ${Math.round(3600/USER_GOAL.vam_pace*10)/10} km/h` : 'teste 3km';
-  html += `<div class="card card-teal">
-    <div class="clabel">⚡ Como funciona a prescrição</div>
-    <div style="font-size:12px;color:var(--tx2);line-height:1.8">
-      A cada treino inserido, o modelo reavalia e atualiza os próximos treinos:
-      <br>• <strong style="color:var(--neon)">Após Z3</strong> → recuperação Z1 obrigatória
-      <br>• <strong style="color:var(--orange)">Sem Z2 recente</strong> → prescreve limiar
-      <br>• <strong style="color:var(--red)">Sem Z3 recente</strong> → prescreve strides ou intervalado
-      <br>• <strong style="color:var(--teal)">Sem longão</strong> → prescreve longão com +10% de distância
-      <br>• <strong style="color:var(--tx2)">Excesso Z3</strong> → mais Z1 obrigatório
-      <br><br>Meta: ~80% Z1 · ~10–15% Z2 · ~5–10% Z3 · ${vamRef}
+  html+=`<div class="card card-teal" style="margin-top:4px">
+    <div class="clabel">⚡ Como funciona o plano dinâmico</div>
+    <div style="font-size:12px;color:var(--tx2);line-height:1.7">
+      Cada treino inserido atualiza automaticamente os próximos:<br>
+      • <strong style="color:var(--neon)">Após Z3</strong> → recuperação Z1<br>
+      • <strong style="color:var(--orange)">Sem Z2</strong> → insere treino ritmado<br>
+      • <strong style="color:var(--red)">Sem Z3</strong> → insere tiro ou intervalado<br>
+      • <strong style="color:var(--teal)">Sem longão</strong> → insere longão +10%<br>
+      Paces baseados nos seus treinos reais (${sp(a.basePace)}/km atual)
     </div>
   </div>`;
 
-  document.getElementById('pn-plano').innerHTML = html;
+  document.getElementById('pn-plano').innerHTML=html;
 }
 
 
@@ -2447,8 +1436,7 @@ function renderPlano(){
 // ═══════════════════════════════════════════════════
 function renderEvolucao(){
   const el=document.getElementById('pn-evolucao');const h=HIST;
-  if(h.length===0){el.innerHTML=`<div class="empty"><div class="empty-icon">📈</div><div class="empty-title">Sem treinos</div><div class="empty-sub">Insira treinos para ver seu relatório de evolução.</div></div>`;return;}
-  if(h.length<2){el.innerHTML=`<div class="empty"><div class="empty-icon">📈</div><div class="empty-title">Quase lá!</div><div class="empty-sub">Insira mais 1 treino para ver o relatório de evolução completo.</div></div>`;return;}
+  if(h.length<2){el.innerHTML=`<div class="empty"><div class="empty-icon">📈</div><div class="empty-title">Poucos dados</div><div class="empty-sub">Adicione pelo menos 2 treinos para ver o relatório de evolução.</div></div>`;return;}
   const a=computeAnalise();const n=h.length;
   const first=h[0],last=h[n-1];
   const pd=first.paceSec-last.paceSec;
