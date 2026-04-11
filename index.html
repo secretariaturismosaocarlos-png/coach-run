@@ -397,7 +397,7 @@ let OB_TARGET_PACE = '';
 let OB_TARGET_DATE = '';
 let OB_TEST_TIME = '';
 let OB_TEST_FCMAX = 0;
-let OB_NIVEL_LABEL = '';
+window._obNivelLabel = '';
 
 // ═══════════════════════════════════════════════════
 //  OBJECTIVES
@@ -762,7 +762,7 @@ function renderOnboarding(el){
     ];
     body=`<div class="ob-heading">Qual é o seu nível atual?</div>
       <div class="ob-sub">Seja honesto — isso calibra o volume e o prazo estimado.</div>
-      ${levels.map(lv=>`<div class="obj-card${OB_NIVEL===lv.id?' sel':''}" style="margin-bottom:8px" onclick="OB_NIVEL='${lv.id}';OB_NIVEL_LABEL='${lv.l}';renderHome()">
+      ${levels.map(lv=>`<div class="obj-card${OB_NIVEL===lv.id?' sel':''}" style="margin-bottom:8px" onclick="OB_NIVEL='${lv.id}';window._obNivelLabel='${lv.l}';renderHome()">
         <div class="ot">${lv.l}</div><div class="os">${lv.s}</div>
       </div>`).join('')}
       <button class="btn btn-neon" style="margin-top:6px" onclick="obNext(2)" ${OB_NIVEL?'':'disabled style="opacity:.4;cursor:not-allowed"'}>Próximo →</button>
@@ -1546,11 +1546,11 @@ function buildProgNarr(pd,pct,n,a){
 }
 
 // ═══════════════════════════════════════════════════
-//  UTILITY FUNCTIONS
+//  UTILITY — pace / time helpers
 // ═══════════════════════════════════════════════════
 function sp(secs){
   if(!secs||isNaN(secs)||secs<=0) return '—';
-  const m=Math.floor(secs/60), s=Math.round(secs%60);
+  const m=Math.floor(secs/60),s=Math.round(secs%60);
   return `${m}:${String(s).padStart(2,'0')}`;
 }
 function ps(str){
@@ -1569,7 +1569,7 @@ function t2s(str){
 }
 function s2t(secs){
   if(!secs||secs<=0) return '—';
-  const h=Math.floor(secs/3600), m=Math.floor((secs%3600)/60), s=Math.round(secs%60);
+  const h=Math.floor(secs/3600),m=Math.floor((secs%3600)/60),s=Math.round(secs%60);
   if(h>0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
   return `${m}:${String(s).padStart(2,'0')}`;
 }
@@ -1583,29 +1583,26 @@ function computeAnalise(){
   const obj=OBJS.find(o=>o.id===USER_GOAL.obj_id)||OBJS[0];
   const last=h[n-1];
 
-  // Base pace: median of last 5 workouts
+  // Base pace: average of last 5 workouts
   const recent=h.slice(-5).filter(w=>w.paceSec>60&&w.paceSec<900);
-  const basePace=recent.length>0 ? Math.round(recent.reduce((a,w)=>a+w.paceSec,0)/recent.length) : last.paceSec;
+  const basePace=recent.length>0?Math.round(recent.reduce((a,w)=>a+w.paceSec,0)/recent.length):last.paceSec;
 
-  // Evolution
-  let evoSt='estavel', evoMag=0;
+  // Evolution trend
+  let evoSt='estavel',evoMag=0;
   if(n>=3){
     const prev=h.slice(-4,-1).filter(w=>w.paceSec>0);
     if(prev.length>0){
       const prevAvg=prev.reduce((a,w)=>a+w.paceSec,0)/prev.length;
-      evoMag=prevAvg-basePace; // positive = faster
+      evoMag=prevAvg-basePace;
       if(evoMag>10) evoSt='evolucao';
       else if(evoMag<-15) evoSt='regressao';
     }
   }
 
-  // Zones
-  const testTime=USER_GOAL.test_time||null;
-  const fcmax=USER_GOAL.test_fcmax||0;
+  // Zones — from test or fallback to basePace
   let z={};
-  if(testTime){ z=calcZonesFromTest(testTime,fcmax)||{}; }
+  if(USER_GOAL.test_time){z=calcZonesFromTest(USER_GOAL.test_time,USER_GOAL.test_fcmax||0)||{};}
   if(!z||!z.e){
-    // Fallback zones anchored to basePace
     z={
       e:{min:Math.round(basePace*1.10),max:Math.round(basePace*1.25),label:'Z1 — Base aeróbica',emoji:'🟢',desc:'Conversa normal.',color:'var(--neon)',bg:'var(--neon-dim)'},
       m:{min:Math.round(basePace*1.03),max:Math.round(basePace*1.09),label:'Z1+ — Leve/Moderado',emoji:'🔵',desc:'Frases curtas.',color:'#4da6ff',bg:'rgba(77,166,255,.08)'},
@@ -1628,7 +1625,7 @@ function computeAnalise(){
   // Target pace & progress
   const tp=USER_GOAL.target_pace_sec||0;
   const startPace=h[0].paceSec;
-  let progPct=0, gapSec=0;
+  let progPct=0,gapSec=0;
   if(tp>0){
     gapSec=Math.max(0,basePace-tp);
     const totalGap=startPace-tp;
@@ -1637,25 +1634,20 @@ function computeAnalise(){
 
   // Race estimate
   let raceEst='';
-  if(obj.dist>0&&basePace>0){
-    const estSecs=basePace*obj.dist*1.08;
-    raceEst=s2t(Math.round(estSecs));
-  }
+  if(obj.dist>0&&basePace>0){raceEst=s2t(Math.round(basePace*obj.dist*1.08));}
 
-  // ETA
-  const improvPerWeek=8; // ~8 sec/km per week
+  // ETA weeks
+  const improvPerWeek=8;
   const weeksETA=tp>0&&gapSec>0?Math.ceil(gapSec/improvPerWeek):obj.weeks||12;
-  const etaD=new Date();
-  etaD.setDate(etaD.getDate()+weeksETA*7);
+  const etaD=new Date();etaD.setDate(etaD.getDate()+weeksETA*7);
   const etaDate=etaD.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
 
   const analysis=buildHumanAnalysis(last,basePace,evoSt,evoMag,obj,n,h);
-
   return {last,h,n,score,evoSt,evoMag,basePace,z,obj,tp,gapSec,progPct,raceEst,weeksETA,etaDate,analysis};
 }
 
 // ═══════════════════════════════════════════════════
-//  RENDER TREINO (workout entry panel)
+//  RENDER TREINO — mantém o visual/layout original
 // ═══════════════════════════════════════════════════
 function renderTreino(){
   const el=document.getElementById('pn-treino');
@@ -1666,58 +1658,54 @@ function renderTreino(){
     <div style="font-size:12px;color:var(--tx2);margin-top:2px">Insira manualmente ou faça upload do arquivo GPS</div>
   </div>
 
-  <!-- Upload GPX/TCX/CSV/JSON -->
-  <div class="upload-zone" id="upload-zone" onclick="document.getElementById('file-input').click()">
-    <input type="file" id="file-input" accept=".gpx,.tcx,.csv,.json,.fit" style="display:none" onchange="handleFileUpload(this)">
+  <div class="upload-zone" id="upload-zone">
+    <input type="file" id="file-input" accept=".gpx,.tcx,.csv,.json" onchange="handleFileUpload(this)">
     <div style="font-size:28px;margin-bottom:8px">📂</div>
     <div style="font-size:13px;font-weight:700;color:var(--neon);margin-bottom:4px">Upload de arquivo GPS</div>
-    <div style="font-size:11px;color:var(--tx2);margin-bottom:8px">Toque aqui para selecionar o arquivo</div>
-    <div>
-      <span class="utype">GPX</span><span class="utype">TCX</span><span class="utype">CSV</span><span class="utype">JSON</span>
-    </div>
+    <div style="font-size:11px;color:var(--tx2);margin-bottom:8px">Toque aqui para selecionar</div>
+    <div><span class="utype">GPX</span><span class="utype">TCX</span><span class="utype">CSV</span><span class="utype">JSON</span></div>
   </div>
 
-  <div id="upload-status" style="display:none" class="alert alert-teal" style="margin-bottom:12px"></div>
+  <div id="upload-status" style="display:none;margin-bottom:12px"></div>
 
   <div class="or-div">ou insira manualmente</div>
 
-  <!-- Manual form -->
-  <div class="card" id="form-treino">
+  <div class="card">
     <div class="clabel">Dados do treino</div>
     <div class="g2" style="margin-bottom:10px">
       <div class="field"><label>Data</label><input type="date" id="t-data" value="${today}"></div>
-      <div class="field"><label>Distância (km)</label><input type="number" id="t-dist" placeholder="ex: 5.2" step="0.1" min="0.1"></div>
+      <div class="field"><label>Distância (km)</label><input type="number" id="t-dist" placeholder="ex: 5.2" step="0.1" min="0.1" oninput="autoCalcPace()"></div>
     </div>
     <div class="g2" style="margin-bottom:10px">
-      <div class="field"><label>Duração (mm:ss ou hh:mm:ss)</label><input type="text" id="t-tempo" placeholder="ex: 28:30"></div>
-      <div class="field"><label>Pace médio (mm:ss/km)</label><input type="text" id="t-pace" placeholder="ex: 5:29" oninput="autoCalcPace()"></div>
+      <div class="field"><label>Duração (mm:ss)</label><input type="text" id="t-tempo" placeholder="ex: 28:30" oninput="autoCalcPace()"></div>
+      <div class="field"><label>Pace médio (mm:ss/km)</label><input type="text" id="t-pace" placeholder="ex: 5:29"></div>
     </div>
     <div class="g2" style="margin-bottom:10px">
-      <div class="field"><label>FC média (bpm)</label><input type="number" id="t-fcmed" placeholder="ex: 148" min="60" max="220"></div>
-      <div class="field"><label>FC máxima (bpm)</label><input type="number" id="t-fcmax" placeholder="ex: 172" min="60" max="220"></div>
+      <div class="field"><label>FC média (bpm)</label><input type="number" id="t-fcmed" placeholder="ex: 148"></div>
+      <div class="field"><label>FC máxima (bpm)</label><input type="number" id="t-fcmax" placeholder="ex: 172"></div>
     </div>
     <div class="g2" style="margin-bottom:10px">
-      <div class="field"><label>Cadência (passos/min)</label><input type="number" id="t-cad" placeholder="ex: 172" min="100" max="230"></div>
-      <div class="field"><label>Elevação acumulada (m)</label><input type="number" id="t-elev" placeholder="ex: 45" min="0"></div>
+      <div class="field"><label>Cadência (passos/min)</label><input type="number" id="t-cad" placeholder="ex: 172"></div>
+      <div class="field"><label>Elevação acumulada (m)</label><input type="number" id="t-elev" placeholder="ex: 45"></div>
     </div>
     <div class="field" style="margin-bottom:10px">
       <label>Splits por km (pace separado por vírgula)</label>
-      <input type="text" id="t-splits" placeholder="ex: 5:40, 5:30, 5:25, 5:20, 5:15">
+      <input type="text" id="t-splits" placeholder="ex: 5:40, 5:30, 5:25">
     </div>
     <div class="field" style="margin-bottom:14px">
       <label>PSE — Percepção de Esforço (1–10)</label>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px" id="pse-btns">
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
         ${[1,2,3,4,5,6,7,8,9,10].map(i=>`<button onclick="selectPSE(${i})" id="pse-${i}" style="width:34px;height:34px;border-radius:8px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx2);font-weight:700;font-size:13px;cursor:pointer;font-family:var(--sans);transition:all .15s">${i}</button>`).join('')}
       </div>
-      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--tx3);margin-top:4px;padding:0 2px"><span>Muito leve</span><span>Máximo</span></div>
+      <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--tx3);margin-top:4px"><span>Muito leve</span><span>Máximo</span></div>
     </div>
-    <div id="save-msg" style="display:none" class="alert alert-teal" style="margin-bottom:10px"></div>
+    <div id="save-msg" style="display:none;margin-bottom:10px;padding:10px 14px;border-radius:var(--r);font-size:12px"></div>
     <button class="btn btn-neon" onclick="doSaveTreino()">💾 Salvar treino</button>
   </div>`;
 
   window._pseVal=0;
 
-  // Drag & drop
+  // drag & drop
   const uz=document.getElementById('upload-zone');
   uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('drag');});
   uz.addEventListener('dragleave',()=>uz.classList.remove('drag'));
@@ -1726,25 +1714,20 @@ function renderTreino(){
 
 function selectPSE(v){
   window._pseVal=v;
-  [1,2,3,4,5,6,7,8,9,10].forEach(i=>{
-    const b=document.getElementById('pse-'+i);
-    if(!b)return;
+  for(let i=1;i<=10;i++){
+    const b=document.getElementById('pse-'+i);if(!b)continue;
     const col=i<=3?'var(--neon)':i<=6?'var(--orange)':i<=8?'var(--red)':'var(--purple)';
     b.style.background=i<=v?col+'22':'var(--bg3)';
     b.style.color=i<=v?col:'var(--tx2)';
     b.style.borderColor=i<=v?col:'var(--bd)';
-  });
+  }
 }
 
 function autoCalcPace(){
   const dist=parseFloat(document.getElementById('t-dist')?.value)||0;
   const tempo=document.getElementById('t-tempo')?.value||'';
-  const paceField=document.getElementById('t-pace');
-  if(!paceField) return;
-  if(dist>0&&tempo){
-    const durSec=t2s(tempo);
-    if(durSec>0){const p=Math.round(durSec/dist);paceField.value=sp(p);}
-  }
+  const pf=document.getElementById('t-pace');
+  if(pf&&dist>0&&tempo){const dur=t2s(tempo);if(dur>0)pf.value=sp(Math.round(dur/dist));}
 }
 
 async function doSaveTreino(){
@@ -1760,144 +1743,57 @@ async function doSaveTreino(){
   const pse=window._pseVal||0;
 
   if(!data||!dist||dist<=0){showSaveMsg('Informe pelo menos a data e a distância.','err');return;}
-
-  // Auto-calc pace if missing
-  if(!pace&&tempo){const s=t2s(tempo);if(s>0)pace=sp(Math.round(s/dist));}
-  if(!pace){showSaveMsg('Informe o pace ou a duração para calcular.','err');return;}
+  if(!pace&&tempo){const d=t2s(tempo);if(d>0)pace=sp(Math.round(d/dist));}
+  if(!pace){showSaveMsg('Informe o pace ou a duração.','err');return;}
 
   const splits=splitsRaw?splitsRaw.split(',').map(s=>s.trim()).filter(Boolean):null;
-
   showSaveMsg('Salvando...','ok');
   await saveWorkout({data:data.split('-').reverse().join('/'),dist,tempo:tempo||null,pace,fcmed,fcmax,cad,splits,elev,pse});
-  showSaveMsg('✓ Treino salvo com sucesso!','ok');
+  showSaveMsg('✓ Treino salvo!','ok');
   setTimeout(()=>goTab('analise'),1200);
 }
 
 function showSaveMsg(msg,type){
-  const el=document.getElementById('save-msg');
-  if(!el)return;
-  el.style.display='flex';
-  el.className='alert '+(type==='ok'?'alert-teal':'alert-red');
+  const el=document.getElementById('save-msg');if(!el)return;
+  el.style.display='block';
+  el.style.background=type==='ok'?'rgba(0,229,204,.1)':'rgba(255,61,90,.1)';
+  el.style.color=type==='ok'?'var(--teal)':'var(--red)';
+  el.style.border=`1px solid ${type==='ok'?'rgba(0,229,204,.3)':'rgba(255,61,90,.3)'}`;
   el.textContent=msg;
 }
 
 // ═══════════════════════════════════════════════════
-//  FILE UPLOAD (GPX/TCX/CSV/JSON)
+//  FILE UPLOAD
 // ═══════════════════════════════════════════════════
-function handleFileUpload(input){
-  const f=input.files[0];
-  if(f) processFile(f);
-}
+function handleFileUpload(input){const f=input.files[0];if(f)processFile(f);}
 
 function processFile(file){
-  const st=document.getElementById('upload-status');
-  if(st){st.style.display='flex';st.textContent='Lendo arquivo...';}
+  showUploadStatus('Lendo arquivo...','');
   const reader=new FileReader();
   reader.onload=e=>{
     try{
       const name=file.name.toLowerCase();
-      let result=null;
-      if(name.endsWith('.gpx'))        result=parseGPX(e.target.result);
-      else if(name.endsWith('.tcx'))   result=parseTCX(e.target.result);
-      else if(name.endsWith('.json'))  result=parseJSON(e.target.result);
-      else if(name.endsWith('.csv'))   result=parseCSV(e.target.result);
-      else{if(st)st.textContent='Formato não suportado. Use GPX, TCX, CSV ou JSON.';return;}
-      if(result){fillFormFromFile(result);if(st){st.className='alert alert-teal';st.textContent='✓ Arquivo lido! Confira os dados e salve.';}}
-      else{if(st){st.className='alert alert-red';st.textContent='Não foi possível ler o arquivo. Tente inserir os dados manualmente.';}}
-    }catch(err){if(st){st.className='alert alert-red';st.textContent='Erro ao processar arquivo: '+err.message;}}
+      let r=null;
+      if(name.endsWith('.gpx'))       r=parseGPX(e.target.result);
+      else if(name.endsWith('.tcx'))  r=parseTCX(e.target.result);
+      else if(name.endsWith('.json')) r=parseJSON(e.target.result);
+      else if(name.endsWith('.csv'))  r=parseCSV(e.target.result);
+      else{showUploadStatus('Formato não suportado. Use GPX, TCX, CSV ou JSON.','err');return;}
+      if(r){fillFormFromFile(r);showUploadStatus('✓ Arquivo lido! Confira os dados e salve.','ok');}
+      else showUploadStatus('Não foi possível ler o arquivo.','err');
+    }catch(err){showUploadStatus('Erro: '+err.message,'err');}
   };
   reader.readAsText(file);
 }
 
-function parseGPX(xml){
-  const parser=new DOMParser();
-  const doc=parser.parseFromString(xml,'text/xml');
-  const trkpts=[...doc.querySelectorAll('trkpt')];
-  if(!trkpts.length) return null;
-  const times=trkpts.map(p=>new Date(p.querySelector('time')?.textContent||0)).filter(t=>t>0);
-  const lats=trkpts.map(p=>parseFloat(p.getAttribute('lat')));
-  const lons=trkpts.map(p=>parseFloat(p.getAttribute('lon')));
-  const elevs=trkpts.map(p=>parseFloat(p.querySelector('ele')?.textContent||0));
-  const hrs=trkpts.map(p=>parseInt(p.querySelector('hr,ns3\\:hr,gpxtpx\\:hr,heartrate')?.textContent||0)).filter(v=>v>0);
-
-  // Calculate distance
-  let dist=0;
-  for(let i=1;i<lats.length;i++) dist+=haversine(lats[i-1],lons[i-1],lats[i],lons[i]);
-  dist=Math.round(dist*100)/100;
-
-  // Duration
-  const durSec=times.length>=2?(times[times.length-1]-times[0])/1000:0;
-
-  // Elevation gain
-  let elevGain=0;
-  for(let i=1;i<elevs.length;i++){const d=elevs[i]-elevs[i-1];if(d>0)elevGain+=d;}
-
-  // FC
-  const fcmed=hrs.length?Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length):0;
-  const fcmax=hrs.length?Math.max(...hrs):0;
-
-  // Splits per km
-  const splits=calcSplits(lats,lons,times);
-
-  // Date from first track point
-  const dateObj=times[0]||new Date();
-
-  return {dist,durSec,fcmed,fcmax,elevGain:Math.round(elevGain),splits,date:dateObj};
-}
-
-function parseTCX(xml){
-  const parser=new DOMParser();
-  const doc=parser.parseFromString(xml,'text/xml');
-  const ns='http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2';
-  const tps=[...doc.getElementsByTagNameNS(ns,'Trackpoint')];
-  if(!tps.length) return null;
-
-  let dist=0,fcSum=0,fcCnt=0,fcmax=0,elevGain=0,prevElev=null;
-  const times=[];
-  tps.forEach(tp=>{
-    const t=tp.getElementsByTagNameNS(ns,'Time')[0]?.textContent;
-    if(t) times.push(new Date(t));
-    const d=parseFloat(tp.getElementsByTagNameNS(ns,'DistanceMeters')[0]?.textContent||0);
-    if(d>dist) dist=d;
-    const hr=parseInt(tp.getElementsByTagNameNS(ns,'Value')[0]?.textContent||0);
-    if(hr>0){fcSum+=hr;fcCnt++;if(hr>fcmax)fcmax=hr;}
-    const el=parseFloat(tp.getElementsByTagNameNS(ns,'AltitudeMeters')[0]?.textContent||0);
-    if(prevElev!==null&&el-prevElev>0) elevGain+=el-prevElev;
-    prevElev=el;
-  });
-  dist=Math.round(dist/10)/100;
-  const durSec=times.length>=2?(times[times.length-1]-times[0])/1000:0;
-  return {dist,durSec,fcmed:fcCnt?Math.round(fcSum/fcCnt):0,fcmax,elevGain:Math.round(elevGain),splits:[],date:times[0]||new Date()};
-}
-
-function parseJSON(txt){
-  const d=JSON.parse(txt);
-  return {
-    dist:parseFloat(d.distance||d.dist||0),
-    durSec:t2s(d.time||d.tempo||d.duration||''),
-    fcmed:parseInt(d.avg_hr||d.fcmed||0),
-    fcmax:parseInt(d.max_hr||d.fcmax||0),
-    elevGain:parseInt(d.elevation||d.elev||0),
-    splits:(d.splits||[]),
-    date:new Date(d.date||d.data||Date.now())
-  };
-}
-
-function parseCSV(txt){
-  const lines=txt.trim().split('\n');
-  if(lines.length<2) return null;
-  const header=lines[0].split(',').map(h=>h.trim().toLowerCase());
-  const row=lines[1].split(',').map(v=>v.trim());
-  const get=k=>row[header.indexOf(k)]||'';
-  return {
-    dist:parseFloat(get('distance')||get('dist')||0),
-    durSec:t2s(get('time')||get('duration')||get('tempo')||''),
-    fcmed:parseInt(get('avg_hr')||get('fcmed')||0),
-    fcmax:parseInt(get('max_hr')||get('fcmax')||0),
-    elevGain:parseInt(get('elevation')||get('elev')||0),
-    splits:[],
-    date:new Date(get('date')||Date.now())
-  };
+function showUploadStatus(msg,type){
+  const el=document.getElementById('upload-status');if(!el)return;
+  el.style.display='block';
+  el.style.padding='10px 14px';el.style.borderRadius='var(--r)';el.style.fontSize='12px';el.style.borderLeft='3px solid';
+  if(type==='ok'){el.style.background='var(--teal-dim)';el.style.color='#4dfde8';el.style.borderColor='var(--teal)';}
+  else if(type==='err'){el.style.background='var(--red-dim)';el.style.color='var(--red)';el.style.borderColor='var(--red)';}
+  else{el.style.background='var(--bg3)';el.style.color='var(--tx2)';el.style.borderColor='var(--bd)';}
+  el.textContent=msg;
 }
 
 function haversine(lat1,lon1,lat2,lon2){
@@ -1906,47 +1802,82 @@ function haversine(lat1,lon1,lat2,lon2){
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
 
-function calcSplits(lats,lons,times){
-  const splits=[];let km=0,prevKmTime=times[0]||null,prevDist=0;
+function parseGPX(xml){
+  const doc=new DOMParser().parseFromString(xml,'text/xml');
+  const trkpts=[...doc.querySelectorAll('trkpt')];
+  if(!trkpts.length) return null;
+  const times=trkpts.map(p=>new Date(p.querySelector('time')?.textContent||0)).filter(t=>+t>0);
+  const lats=trkpts.map(p=>parseFloat(p.getAttribute('lat')));
+  const lons=trkpts.map(p=>parseFloat(p.getAttribute('lon')));
+  const hrs=[...doc.querySelectorAll('hr,ns3\\:hr,gpxtpx\\:hr')].map(n=>parseInt(n.textContent)).filter(v=>v>0);
+  let dist=0;
+  for(let i=1;i<lats.length;i++) dist+=haversine(lats[i-1],lons[i-1],lats[i],lons[i]);
+  dist=Math.round(dist*100)/100;
+  const durSec=times.length>=2?(+times[times.length-1]-+times[0])/1000:0;
+  const fcmed=hrs.length?Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length):0;
+  const fcmax=hrs.length?Math.max(...hrs):0;
+  // splits per km
+  const splits=[];let cumDist=0,lastKm=0,lastT=times[0];
   for(let i=1;i<lats.length;i++){
-    const seg=haversine(lats[i-1],lons[i-1],lats[i],lons[i]);
-    prevDist+=seg;
-    if(prevDist>=km+1){
-      if(prevKmTime&&times[i]){
-        const secs=(times[i]-prevKmTime)/1000;
-        splits.push(sp(Math.round(secs)));
-        prevKmTime=times[i];
-      }
-      km++;
+    cumDist+=haversine(lats[i-1],lons[i-1],lats[i],lons[i]);
+    if(cumDist>=lastKm+1&&times[i]){
+      const secs=(+times[i]-+lastT)/1000;
+      splits.push(sp(Math.round(secs)));
+      lastT=times[i];lastKm=Math.floor(cumDist);
     }
   }
-  return splits;
+  return {dist,durSec,fcmed,fcmax,elevGain:0,splits,date:times[0]||new Date()};
+}
+
+function parseTCX(xml){
+  const doc=new DOMParser().parseFromString(xml,'text/xml');
+  const ns='http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2';
+  const tps=[...doc.getElementsByTagNameNS(ns,'Trackpoint')];
+  if(!tps.length) return null;
+  let distMax=0,fcSum=0,fcCnt=0,fcmax=0;const times=[];
+  tps.forEach(tp=>{
+    const t=tp.getElementsByTagNameNS(ns,'Time')[0]?.textContent;if(t)times.push(new Date(t));
+    const d=parseFloat(tp.getElementsByTagNameNS(ns,'DistanceMeters')[0]?.textContent||0);if(d>distMax)distMax=d;
+    const hr=parseInt(tp.getElementsByTagNameNS(ns,'Value')[0]?.textContent||0);if(hr>0){fcSum+=hr;fcCnt++;if(hr>fcmax)fcmax=hr;}
+  });
+  const dist=Math.round(distMax/10)/100;
+  const durSec=times.length>=2?(+times[times.length-1]-+times[0])/1000:0;
+  return {dist,durSec,fcmed:fcCnt?Math.round(fcSum/fcCnt):0,fcmax,elevGain:0,splits:[],date:times[0]||new Date()};
+}
+
+function parseJSON(txt){
+  const d=JSON.parse(txt);
+  return {dist:parseFloat(d.distance||d.dist||0),durSec:t2s(d.time||d.tempo||d.duration||''),
+    fcmed:parseInt(d.avg_hr||d.fcmed||0),fcmax:parseInt(d.max_hr||d.fcmax||0),
+    elevGain:parseInt(d.elevation||d.elev||0),splits:d.splits||[],date:new Date(d.date||d.data||Date.now())};
+}
+
+function parseCSV(txt){
+  const lines=txt.trim().split('\n');if(lines.length<2)return null;
+  const hdr=lines[0].split(',').map(h=>h.trim().toLowerCase());
+  const row=lines[1].split(',').map(v=>v.trim());
+  const get=k=>row[hdr.indexOf(k)]||'';
+  return {dist:parseFloat(get('distance')||get('dist')||0),durSec:t2s(get('time')||get('duration')||get('tempo')||''),
+    fcmed:parseInt(get('avg_hr')||get('fcmed')||0),fcmax:parseInt(get('max_hr')||get('fcmax')||0),
+    elevGain:parseInt(get('elevation')||get('elev')||0),splits:[],date:new Date(get('date')||Date.now())};
 }
 
 function fillFormFromFile(r){
   const dateStr=r.date?r.date.toISOString().split('T')[0]:new Date().toISOString().split('T')[0];
-  const tempoStr=r.durSec>0?s2t(Math.round(r.durSec)):'';
-  const paceStr=r.dist>0&&r.durSec>0?sp(Math.round(r.durSec/r.dist)):'';
-
   const setV=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
   setV('t-data',dateStr);
-  setV('t-dist',r.dist>0?r.dist:'');
-  setV('t-tempo',tempoStr);
-  setV('t-pace',paceStr);
-  setV('t-fcmed',r.fcmed||'');
-  setV('t-fcmax',r.fcmax||'');
-  setV('t-elev',r.elevGain||'');
-  if(r.splits&&r.splits.length>0){setV('t-splits',r.splits.join(', '));}
+  if(r.dist>0) setV('t-dist',r.dist);
+  if(r.durSec>0){const ts=s2t(Math.round(r.durSec));setV('t-tempo',ts);if(r.dist>0)setV('t-pace',sp(Math.round(r.durSec/r.dist)));}
+  if(r.fcmed) setV('t-fcmed',r.fcmed);
+  if(r.fcmax) setV('t-fcmax',r.fcmax);
+  if(r.elevGain) setV('t-elev',r.elevGain);
+  if(r.splits&&r.splits.length>0) setV('t-splits',r.splits.join(', '));
 }
 
 // ═══════════════════════════════════════════════════
-//  ONBOARDING ACTIONS
+//  ONBOARDING
 // ═══════════════════════════════════════════════════
-function obPickObj(id){
-  OB_OBJ=OBJS.find(o=>o.id===id)||null;
-  OB_TARGET_PACE=''; OB_TARGET_DATE='';
-  renderHome();
-}
+function obPickObj(id){OB_OBJ=OBJS.find(o=>o.id===id)||null;OB_TARGET_PACE='';OB_TARGET_DATE='';renderHome();}
 
 function obNext(step){
   if(step===1){if(!OB_OBJ)return;OB_STEP=2;}
@@ -1957,31 +1888,22 @@ function obNext(step){
 
 async function obFinish(){
   if(!OB_TEST_TIME) return;
-  const tpRaw=OB_TARGET_PACE?ps(OB_TARGET_PACE):0;
-  const vam=calcZonesFromTest(OB_TEST_TIME,OB_TEST_FCMAX);
-  const vam_pace=vam?vam._vam.pace:0;
-  const goal={
-    obj_id:OB_OBJ.id,
-    nivel:OB_NIVEL,
-    nivel_label:OB_NIVEL_LABEL||OB_NIVEL,
-    dias_semana:OB_DIAS||3,
-    target_pace_sec:tpRaw||0,
-    target_date:OB_TARGET_DATE||null,
-    onboard_done:true,
-    test_time:OB_TEST_TIME,
-    test_fcmax:OB_TEST_FCMAX||0,
-    vam_pace:vam_pace||0
-  };
-  await saveGoal(goal);
+  const vam=calcZonesFromTest(OB_TEST_TIME,OB_TEST_FCMAX)||{};
+  await saveGoal({
+    obj_id:OB_OBJ.id, nivel:OB_NIVEL, nivel_label:window._obNivelLabel||OB_NIVEL,
+    dias_semana:OB_DIAS||3, target_pace_sec:OB_TARGET_PACE?ps(OB_TARGET_PACE):0,
+    target_date:OB_TARGET_DATE||null, onboard_done:true,
+    test_time:OB_TEST_TIME, test_fcmax:OB_TEST_FCMAX||0,
+    vam_pace:vam._vam?vam._vam.pace:0
+  });
   renderHome();
 }
 
 function resetGoal(){
   if(!confirm('Isso vai reiniciar sua configuração de objetivo. Continuar?')) return;
-  OB_STEP=1; OB_OBJ=null; OB_NIVEL=null; OB_DIAS=3;
-  OB_TARGET_PACE=''; OB_TARGET_DATE=''; OB_TEST_TIME=''; OB_TEST_FCMAX=0;
-  USER_GOAL=null;
-  renderHome();
+  OB_STEP=1;OB_OBJ=null;OB_NIVEL=null;OB_DIAS=3;
+  OB_TARGET_PACE='';OB_TARGET_DATE='';OB_TEST_TIME='';OB_TEST_FCMAX=0;
+  USER_GOAL=null;renderHome();
 }
 
 // ═══════════════════════════════════════════════════
@@ -1993,10 +1915,6 @@ async function doDelete(id){
   renderEvolucao();
 }
 
-// Render treino tab on mount
-document.addEventListener('DOMContentLoaded',()=>{
-  // nothing needed here — goTab handles rendering
-});
 </script>
 </body>
 </html>
