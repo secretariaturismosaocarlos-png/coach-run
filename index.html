@@ -672,6 +672,62 @@ function goTab(n){
 // ═══════════════════════════════════════════════════
 //  HOME / ONBOARDING
 // ═══════════════════════════════════════════════════
+let OB_NIVEL_LABEL = '';
+let OB_TEST_TIME = '';
+let OB_TEST_FCMAX = 0;
+
+function obPickObj(id){
+  OB_OBJ=OBJS.find(o=>o.id===id);
+  renderHome();
+  setTimeout(()=>{
+    const tp=document.getElementById('ob-tp'),td=document.getElementById('ob-td');
+    if(tp)OB_TARGET_PACE=tp.value;if(td)OB_TARGET_DATE=td.value;
+  },0);
+}
+
+function obNext(step){
+  if(step===1){
+    if(!OB_OBJ)return;
+    if(OB_OBJ.hasPace){const tp=document.getElementById('ob-tp'),td=document.getElementById('ob-td');if(tp)OB_TARGET_PACE=tp.value;if(td)OB_TARGET_DATE=td.value;}
+    OB_STEP=2;renderHome();
+  } else if(step===2){
+    if(!OB_NIVEL)return;OB_STEP=3;renderHome();
+  } else if(step===3){
+    OB_STEP=4;renderHome();
+  }
+}
+
+async function obFinish(){
+  const testTime=document.getElementById('ob-test-time')?.value||OB_TEST_TIME;
+  const testFcmax=parseInt(document.getElementById('ob-test-fcmax')?.value)||OB_TEST_FCMAX||0;
+  OB_TEST_TIME=testTime;OB_TEST_FCMAX=testFcmax;
+  const testSecs=t2s(testTime);
+  const vam_ms=testSecs>0?3000/testSecs:0;
+  const vam_pace=vam_ms>0?Math.round(1000/vam_ms):0;
+  await saveGoal({
+    obj_id:OB_OBJ.id,nivel:OB_NIVEL,nivel_label:OB_NIVEL_LABEL||OB_NIVEL,
+    dias_semana:OB_DIAS,target_pace_sec:ps(OB_TARGET_PACE)||0,
+    target_date:OB_TARGET_DATE||null,onboard_done:true,
+    test_time:testTime,test_fcmax:testFcmax,vam_pace:vam_pace
+  });
+  if(testTime&&HIST.length===0){
+    const testPaceSec=vam_pace>0?vam_pace:ps(testTime);
+    const t={data:new Date().toLocaleDateString('pt-BR'),ts:Date.now(),dist:3.0,tempo:testTime,pace:sp(testPaceSec),fcmed:Math.round(testFcmax*0.93)||0,fcmax:testFcmax||0,cad:0,splits:[],elev:0,pse:0,paceSec:testPaceSec,isTeste:true};
+    await saveWorkout(t);
+  }
+  OB_STEP=1;renderHome();goTab('analise');
+}
+
+function resetGoal(){
+  if(!confirm('Redefinir objetivo e perfil?'))return;
+  USER_GOAL=null;OB_STEP=1;OB_OBJ=null;OB_NIVEL=null;
+  OB_TARGET_PACE='';OB_TARGET_DATE='';OB_TEST_TIME='';OB_TEST_FCMAX=0;
+  saveGoal({onboard_done:false});renderHome();
+}
+
+function showTutorial(){document.getElementById('tutorial-modal').style.display='block';document.body.style.overflow='hidden';}
+function hideTutorial(){document.getElementById('tutorial-modal').style.display='none';document.body.style.overflow='';}
+
 function renderHome(){
   const el=document.getElementById('pn-home');
   if(!USER_GOAL||!USER_GOAL.onboard_done){ renderOnboarding(el); return; }
