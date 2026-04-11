@@ -61,7 +61,8 @@ body{font-family:var(--sans);background:var(--bg);color:var(--tx);min-height:100
 
 /* ══ BOTTOM NAV ══ */
 .bottom-nav{position:fixed;bottom:0;left:0;right:0;background:rgba(10,11,13,0.95);backdrop-filter:blur(20px);border-top:1px solid var(--bd);padding:8px 0 12px;z-index:100}
-.nav-inner{max-width:720px;margin:0 auto;display:flex;justify-content:space-around}
+.nav-inner{max-width:720px;margin:0 auto;display:flex;justify-content:space-around;overflow-x:auto;-webkit-overflow-scrolling:touch}
+.nav-inner::-webkit-scrollbar{display:none}
 .nav-btn{display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 16px;border:none;background:transparent;cursor:pointer;border-radius:var(--r);transition:all .2s;min-width:60px}
 .nav-btn .ni{font-size:20px;transition:transform .2s}
 .nav-btn .nl{font-size:10px;font-weight:600;color:var(--tx2);transition:color .2s;letter-spacing:.3px;text-transform:uppercase}
@@ -426,7 +427,7 @@ select option{background:var(--bg3)}
       <button class="nav-btn"        id="nb-analise"  onclick="goTab('analise')"> <span class="ni">📊</span><span class="nl">Análise</span></button>
       <button class="nav-btn"        id="nb-plano"    onclick="goTab('plano')">   <span class="ni">📅</span><span class="nl">Plano</span></button>
       <button class="nav-btn"        id="nb-evolucao" onclick="goTab('evolucao')"><span class="ni">📈</span><span class="nl">Evolução</span></button>
-      <button class="nav-btn"        id="nb-admin"    onclick="goTab('admin')" style="display:none"><span class="ni">⚙️</span><span class="nl">Admin</span></button>
+      <button class="nav-btn"        id="nb-admin"    onclick="goTab('admin')" style="display:none;position:relative"><span class="ni">🔔</span><span class="nl">Admin</span><span id="admin-badge" style="display:none;position:absolute;top:4px;right:8px;background:var(--red);color:#fff;font-size:9px;font-weight:700;border-radius:10px;padding:1px 5px;min-width:14px;text-align:center">!</span></button>
     </div>
   </nav>
 </div>
@@ -626,7 +627,54 @@ function setupUI(){
   const name = PROFILE?.name || CU.email.split('@')[0];
   document.getElementById('user-name-display').textContent = name.split(' ')[0];
   document.getElementById('user-avatar').textContent = name[0].toUpperCase();
-  if(IS_ADMIN){ document.getElementById('nb-admin').style.display='flex'; }
+  if(IS_ADMIN){
+    document.getElementById('nb-admin').style.display='flex';
+    checkPendingUsers();
+  }
+}
+
+async function checkPendingUsers(){
+  try {
+    const {data} = await db.from('profiles').select('id').eq('status','pending');
+    const count = data ? data.length : 0;
+    const badge = document.getElementById('admin-badge');
+    if(badge){
+      if(count > 0){
+        badge.style.display = 'block';
+        badge.textContent = count;
+        // Sound notification if new pending users
+        if(count > (window._lastPendingCount || 0)){
+          playNotifSound();
+        }
+        window._lastPendingCount = count;
+      } else {
+        badge.style.display = 'none';
+        window._lastPendingCount = 0;
+      }
+    }
+    // Poll every 30 seconds
+    setTimeout(checkPendingUsers, 30000);
+  } catch(e){}
+}
+
+function playNotifSound(){
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    // Two-tone notification beep
+    [880, 1100].forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'sine';
+      gain.gain.setValueAtTime(0, ctx.currentTime + i * 0.15);
+      gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + i * 0.15 + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i * 0.15 + 0.25);
+      osc.start(ctx.currentTime + i * 0.15);
+      osc.stop(ctx.currentTime + i * 0.15 + 0.25);
+    });
+  } catch(e){}
 }
 
 // ═══════════════════════════════════════════════════
@@ -665,6 +713,7 @@ async function deleteWorkout(id){
 //  ADMIN FUNCTIONS
 // ═══════════════════════════════════════════════════
 async function loadAdminPanel(){
+  checkPendingUsers(); // refresh badge
   const {data:users} = await db.from('profiles').select('*').order('created_at');
   const el = document.getElementById('pn-admin');
   if(!users||!users.length){el.innerHTML='<div class="empty"><div class="empty-icon">👥</div><div class="empty-title">Nenhum usuário</div></div>';return;}
@@ -718,6 +767,7 @@ function adminUserRow(u){
 async function setUserStatus(uid, status){
   await db.from('profiles').update({status}).eq('id',uid);
   loadAdminPanel();
+  checkPendingUsers();
 }
 
 // ═══════════════════════════════════════════════════
@@ -890,7 +940,7 @@ function renderOnboarding(el){
         <div style="font-size:13px;font-weight:700;margin-bottom:10px">Insira o resultado do seu teste:</div>
         
         <div style="border:2px dashed rgba(232,255,0,.25);border-radius:var(--rl);padding:16px;text-align:center;background:var(--neon-dim);position:relative;margin-bottom:12px;cursor:pointer" id="ob-upload-zone">
-          <input type="file" accept=".gpx,.tcx,.csv,.json,*/*" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%" onchange="obHandleFile(this.files[0])">
+          <input type="file" accept="*" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%" onchange="obHandleFile(this.files[0])">
           <div style="font-size:20px;margin-bottom:4px">📁</div>
           <div style="font-size:13px;font-weight:700;color:var(--neon);margin-bottom:2px">Importar arquivo do teste</div>
           <div style="font-size:11px;color:var(--tx2)">GPX, TCX, CSV ou JSON — preenche o tempo automaticamente</div>
@@ -1178,15 +1228,33 @@ function handleFile(f){
   };
   r.readAsText(f);
 }
+function getTagVal(el, tagName){
+  const all = el.getElementsByTagName('*');
+  for(let i=0;i<all.length;i++){
+    if(all[i].localName===tagName) return all[i];
+  }
+  return null;
+}
+
 function parseGPX(xml){
   const doc=new DOMParser().parseFromString(xml,'text/xml');
-  let pts=doc.querySelectorAll('trkpt,rtept');if(!pts.length)return null;
+  let pts=Array.from(doc.getElementsByTagName('trkpt'));
+  if(!pts.length) pts=Array.from(doc.getElementsByTagName('rtept'));
+  if(!pts.length) return null;
   const points=[];
   pts.forEach(pt=>{
-    const hr=pt.querySelector('hr,gpxtpx\\:hr,ns3\\:hr,heartrate');
-    const cad=pt.querySelector('cad,gpxtpx\\:cad,ns3\\:cad');
-    const t=pt.querySelector('time');
-    points.push({lat:parseFloat(pt.getAttribute('lat')),lon:parseFloat(pt.getAttribute('lon')),time:t?new Date(t.textContent):null,hr:hr?parseInt(hr.textContent):0,cad:cad?parseInt(cad.textContent):0});
+    const lat=parseFloat(pt.getAttribute('lat'));
+    const lon=parseFloat(pt.getAttribute('lon'));
+    if(isNaN(lat)||isNaN(lon)) return;
+    const tEl=getTagVal(pt,'time')||pt.querySelector('time');
+    const hrEl=getTagVal(pt,'hr');
+    const cadEl=getTagVal(pt,'cad');
+    points.push({
+      lat,lon,
+      time:tEl?new Date(tEl.textContent):null,
+      hr:hrEl?parseInt(hrEl.textContent):0,
+      cad:cadEl?parseInt(cadEl.textContent):0
+    });
   });
   return calcFromPoints(points);
 }
@@ -1336,7 +1404,7 @@ function renderTreino(){
     <div style="font-size:12px;color:var(--tx2);margin-top:2px">Importe um arquivo ou preencha manualmente</div>
   </div>
   <div class="upload-zone" id="upload-zone2">
-    <input type="file" accept=".gpx,.tcx,.csv,.json,application/gpx+xml,application/vnd.garmin.tcx+xml,text/csv,application/json,*/*" onchange="handleFile(this.files[0])">
+    <input type="file" accept="*" onchange="handleFile(this.files[0])">
     <div style="font-size:24px;margin-bottom:6px">📁</div>
     <div style="font-size:13px;font-weight:700;color:var(--neon);margin-bottom:3px">Importar arquivo de treino</div>
     <div style="font-size:11px;color:var(--tx2);margin-bottom:8px">Preenche os campos automaticamente</div>
