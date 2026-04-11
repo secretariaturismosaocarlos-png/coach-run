@@ -890,7 +890,7 @@ function renderOnboarding(el){
         <div style="font-size:13px;font-weight:700;margin-bottom:10px">Insira o resultado do seu teste:</div>
         
         <div style="border:2px dashed rgba(232,255,0,.25);border-radius:var(--rl);padding:16px;text-align:center;background:var(--neon-dim);position:relative;margin-bottom:12px;cursor:pointer" id="ob-upload-zone">
-          <input type="file" accept=".gpx,.tcx,.csv,.json" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%" onchange="obHandleFile(this.files[0])">
+          <input type="file" accept=".gpx,.tcx,.csv,.json,*/*" style="position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%" onchange="obHandleFile(this.files[0])">
           <div style="font-size:20px;margin-bottom:4px">📁</div>
           <div style="font-size:13px;font-weight:700;color:var(--neon);margin-bottom:2px">Importar arquivo do teste</div>
           <div style="font-size:11px;color:var(--tx2)">GPX, TCX, CSV ou JSON — preenche o tempo automaticamente</div>
@@ -1035,11 +1035,14 @@ function obHandleFile(file){
   const reader = new FileReader();
   reader.onload = function(e){
     try{
+      const content = e.target.result;
       let d = null;
-      if(ext==='gpx') d = parseGPX(e.target.result);
-      else if(ext==='tcx') d = parseTCX(e.target.result);
-      else if(ext==='csv') d = parseCSV(e.target.result);
-      else if(ext==='json') d = parseJSON(e.target.result);
+      const isGPX = ext==='gpx' || content.includes('<gpx') || content.includes('<trkpt');
+      const isTCX = ext==='tcx' || content.includes('<TrainingCenterDatabase') || content.includes('<Trackpoint>');
+      if(isGPX) d = parseGPX(content);
+      else if(isTCX) d = parseTCX(content);
+      else if(ext==='csv') d = parseCSV(content);
+      else if(ext==='json'||content.trim().startsWith('{')) d = parseJSON(content);
       else { obUploadMsg('Formato não suportado. Use GPX, TCX, CSV ou JSON.', 'err'); return; }
       if(!d){ obUploadMsg('Não foi possível ler os dados.', 'err'); return; }
       if(d.tempo){ 
@@ -1145,21 +1148,35 @@ document.addEventListener('DOMContentLoaded',()=>{
   }
 });
 function handleFile(f){
-  if(!f)return;const ext=f.name.split('.').pop().toLowerCase();
+  if(!f)return;
+  const ext=f.name.split('.').pop().toLowerCase();
   const r=new FileReader();
   r.onload=e=>{
     try{
+      const content = e.target.result;
       let d=null;
-      if(ext==='gpx')d=parseGPX(e.target.result);
-      else if(ext==='tcx')d=parseTCX(e.target.result);
-      else if(ext==='csv')d=parseCSV(e.target.result);
-      else if(ext==='json')d=parseJSON(e.target.result);
+      // Detect by content if extension is unknown
+      const isGPX = ext==='gpx' || content.includes('<gpx') || content.includes('<trkpt');
+      const isTCX = ext==='tcx' || content.includes('<TrainingCenterDatabase') || content.includes('<Trackpoint>');
+      const isJSON = ext==='json' || (content.trim().startsWith('{') || content.trim().startsWith('['));
+      const isCSV = ext==='csv';
+
+      if(isGPX) d=parseGPX(content);
+      else if(isTCX) d=parseTCX(content);
+      else if(isCSV) d=parseCSV(content);
+      else if(isJSON) d=parseJSON(content);
       else if(ext==='fit'){uMsg('Arquivo .FIT é binário. Exporte como GPX no Garmin Connect ou Strava.','err');return;}
-      else{uMsg('Formato não suportado.','err');return;}
-      if(!d){uMsg('Não foi possível ler os dados.','err');return;}
+      else{
+        // Last resort: try to detect
+        if(content.includes('<gpx') || content.includes('<trkpt')) d=parseGPX(content);
+        else if(content.includes('<Trackpoint')) d=parseTCX(content);
+        else { uMsg('Formato não reconhecido. Use GPX, TCX, CSV ou JSON.','err'); return; }
+      }
+      if(!d){uMsg('Não foi possível ler os dados do arquivo.','err');return;}
       fillForm(d,f.name);
-    }catch(err){uMsg('Erro: '+err.message,'err');}
-  };r.readAsText(f);
+    }catch(err){uMsg('Erro ao ler arquivo: '+err.message,'err');}
+  };
+  r.readAsText(f);
 }
 function parseGPX(xml){
   const doc=new DOMParser().parseFromString(xml,'text/xml');
@@ -1319,7 +1336,7 @@ function renderTreino(){
     <div style="font-size:12px;color:var(--tx2);margin-top:2px">Importe um arquivo ou preencha manualmente</div>
   </div>
   <div class="upload-zone" id="upload-zone2">
-    <input type="file" accept=".gpx,.tcx,.csv,.json" onchange="handleFile(this.files[0])">
+    <input type="file" accept=".gpx,.tcx,.csv,.json,application/gpx+xml,application/vnd.garmin.tcx+xml,text/csv,application/json,*/*" onchange="handleFile(this.files[0])">
     <div style="font-size:24px;margin-bottom:6px">📁</div>
     <div style="font-size:13px;font-weight:700;color:var(--neon);margin-bottom:3px">Importar arquivo de treino</div>
     <div style="font-size:11px;color:var(--tx2);margin-bottom:8px">Preenche os campos automaticamente</div>
