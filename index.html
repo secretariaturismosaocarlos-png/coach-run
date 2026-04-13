@@ -456,7 +456,16 @@ select option{background:var(--bg3)}
 <div id="screen-auth">
   <div class="auth-box">
     <div class="auth-logo">
-      <div class="auth-logo-icon" style="display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" width="56" height="56"><defs><linearGradient id="lg2" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#FF2D00"/><stop offset="100%" stop-color="#FFAA00"/></linearGradient></defs><ellipse cx="15" cy="40" rx="10" ry="4" fill="url(#lg2)" opacity=".5" transform="rotate(-25,15,40)"/><ellipse cx="13" cy="32" rx="8" ry="3" fill="url(#lg2)" opacity=".4" transform="rotate(-30,13,32)"/><ellipse cx="11" cy="23" rx="6" ry="2.5" fill="url(#lg2)" opacity=".3" transform="rotate(-20,11,23)"/><path d="M39 12 Q44 9 45 14 L42 23 L47 20 Q52 18 50 25 L44 30 L40 40 L32 42 L30 34 L23 39 L18 37 L25 25 L32 25 Z" fill="url(#lg2)"/><circle cx="42" cy="9" r="5" fill="#FFAA00"/></svg></div>
+      <div class="auth-logo-icon" style="display:flex;align-items:center;justify-content:center;background:var(--neon)">
+<svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" width="54" height="54">
+  <defs><linearGradient id="flg2" x1="30%" y1="0%" x2="70%" y2="100%"><stop offset="0%" stop-color="#FFE566"/><stop offset="100%" stop-color="#FF8C00"/></linearGradient></defs>
+  <path d="M13 42 Q8 35 9 27 Q11 20 14 23 Q11 30 16 36 Z" fill="#FFE566" opacity=".7"/>
+  <path d="M16 45 Q10 37 11 27 Q13 19 17 22 Q13 30 19 38 Z" fill="#FF8C00" opacity=".6"/>
+  <path d="M19 46 Q13 38 14 28 Q17 20 20 23 Q16 31 22 39 Z" fill="#FFE566" opacity=".5"/>
+  <path d="M34 13 Q39 11 41 16 L38 24 L43 21 Q47 19 46 25 L40 30 L37 40 L28 42 L26 34 L21 38 L17 37 L24 26 L31 26 Z" fill="white"/>
+  <circle cx="38" cy="11" r="5" fill="white"/>
+</svg>
+</div>
       <div class="auth-title">Coach Run</div>
       <div class="auth-sub">Treinador de corrida inteligente</div>
     </div>
@@ -502,7 +511,24 @@ select option{background:var(--bg3)}
   <div class="app">
     <div class="header">
       <div class="logo">
-        <div class="logo-icon" style="overflow:hidden;padding:1px"><svg viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg" width="36" height="36"><defs><linearGradient id="lg1" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#FF2D00"/><stop offset="100%" stop-color="#FFAA00"/></linearGradient></defs><ellipse cx="9" cy="24" rx="6" ry="2.5" fill="url(#lg1)" opacity=".5" transform="rotate(-25,9,24)"/><ellipse cx="8" cy="19" rx="4.5" ry="2" fill="url(#lg1)" opacity=".4" transform="rotate(-30,8,19)"/><ellipse cx="7" cy="14" rx="3.5" ry="1.5" fill="url(#lg1)" opacity=".3" transform="rotate(-20,7,14)"/><path d="M23 7 Q26 5.5 27 8.5 L25 14 L28 12 Q31 11 30 15 L26 18 L24 24 L19 25 L18 20 L14 23 L11 22 L15 15 L19 15 Z" fill="url(#lg1)"/><circle cx="25" cy="5.5" r="3" fill="#FFAA00"/></svg></div>
+        <div class="logo-icon" style="background:var(--neon);overflow:hidden;display:flex;align-items:center;justify-content:center">
+<svg viewBox="0 0 38 38" xmlns="http://www.w3.org/2000/svg" width="38" height="38">
+  <defs>
+    <linearGradient id="flg" x1="30%" y1="0%" x2="70%" y2="100%">
+      <stop offset="0%" stop-color="#FFE566"/>
+      <stop offset="100%" stop-color="#FF8C00"/>
+    </linearGradient>
+  </defs>
+  <!-- Flame trails -->
+  <path d="M8 26 Q5 22 6 17 Q7 13 9 15 Q7 19 10 22 Z" fill="#FFE566" opacity=".7"/>
+  <path d="M10 28 Q6 23 7 17 Q9 12 11 14 Q8 19 12 24 Z" fill="#FF8C00" opacity=".6"/>
+  <path d="M12 29 Q8 24 9 18 Q11 13 13 15 Q10 20 14 25 Z" fill="#FFE566" opacity=".5"/>
+  <!-- Body running -->
+  <path d="M21 8 Q24 7 25 10 L23 15 L26 13 Q29 12 28 16 L24 19 L22 25 L17 26 L16 21 L13 24 L10 23 L15 16 L19 16 Z" fill="white"/>
+  <!-- Head -->
+  <circle cx="23" cy="7" r="3" fill="white"/>
+</svg>
+</div>
         <div><div class="logo-text">COACH <span style="color:var(--neon)">RUN</span></div><div class="logo-sub">Treinador inteligente</div></div>
       </div>
       <div class="user-badge" onclick="doLogout()">
@@ -570,7 +596,7 @@ let OB_NIVEL_LABEL = '';
 // ═══════════════════════════════════════════════════
 //  PROXY CONFIG — aponte para seu Cloudflare Worker
 // ═══════════════════════════════════════════════════
-const PROXY_URL = 'https://coach-run-api.secretaria-turismo-saocarlos.workers.dev';
+const PROXY_URL = 'https://coach-run-api.SEU_USUARIO.workers.dev';
 // ↑ Troque pelo endereço do seu Worker após o deploy
 
 async function callClaudeAPI(messages, maxTokens=1500){
@@ -1697,6 +1723,17 @@ function parseWorkoutBlocks(descricao, paceStr, zona){
 
     const segColor = segZona==='Z1'?'var(--teal)':segZona==='Z2'?'var(--orange)':segZona==='Z3'?'var(--red)':'var(--tx2)';
     let finalPace = segPace ? parsePaceRange(segPace, segZona, segDesc) : '';
+    // Non-running segments — no zone, no pace
+    const isNonRunning = /alongamento|aquecimento muscular|fortalec|mobilidade|flexib|estatic|ativ/i.test(segDesc);
+    if(isNonRunning){
+      blocks.push({desc:segDesc, pace:'', color:'var(--tx3)', zona:'', isNonRunning:true});
+      if(restPart && /caminh|recup|descanso|trote|rest|jog/i.test(restPart)){
+        const restClean = restPart.replace(/\d+:\d+/g,'').replace(/\s+/g,' ').trim();
+        blocks.push({desc:'↩ descanso: '+restClean, pace:'', color:'var(--tx3)', zona:'Z1', isRest:true});
+      }
+      return; // skip normal push below
+    }
+
     if(!finalPace && segZona==='Z1') finalPace = 'Z1 confortável';
 
     blocks.push({desc:segDesc, pace:finalPace, color:segColor, zona:segZona});
@@ -1723,8 +1760,13 @@ function renderWorkoutCell(t, col, cls){
   let inner = `<div class="ps-type" style="color:${ztopColor}">${t.tipo||zona}</div>`;
   blocks.forEach(b => {
     if(b.isRest){
-      inner += `<div class="ps-block" style="opacity:.6">
+      inner += `<div class="ps-block" style="opacity:.55">
         <span class="ps-bdesc" style="color:var(--tx3);font-style:italic">${b.desc}</span>
+      </div>`;
+    } else if(b.isNonRunning){
+      inner += `<div class="ps-block">
+        <span class="ps-bdesc" style="color:var(--tx2)">${b.desc}</span>
+        <span class="ps-bpace" style="color:var(--tx3);font-size:9px">—</span>
       </div>`;
     } else {
       inner += `<div class="ps-block">
@@ -1822,9 +1864,9 @@ function renderPlanSheet(plan, a){
               <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${zborder};color:${ztopColor}">${zona}</span>
             </div>
             <div style="padding:8px 14px">
-              ${blocks.map(b=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(0,0,0,0.04)">
-                <span style="font-size:12px;color:var(--tx)">${b.desc}</span>
-                ${b.pace?`<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${b.color};white-space:nowrap;margin-left:8px">${b.pace}</span>`:''}
+              ${blocks.map(b=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(0,0,0,0.04);${b.isRest||b.isNonRunning?'opacity:.6':''}">
+                <span style="font-size:12px;color:${b.isRest||b.isNonRunning?'var(--tx3)':'var(--tx)'};${b.isRest?'font-style:italic':''}">${b.desc}</span>
+                ${b.pace&&!b.isRest&&!b.isNonRunning?`<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${b.color};white-space:nowrap;margin-left:8px">${b.pace}</span>`:''}
               </div>`).join('')}
             </div>
           </div>`;
@@ -1868,9 +1910,9 @@ function openDayModal(cell){
         </div>
         <button onclick="this.closest('[style*=fixed]').remove()" style="background:var(--bg3);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px">✕</button>
       </div>
-      ${blocks.map(b=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;margin-bottom:8px;border-radius:var(--r);background:var(--bg3)">
-        <span style="font-size:14px;color:var(--tx);font-weight:500">${b.desc}</span>
-        ${b.pace?`<div style="text-align:right">
+      ${blocks.map(b=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;margin-bottom:8px;border-radius:var(--r);background:${b.isRest||b.isNonRunning?'transparent':'var(--bg3)'};${b.isRest||b.isNonRunning?'opacity:.6':''}">
+        <span style="font-size:14px;color:${b.isRest||b.isNonRunning?'var(--tx3)':'var(--tx)'};font-weight:${b.isRest?'400':'500'};${b.isRest?'font-style:italic':''}">${b.desc}</span>
+        ${b.pace&&!b.isRest&&!b.isNonRunning?`<div style="text-align:right">
           <div style="font-family:var(--mono);font-size:14px;font-weight:700;color:${b.color}">${b.pace}</div>
           <div style="font-size:10px;color:var(--tx3)">min/km</div>
         </div>`:''}
