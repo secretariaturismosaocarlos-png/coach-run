@@ -795,8 +795,17 @@ function renderOnboarding(el){
         </div>
       </div>
 
+      <div class="upload-zone" id="ob-upload-zone" style="margin-bottom:12px">
+        <input type="file" id="ob-file-input" accept=".gpx,.tcx,.fit,.json" onchange="handleTestFileUpload(this)">
+        <div style="font-size:22px;margin-bottom:6px">📂</div>
+        <div style="font-size:13px;font-weight:700;color:var(--neon);margin-bottom:3px">Upload do arquivo do teste</div>
+        <div style="font-size:11px;color:var(--tx2);margin-bottom:6px">Faça upload do GPX ou TCX — os dados são extraídos automaticamente</div>
+        <div><span class="utype">GPX</span><span class="utype">TCX</span><span class="utype">JSON</span></div>
+      </div>
+      <div id="ob-upload-status" style="display:none;padding:8px 12px;border-radius:var(--r);font-size:12px;border-left:3px solid;margin-bottom:10px"></div>
+
       <div class="card" style="margin-bottom:12px">
-        <div style="font-size:13px;font-weight:700;margin-bottom:10px">Insira o resultado do seu teste:</div>
+        <div style="font-size:13px;font-weight:700;margin-bottom:10px">Ou insira manualmente:</div>
         <div class="g2" style="margin-bottom:10px">
           <div class="field"><label>Tempo nos 3km (mm:ss)</label><input type="text" id="ob-test-time" value="${OB_TEST_TIME}" placeholder="ex: 16:30" oninput="OB_TEST_TIME=this.value"></div>
           <div class="field"><label>FC máxima (opcional)</label><input type="number" id="ob-test-fcmax" value="${OB_TEST_FCMAX||''}" placeholder="ex: 182" oninput="OB_TEST_FCMAX=parseInt(this.value)||0"></div>
@@ -1143,7 +1152,197 @@ function renderAnalise(){
     html+=`</div></div>`;
   }
 
+  // ── Botão Análise IA ──
+  html+=`<div class="card card-accent" style="margin-top:4px">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+      <div>
+        <div style="font-size:14px;font-weight:700">🤖 Análise do Coach IA</div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:2px">Relatório completo personalizado — 12 etapas de análise profissional</div>
+      </div>
+    </div>
+    <button class="btn btn-neon" onclick="gerarAnaliseIA()" id="btn-ia">✨ Gerar análise completa</button>
+    <div id="ia-output" style="display:none;margin-top:14px"></div>
+  </div>`;
+
   document.getElementById('pn-analise').innerHTML=html;
+}
+
+// ═══════════════════════════════════════════════════
+//  ANÁLISE IA — COACH INTELIGENTE
+// ═══════════════════════════════════════════════════
+async function gerarAnaliseIA(){
+  const a=computeAnalise();
+  if(!a) return;
+
+  const btn=document.getElementById('btn-ia');
+  const out=document.getElementById('ia-output');
+  if(!btn||!out) return;
+
+  btn.disabled=true;
+  btn.textContent='⏳ Analisando...';
+  out.style.display='block';
+  out.innerHTML=`<div style="color:var(--tx2);font-size:13px;text-align:center;padding:16px 0">
+    <div style="font-size:24px;margin-bottom:8px">🧠</div>
+    Gerando análise profissional...<br>
+    <span style="font-size:11px;opacity:.6">Isso pode levar alguns segundos</span>
+  </div>`;
+
+  // Build historico string
+  const histLines = HIST.slice(-10).map((t,i)=>
+    `Treino ${i+1}: ${t.data} | ${t.dist}km | Pace: ${t.pace}/km${t.fcmed?' | FC med: '+t.fcmed+' bpm':''}${t.fcmax?' | FC max: '+t.fcmax+' bpm':''}${t.cad?' | Cadência: '+t.cad+' spm':''}${t.splits&&t.splits.length?' | Splits: '+t.splits.join(', '):''}${t.pse?' | PSE: '+t.pse+'/10':''}`
+  ).join('\n');
+
+  const last=a.last;
+  const obj=a.obj;
+  const nivel=USER_GOAL?.nivel_label||USER_GOAL?.nivel||'não informado';
+  const dias=USER_GOAL?.dias_semana||3;
+
+  const prompt=`Você é um treinador de corrida profissional de alto nível, especializado em ciência do esporte, fisiologia do exercício e análise de dados de performance. Você atua como um sistema inteligente de treinamento, capaz de analisar treinos profundamente, interpretar evolução ao longo do tempo, ajustar estratégias automaticamente, gerar treinos e planos semanais personalizados e prevenir fadiga e overtraining. Você toma decisões baseadas em dados. Nunca seja genérico.
+
+---
+
+# 🧠 MEMÓRIA DO ATLETA (HISTÓRICO)
+${histLines||'Nenhum histórico anterior disponível.'}
+
+---
+
+# 👤 PERFIL DO USUÁRIO
+- Nível: ${nivel}
+- Objetivo: ${obj.t}
+- Dias por semana: ${dias}
+
+---
+
+# 📊 TREINO ATUAL
+- Distância: ${last.dist}km
+- Tempo: ${last.tempo||'não informado'}
+- Pace médio: ${last.pace}/km
+- Frequência cardíaca média: ${last.fcmed||'não informada'} bpm
+- Frequência cardíaca máxima: ${last.fcmax||'não informada'} bpm
+- Cadência: ${last.cad||'não informada'} spm
+- PSE (percepção de esforço): ${last.pse||'não informada'}/10
+- Splits: ${last.splits&&last.splits.length?last.splits.join(', '):'não informados'}
+- Elevação: ${last.elev||'não informada'} m
+
+---
+
+Agora gere a análise completa seguindo TODAS as etapas abaixo. Use linguagem clara, direta e prática. Seja específico com os dados — nunca genérico.
+
+# 🧠 ETAPA 1 — RESUMO DO TREINO
+Explique em até 2 frases como foi o treino e a percepção geral.
+
+# 👍 ETAPA 2 — PONTOS FORTES
+Liste até 3 pontos positivos claros baseados nos dados.
+
+# ⚠️ ETAPA 3 — PONTOS A MELHORAR
+Liste até 3 pontos objetivos com o que fazer.
+
+# 🔍 ETAPA 4 — ANÁLISE TÉCNICA
+Avalie esforço vs ritmo (eficiência), FC, consistência, cadência e fadiga. Traduzir para linguagem prática.
+
+# 📈 ETAPA 5 — ANÁLISE DE EVOLUÇÃO
+Compare com o histórico: evolução, manutenção ou regressão? Basear em pace, FC e consistência.
+
+# 🚨 ETAPA 6 — ALERTAS INTELIGENTES
+Se necessário: esforço alto demais, risco de fadiga, excesso de intensidade, falta de estímulo.
+
+# 🧠 ETAPA 7 — ZONAS DE TREINO (baseadas no pace atual)
+Calcule e apresente:
+- Z1 Leve: pace +15% a +25%
+- Z2 Moderado: pace +5% a +10%  
+- Z3 Forte: pace -5% a -10%
+
+# 🧠 ETAPA 8 — DECISÃO DO SISTEMA
+Com base na evolução, decidir: aumentar carga, manter ou recuar. Explicar a decisão.
+
+# 🎯 ETAPA 9 — FOCO DA SEMANA
+Dizer claramente o foco e ajustes imediatos.
+
+# 🏃 ETAPA 10 — PRÓXIMO TREINO COMPLETO
+Gerar treino com: tipo, objetivo, duração, distância. Estrutura: aquecimento + blocos principais + desaquecimento. Com pace em faixa ou esforço claro. Formato pronto para relógio.
+
+# 📅 ETAPA 11 — PLANO SEMANAL (${dias} dias)
+Gerar plano completo com ${dias} treinos. Cada um com: tipo, objetivo, estrutura, duração, distância e pace detalhado.
+
+# 📊 ETAPA 12 — SCORE DO TREINO
+Nota de 0 a 100 com classificação (90+ excelente / 70–89 bom / 50–69 atenção / <50 ruim) e breve explicação.`;
+
+  try {
+    const resp = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({
+        model: 'claude-sonnet-4-20250514',
+        max_tokens: 2500,
+        messages: [{role:'user', content: prompt}]
+      })
+    });
+
+    const data = await resp.json();
+    const text = data.content?.[0]?.text || 'Erro ao gerar análise.';
+
+    // Render markdown-like text nicely
+    out.innerHTML = renderIAText(text);
+    btn.textContent = '🔄 Gerar nova análise';
+    btn.disabled = false;
+
+  } catch(err) {
+    out.innerHTML=`<div style="color:var(--red);font-size:13px;padding:12px">⚠️ Erro ao conectar com a IA: ${err.message}</div>`;
+    btn.textContent = '✨ Tentar novamente';
+    btn.disabled = false;
+  }
+}
+
+function renderIAText(text){
+  // Convert markdown headings and lists to styled HTML
+  const lines = text.split('\n');
+  let html = '<div style="font-size:13px;line-height:1.8;color:var(--tx)">';
+
+  for(const line of lines){
+    const t = line.trim();
+    if(!t){ html += '<div style="height:6px"></div>'; continue; }
+
+    // H1-style: # emoji TÍTULO
+    if(/^# [🧠👍⚠️🔍📈🚨🎯🏃📅📊]/.test(t)){
+      const title = t.replace(/^# /,'');
+      html += `<div style="font-size:14px;font-weight:700;color:var(--neon);margin:16px 0 6px;padding:8px 12px;background:rgba(232,255,0,.06);border-radius:var(--r);border-left:3px solid var(--neon)">${title}</div>`;
+    }
+    // Bold **text**
+    else if(t.startsWith('**') && t.endsWith('**')){
+      html += `<div style="font-weight:700;color:var(--tx);margin:4px 0">${t.replace(/\*\*/g,'')}</div>`;
+    }
+    // Bullet - text
+    else if(t.startsWith('- ') || t.startsWith('• ')){
+      const item = t.replace(/^[-•] /,'');
+      const colored = item.replace(/\*\*(.*?)\*\*/g,'<strong style="color:var(--neon)">$1</strong>');
+      html += `<div style="display:flex;gap:8px;padding:3px 0;padding-left:8px"><span style="color:var(--neon);flex-shrink:0">›</span><span>${colored}</span></div>`;
+    }
+    // Numbered list
+    else if(/^\d+\. /.test(t)){
+      const num = t.match(/^(\d+)\. /)[1];
+      const item = t.replace(/^\d+\. /,'').replace(/\*\*(.*?)\*\*/g,'<strong style="color:var(--neon)">$1</strong>');
+      html += `<div style="display:flex;gap:8px;padding:3px 0;padding-left:8px"><span style="color:var(--orange);font-weight:700;flex-shrink:0;font-family:var(--mono);font-size:11px">${num}.</span><span>${item}</span></div>`;
+    }
+    // Zone lines (Z1/Z2/Z3)
+    else if(/Z[123]/.test(t) && t.includes('min/km')){
+      const colored = t.replace(/\*\*(.*?)\*\*/g,'<strong>$1</strong>');
+      html += `<div style="padding:6px 12px;border-radius:var(--r);background:var(--bg3);border:1px solid var(--bd);margin:3px 0;font-family:var(--mono);font-size:12px">${colored}</div>`;
+    }
+    // Score line
+    else if(/score|nota|pontos?/i.test(t) && /\d{2,3}/.test(t)){
+      const score = t.match(/\d{2,3}/)?.[0];
+      const color = score>=90?'var(--neon)':score>=70?'var(--teal)':score>=50?'var(--orange)':'var(--red)';
+      html += `<div style="font-size:16px;font-weight:700;color:${color};padding:4px 0">${t.replace(/\*\*/g,'')}</div>`;
+    }
+    // Regular paragraph
+    else {
+      const colored = t.replace(/\*\*(.*?)\*\*/g,'<strong style="color:var(--neon)">$1</strong>');
+      html += `<div style="margin:2px 0">${colored}</div>`;
+    }
+  }
+
+  html += '</div>';
+  return html;
 }
 
 // ═══════════════════════════════════════════════════
@@ -1662,8 +1861,7 @@ function renderTreino(){
     </div>
     <div class="field" style="margin-bottom:14px">
       <label>PSE — Percepção de Esforço (1–10)</label>
-      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px">
-        ${[1,2,3,4,5,6,7,8,9,10].map(i=>`<button onclick="selectPSE(${i})" id="pse-${i}" style="width:34px;height:34px;border-radius:8px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx2);font-weight:700;font-size:13px;cursor:pointer;font-family:var(--sans);transition:all .15s">${i}</button>`).join('')}
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-top:6px" id="pse-wrap">
       </div>
       <div style="display:flex;justify-content:space-between;font-size:9px;color:var(--tx3);margin-top:4px"><span>Muito leve</span><span>Máximo</span></div>
     </div>
@@ -1671,6 +1869,18 @@ function renderTreino(){
     <button class="btn btn-neon" onclick="doSaveTreino()">💾 Salvar treino</button>
   </div>`;
   window._pseVal=0;
+  // Build PSE buttons without nested template literals
+  const pseWrap=document.getElementById('pse-wrap');
+  if(pseWrap){
+    for(let i=1;i<=10;i++){
+      const b=document.createElement('button');
+      b.id='pse-'+i;
+      b.textContent=i;
+      b.setAttribute('onclick','selectPSE('+i+')');
+      b.style.cssText='width:34px;height:34px;border-radius:8px;border:1px solid var(--bd);background:var(--bg3);color:var(--tx2);font-weight:700;font-size:13px;cursor:pointer;font-family:var(--sans);transition:all .15s';
+      pseWrap.appendChild(b);
+    }
+  }
   const uz=document.getElementById('upload-zone');
   uz.addEventListener('dragover',e=>{e.preventDefault();uz.classList.add('drag');});
   uz.addEventListener('dragleave',()=>uz.classList.remove('drag'));
@@ -1728,6 +1938,53 @@ function showSaveMsg(msg,type){
 // ═══════════════════════════════════════════════════
 //  FILE UPLOAD
 // ═══════════════════════════════════════════════════
+// ═══════════════════════════════════════════════════
+//  TEST FILE UPLOAD (onboarding step 4)
+// ═══════════════════════════════════════════════════
+function handleTestFileUpload(input){
+  const f=input.files[0];
+  if(!f) return;
+  const st=document.getElementById('ob-upload-status');
+  if(st){st.style.display='block';st.style.background='var(--bg3)';st.style.color='var(--tx2)';st.style.borderColor='var(--bd)';st.textContent='Lendo arquivo do teste...';}
+  const reader=new FileReader();
+  reader.onload=e=>{
+    try{
+      const name=f.name.toLowerCase();
+      let r=null;
+      if(name.endsWith('.gpx'))       r=parseGPX(e.target.result);
+      else if(name.endsWith('.tcx'))  r=parseTCX(e.target.result);
+      else if(name.endsWith('.json')) r=parseJSON(e.target.result);
+      else{if(st){st.style.background='var(--red-dim)';st.style.color='var(--red)';st.style.borderColor='var(--red)';st.textContent='Formato não suportado. Use GPX ou TCX.';}return;}
+
+      if(r&&r.durSec>0){
+        // Fill in the time and FC fields
+        const tField=document.getElementById('ob-test-time');
+        const fcField=document.getElementById('ob-test-fcmax');
+        if(tField){
+          const mins=Math.floor(r.durSec/60);
+          const secs=Math.round(r.durSec%60);
+          const timeStr=mins+':'+String(secs).padStart(2,'0');
+          tField.value=timeStr;
+          OB_TEST_TIME=timeStr;
+        }
+        if(fcField&&r.fcmax>0){
+          fcField.value=r.fcmax;
+          OB_TEST_FCMAX=r.fcmax;
+        }
+        const distInfo=r.dist>0?` | ${r.dist}km`:'';
+        const fcInfo=r.fcmax>0?` | FC máx: ${r.fcmax} bpm`:'';
+        if(st){st.style.background='var(--teal-dim)';st.style.color='var(--teal)';st.style.borderColor='var(--teal)';st.textContent='✓ Arquivo lido! Tempo: '+tField.value+distInfo+fcInfo+' — confirme abaixo e clique em Começar.';}
+        renderHome(); // re-render to show the preview zones
+      } else {
+        if(st){st.style.background='var(--red-dim)';st.style.color='var(--red)';st.style.borderColor='var(--red)';st.textContent='Não foi possível extrair o tempo do arquivo. Insira manualmente.';}
+      }
+    }catch(err){
+      if(st){st.style.background='var(--red-dim)';st.style.color='var(--red)';st.style.borderColor='var(--red)';st.textContent='Erro ao ler arquivo: '+err.message;}
+    }
+  };
+  reader.readAsText(f);
+}
+
 function handleFileUpload(input){const f=input.files[0];if(f)processFile(f);}
 
 function processFile(file){
@@ -1766,38 +2023,121 @@ function haversine(lat1,lon1,lat2,lon2){
 
 function parseGPX(xml){
   const doc=new DOMParser().parseFromString(xml,'text/xml');
-  const trkpts=[...doc.querySelectorAll('trkpt')];
-  if(!trkpts.length) return null;
-  const times=trkpts.map(p=>new Date(p.querySelector('time')?.textContent||0)).filter(t=>+t>0);
-  const lats=trkpts.map(p=>parseFloat(p.getAttribute('lat')));
-  const lons=trkpts.map(p=>parseFloat(p.getAttribute('lon')));
-  const hrs=[...doc.querySelectorAll('hr,ns3\:hr,gpxtpx\:hr')].map(n=>parseInt(n.textContent)).filter(v=>v>60&&v<220);
+  const pts=[...doc.querySelectorAll('trkpt,rtept')];
+  if(!pts.length) return null;
+
+  const times=pts.map(p=>{
+    const t=p.querySelector('time');
+    const d=t?new Date(t.textContent):null;
+    return d&&+d>0?d:null;
+  });
+  const lats=pts.map(p=>parseFloat(p.getAttribute('lat')));
+  const lons=pts.map(p=>parseFloat(p.getAttribute('lon')));
+
+  // HR — try multiple namespace variants
+  const hrs=[];
+  pts.forEach(p=>{
+    const hrEl=p.querySelector('hr')||
+               p.getElementsByTagNameNS('http://www.garmin.com/xmlschemas/TrackPointExtension/v1','hr')[0]||
+               p.getElementsByTagNameNS('http://www.garmin.com/xmlschemas/TrackPointExtension/v2','hr')[0];
+    const v=hrEl?parseInt(hrEl.textContent):0;
+    if(v>40&&v<230) hrs.push(v);
+  });
+
+  // Cadence
+  const cads=[];
+  pts.forEach(p=>{
+    const cEl=p.querySelector('cad')||
+               p.getElementsByTagNameNS('http://www.garmin.com/xmlschemas/TrackPointExtension/v1','cad')[0];
+    const v=cEl?parseInt(cEl.textContent)*2:0;
+    if(v>100&&v<240) cads.push(v);
+  });
+
+  // Elevation gain
+  let elevGain=0;
+  const elevs=pts.map(p=>parseFloat(p.querySelector('ele')?.textContent||NaN));
+  for(let i=1;i<elevs.length;i++){if(!isNaN(elevs[i])&&!isNaN(elevs[i-1])&&elevs[i]-elevs[i-1]>0)elevGain+=elevs[i]-elevs[i-1];}
+
+  // Distance via haversine
   let dist=0;
-  for(let i=1;i<lats.length;i++) dist+=haversine(lats[i-1],lons[i-1],lats[i],lons[i]);
+  for(let i=1;i<lats.length;i++){
+    if(!isNaN(lats[i])&&!isNaN(lons[i])&&!isNaN(lats[i-1])&&!isNaN(lons[i-1]))
+      dist+=haversine(lats[i-1],lons[i-1],lats[i],lons[i]);
+  }
   dist=Math.round(dist*100)/100;
-  const durSec=times.length>=2?(+times[times.length-1]-+times[0])/1000:0;
+
+  const validTimes=times.filter(Boolean);
+  const durSec=validTimes.length>=2?(+validTimes[validTimes.length-1]-+validTimes[0])/1000:0;
   const fcmed=hrs.length?Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length):0;
   const fcmax=hrs.length?Math.max(...hrs):0;
-  const splits=[];let cumDist=0,lastKm=0,lastT=times[0];
-  for(let i=1;i<lats.length;i++){
+  const cadAvg=cads.length?Math.round(cads.reduce((a,b)=>a+b,0)/cads.length):0;
+
+  // Splits per km
+  const splits=[];let cumDist=0,lastKm=0,lastT=validTimes[0];
+  for(let i=1;i<pts.length;i++){
+    if(isNaN(lats[i])||isNaN(lons[i])) continue;
     cumDist+=haversine(lats[i-1],lons[i-1],lats[i],lons[i]);
-    if(cumDist>=lastKm+1&&times[i]){splits.push(sp(Math.round((+times[i]-+lastT)/1000)));lastT=times[i];lastKm=Math.floor(cumDist);}
+    if(cumDist>=lastKm+1&&times[i]&&lastT){
+      const sec=(+times[i]-+lastT)/1000;
+      if(sec>0)splits.push(sp(Math.round(sec)));
+      lastT=times[i];lastKm=Math.floor(cumDist);
+    }
   }
-  return {dist,durSec,fcmed,fcmax,elevGain:0,splits,date:times[0]||new Date()};
+  return {dist,durSec,fcmed,fcmax,cad:cadAvg,elevGain:Math.round(elevGain),splits,date:validTimes[0]||new Date()};
 }
 
 function parseTCX(xml){
   const doc=new DOMParser().parseFromString(xml,'text/xml');
   const ns='http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2';
+  const ns2='http://www.garmin.com/xmlschemas/ActivityExtension/v2';
   const tps=[...doc.getElementsByTagNameNS(ns,'Trackpoint')];
   if(!tps.length) return null;
-  let distMax=0,fcSum=0,fcCnt=0,fcmax=0;const times=[];
+
+  let distMax=0,fcSum=0,fcCnt=0,fcmax=0,elevGain=0,prevElev=null;
+  let cadSum=0,cadCnt=0;
+  const times=[];const lats=[];const lons=[];
+
   tps.forEach(tp=>{
     const t=tp.getElementsByTagNameNS(ns,'Time')[0]?.textContent;if(t)times.push(new Date(t));
     const d=parseFloat(tp.getElementsByTagNameNS(ns,'DistanceMeters')[0]?.textContent||0);if(d>distMax)distMax=d;
-    const hr=parseInt(tp.getElementsByTagNameNS(ns,'Value')[0]?.textContent||0);if(hr>0){fcSum+=hr;fcCnt++;if(hr>fcmax)fcmax=hr;}
+    const hr=parseInt(tp.getElementsByTagNameNS(ns,'Value')[0]?.textContent||0);
+    if(hr>40&&hr<230){fcSum+=hr;fcCnt++;if(hr>fcmax)fcmax=hr;}
+    const el=parseFloat(tp.getElementsByTagNameNS(ns,'AltitudeMeters')[0]?.textContent||NaN);
+    if(!isNaN(el)){if(prevElev!==null&&el-prevElev>0)elevGain+=el-prevElev;prevElev=el;}
+    // Cadence via extension
+    const cadEl=tp.getElementsByTagNameNS(ns2,'RunCadence')[0]||tp.getElementsByTagNameNS(ns,'Cadence')[0];
+    const cad=cadEl?parseInt(cadEl.textContent)*2:0;
+    if(cad>100&&cad<240){cadSum+=cad;cadCnt++;}
+    // Position
+    const latEl=tp.getElementsByTagNameNS(ns,'LatitudeDegrees')[0];
+    const lonEl=tp.getElementsByTagNameNS(ns,'LongitudeDegrees')[0];
+    if(latEl&&lonEl){lats.push(parseFloat(latEl.textContent));lons.push(parseFloat(lonEl.textContent));}
   });
-  return {dist:Math.round(distMax/10)/100,durSec:times.length>=2?(+times[times.length-1]-+times[0])/1000:0,fcmed:fcCnt?Math.round(fcSum/fcCnt):0,fcmax,elevGain:0,splits:[],date:times[0]||new Date()};
+
+  const dist=distMax>0?Math.round(distMax/10)/100:0;
+  const durSec=times.length>=2?(+times[times.length-1]-+times[0])/1000:0;
+
+  // Splits per km using positions if available
+  const splits=[];
+  if(lats.length>=2&&times.length>=2){
+    let cumDist=0,lastKm=0,lastT=times[0];
+    for(let i=1;i<lats.length;i++){
+      cumDist+=haversine(lats[i-1],lons[i-1],lats[i],lons[i]);
+      if(cumDist>=lastKm+1&&times[i]){
+        const splitSec=(+times[i]-+lastT)/1000;
+        if(splitSec>0)splits.push(sp(Math.round(splitSec)));
+        lastT=times[i];lastKm=Math.floor(cumDist);
+      }
+    }
+  }
+
+  return {
+    dist,durSec,
+    fcmed:fcCnt?Math.round(fcSum/fcCnt):0,fcmax,
+    cad:cadCnt?Math.round(cadSum/cadCnt):0,
+    elevGain:Math.round(elevGain),
+    splits,date:times[0]||new Date()
+  };
 }
 
 function parseJSON(txt){
@@ -1821,12 +2161,17 @@ function fillFormFromFile(r){
   const dateStr=r.date?r.date.toISOString().split('T')[0]:new Date().toISOString().split('T')[0];
   const setV=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
   setV('t-data',dateStr);
-  if(r.dist>0)setV('t-dist',r.dist);
-  if(r.durSec>0){const ts=s2t(Math.round(r.durSec));setV('t-tempo',ts);if(r.dist>0)setV('t-pace',sp(Math.round(r.durSec/r.dist)));}
-  if(r.fcmed)setV('t-fcmed',r.fcmed);
-  if(r.fcmax)setV('t-fcmax',r.fcmax);
-  if(r.elevGain)setV('t-elev',r.elevGain);
-  if(r.splits&&r.splits.length>0)setV('t-splits',r.splits.join(', '));
+  if(r.dist>0) setV('t-dist',r.dist);
+  if(r.durSec>0){
+    const ts=s2t(Math.round(r.durSec));
+    setV('t-tempo',ts);
+    if(r.dist>0) setV('t-pace',sp(Math.round(r.durSec/r.dist)));
+  }
+  if(r.fcmed>0) setV('t-fcmed',r.fcmed);
+  if(r.fcmax>0) setV('t-fcmax',r.fcmax);
+  if(r.cad>0)   setV('t-cad',r.cad);
+  if(r.elevGain>0) setV('t-elev',r.elevGain);
+  if(r.splits&&r.splits.length>0) setV('t-splits',r.splits.join(', '));
 }
 
 // ═══════════════════════════════════════════════════
