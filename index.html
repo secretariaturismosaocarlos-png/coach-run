@@ -321,6 +321,37 @@ select option{background:var(--bg3)}
 .key-ok{background:rgba(0,184,148,.15);color:var(--teal);border:1px solid rgba(0,184,148,.2)}
 .key-miss{background:var(--red-dim);color:var(--red);border:1px solid rgba(232,54,93,.2)}
 
+
+/* ══ PLAN WORKOUT BLOCKS ══ */
+.ps-block{display:flex;justify-content:space-between;align-items:center;padding:3px 0;border-bottom:1px solid rgba(0,0,0,0.05)}
+.ps-block:last-child{border-bottom:none}
+.ps-bdesc{font-size:10px;color:var(--tx);line-height:1.4;flex:1}
+.ps-bpace{font-family:var(--mono);font-size:9px;font-weight:700;white-space:nowrap;margin-left:4px}
+.plan-sheet td{padding:8px 6px;vertical-align:top;border:1px solid var(--bd);background:#fff;min-width:90px;cursor:pointer}
+.plan-sheet td:hover{background:rgba(255,92,0,.03)}
+.plan-sheet th{min-width:36px}
+/* Compact for mobile */
+@media(max-width:480px){
+  .ps-bdesc{font-size:9px}
+  .ps-bpace{font-size:9px}
+  .plan-sheet td{min-width:75px;padding:6px 4px}
+  .ps-type{font-size:8px}
+}
+
+
+/* ══ RACE CALENDAR ══ */
+.race-month-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:12px}
+.race-month-day{aspect-ratio:1;display:flex;flex-direction:column;align-items:center;justify-content:center;border-radius:10px;cursor:pointer;transition:all .15s;position:relative;border:1.5px solid transparent;font-size:13px;font-weight:600}
+.race-month-day:hover{background:rgba(255,92,0,.08)}
+.race-month-day.has-race{border-color:var(--neon);background:rgba(255,92,0,.06)}
+.race-month-day.today{background:var(--neon);color:#fff;font-weight:700}
+.race-month-day.other-month{opacity:.3}
+.race-badge{position:absolute;top:2px;right:2px;width:6px;height:6px;border-radius:50%;background:var(--neon)}
+.race-list-item{display:flex;gap:12px;padding:14px;border-radius:var(--rl);background:#fff;border:1px solid var(--bd);margin-bottom:8px;box-shadow:var(--s1);align-items:flex-start}
+.race-dist-badge{padding:4px 10px;border-radius:20px;font-size:11px;font-weight:700;flex-shrink:0}
+.race-form-modal{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:flex-end;justify-content:center}
+.race-form-inner{background:#fff;border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:720px;max-height:85vh;overflow-y:auto}
+
 /* ══ LIGHT THEME ENHANCEMENTS ══ */
 /* Shadows defined */
 :root { --s1:0 2px 8px rgba(0,0,0,0.06); --s2:0 4px 20px rgba(0,0,0,0.09); --s3:0 8px 32px rgba(0,0,0,0.12); }
@@ -425,7 +456,7 @@ select option{background:var(--bg3)}
 <div id="screen-auth">
   <div class="auth-box">
     <div class="auth-logo">
-      <div class="auth-logo-icon">🏃</div>
+      <div class="auth-logo-icon" style="display:flex;align-items:center;justify-content:center"><svg viewBox="0 0 60 60" xmlns="http://www.w3.org/2000/svg" width="56" height="56"><defs><linearGradient id="lg2" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#FF2D00"/><stop offset="100%" stop-color="#FFAA00"/></linearGradient></defs><ellipse cx="15" cy="40" rx="10" ry="4" fill="url(#lg2)" opacity=".5" transform="rotate(-25,15,40)"/><ellipse cx="13" cy="32" rx="8" ry="3" fill="url(#lg2)" opacity=".4" transform="rotate(-30,13,32)"/><ellipse cx="11" cy="23" rx="6" ry="2.5" fill="url(#lg2)" opacity=".3" transform="rotate(-20,11,23)"/><path d="M39 12 Q44 9 45 14 L42 23 L47 20 Q52 18 50 25 L44 30 L40 40 L32 42 L30 34 L23 39 L18 37 L25 25 L32 25 Z" fill="url(#lg2)"/><circle cx="42" cy="9" r="5" fill="#FFAA00"/></svg></div>
       <div class="auth-title">Coach Run</div>
       <div class="auth-sub">Treinador de corrida inteligente</div>
     </div>
@@ -471,17 +502,12 @@ select option{background:var(--bg3)}
   <div class="app">
     <div class="header">
       <div class="logo">
-        <div class="logo-icon">🏃</div>
-        <div><div class="logo-text">Coach Run</div><div class="logo-sub">Treinador inteligente</div></div>
+        <div class="logo-icon" style="overflow:hidden;padding:1px"><svg viewBox="0 0 36 36" xmlns="http://www.w3.org/2000/svg" width="36" height="36"><defs><linearGradient id="lg1" x1="0%" y1="100%" x2="100%" y2="0%"><stop offset="0%" stop-color="#FF2D00"/><stop offset="100%" stop-color="#FFAA00"/></linearGradient></defs><ellipse cx="9" cy="24" rx="6" ry="2.5" fill="url(#lg1)" opacity=".5" transform="rotate(-25,9,24)"/><ellipse cx="8" cy="19" rx="4.5" ry="2" fill="url(#lg1)" opacity=".4" transform="rotate(-30,8,19)"/><ellipse cx="7" cy="14" rx="3.5" ry="1.5" fill="url(#lg1)" opacity=".3" transform="rotate(-20,7,14)"/><path d="M23 7 Q26 5.5 27 8.5 L25 14 L28 12 Q31 11 30 15 L26 18 L24 24 L19 25 L18 20 L14 23 L11 22 L15 15 L19 15 Z" fill="url(#lg1)"/><circle cx="25" cy="5.5" r="3" fill="#FFAA00"/></svg></div>
+        <div><div class="logo-text">COACH <span style="color:var(--neon)">RUN</span></div><div class="logo-sub">Treinador inteligente</div></div>
       </div>
-      <div style="display:flex;align-items:center;gap:8px">
-        <button class="settings-btn" onclick="openAPISettings()" id="btn-api-settings" title="Configurar chave IA">
-          🤖 <span id="api-key-status" class="key-status key-miss">IA OFF</span>
-        </button>
-        <div class="user-badge" onclick="doLogout()">
-          <div class="user-avatar" id="user-avatar">?</div>
-          <div class="user-name" id="user-name-display">...</div>
-        </div>
+      <div class="user-badge" onclick="doLogout()">
+        <div class="user-avatar" id="user-avatar">?</div>
+        <div class="user-name" id="user-name-display">...</div>
       </div>
     </div>
 
@@ -491,6 +517,7 @@ select option{background:var(--bg3)}
     <div id="pn-analise"  class="panel"></div>
     <div id="pn-plano"    class="panel"></div>
     <div id="pn-evolucao" class="panel"></div>
+    <div id="pn-corridas" class="panel"></div>
     <div id="pn-admin"    class="panel"></div>
   </div>
 
@@ -502,6 +529,7 @@ select option{background:var(--bg3)}
       <button class="nav-btn"        id="nb-analise"  onclick="goTab('analise')"> <span class="ni">📊</span><span class="nl">Análise</span></button>
       <button class="nav-btn"        id="nb-plano"    onclick="goTab('plano')">   <span class="ni">📅</span><span class="nl">Plano</span></button>
       <button class="nav-btn"        id="nb-evolucao" onclick="goTab('evolucao')"><span class="ni">📈</span><span class="nl">Evolução</span></button>
+      <button class="nav-btn" id="nb-corridas" onclick="goTab('corridas')"><span class="ni">🏅</span><span class="nl">Corridas</span></button>
       <button class="nav-btn" id="nb-admin" onclick="goTab('admin')" style="display:none;position:relative"><span class="ni">🔔</span><span class="nl">Admin</span><span id="admin-badge" style="display:none;position:absolute;top:4px;right:8px;background:var(--red);color:#fff;font-size:9px;font-weight:700;border-radius:10px;padding:1px 5px">!</span></button>
     </div>
   </nav>
@@ -530,6 +558,7 @@ let OB_STEP = 1;
 let OB_OBJ = null;
 let OB_NIVEL = null;
 let OB_DIAS = 3;
+let OB_DIAS_SELECIONADOS = [];
 let OB_TARGET_PACE = '';
 let OB_TARGET_DATE = '';
 let OB_TEST_TIME = '';
@@ -538,49 +567,30 @@ let OB_NIVEL_LABEL = '';
 
 
 // ═══════════════════════════════════════════════════
-//  API KEY MANAGEMENT
+//  PROXY CONFIG — aponte para seu Cloudflare Worker
 // ═══════════════════════════════════════════════════
-let CLAUDE_API_KEY = localStorage.getItem('cr_api_key') || '';
-function updateKeyStatus(){
-  const el=document.getElementById('api-key-status');
-  if(!el) return;
-  if(CLAUDE_API_KEY){ el.textContent='IA ON'; el.className='key-status key-ok'; }
-  else{ el.textContent='IA OFF'; el.className='key-status key-miss'; }
-}
-function openAPISettings(){
-  const el=document.getElementById('api-key-input');
-  if(el) el.value=CLAUDE_API_KEY;
-  document.getElementById('modal-api').style.display='flex';
-}
-function saveAPIKey(){
-  const key=document.getElementById('api-key-input')?.value?.trim()||'';
-  const msg=document.getElementById('api-msg');
-  if(key&&!key.startsWith('sk-ant')){
-    msg.style.display='block';msg.style.background='var(--red-dim)';msg.style.color='var(--red)';
-    msg.textContent='⚠️ Chave inválida. Deve começar com sk-ant-...';return;
-  }
-  CLAUDE_API_KEY=key;
-  if(key) localStorage.setItem('cr_api_key',key);
-  else localStorage.removeItem('cr_api_key');
-  updateKeyStatus();
-  document.getElementById('modal-api').style.display='none';
-}
+const PROXY_URL = 'https://coach-run-api.SEU_USUARIO.workers.dev';
+// ↑ Troque pelo endereço do seu Worker após o deploy
 
 async function callClaudeAPI(messages, maxTokens=1500){
-  if(!CLAUDE_API_KEY) throw new Error('Configure sua chave da API. Clique em 🤖 IA OFF no cabeçalho.');
-  const resp=await fetch('https://api.anthropic.com/v1/messages',{
-    method:'POST',
-    headers:{
-      'Content-Type':'application/json',
-      'x-api-key':CLAUDE_API_KEY,
-      'anthropic-version':'2023-06-01',
-      'anthropic-dangerous-direct-browser-access':'true'
-    },
-    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTokens,messages})
-  });
-  if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+resp.status);}
-  const data=await resp.json();
-  return data.content?.[0]?.text||'';
+  try {
+    const resp=await fetch(PROXY_URL,{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({messages, max_tokens:maxTokens})
+    });
+    if(!resp.ok){
+      const e=await resp.json().catch(()=>({}));
+      throw new Error(e.error||'Erro no servidor (HTTP '+resp.status+')');
+    }
+    const data=await resp.json();
+    return data.text||'';
+  } catch(err) {
+    if(err.message.includes('Failed to fetch')||err.message.includes('NetworkError')){
+      throw new Error('Servidor IA indisponível. Verifique sua conexão.');
+    }
+    throw err;
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -713,7 +723,6 @@ function showScreen(s){
 }
 
 function setupUI(){
-  updateKeyStatus();
   const name=PROFILE?.name||CU.email.split('@')[0];
   document.getElementById('user-name-display').textContent=name.split(' ')[0];
   document.getElementById('user-avatar').textContent=name[0].toUpperCase();
@@ -755,7 +764,15 @@ async function loadData(){
   const {data:workouts} = await db.from('workouts').select('*').eq('user_id', CU.id).order('created_at');
   HIST = (workouts||[]).map(w=>({...w, paceSec:ps(w.pace)}));
   const {data:prof} = await db.from('user_goals').select('*').eq('user_id', CU.id).single();
-  if(prof) USER_GOAL = prof;
+  await loadRaces();
+  if(prof){
+    USER_GOAL = prof;
+    // Restore selected days for onboarding
+    if(prof.dias_selecionados && prof.dias_selecionados.length>0){
+      OB_DIAS_SELECIONADOS=prof.dias_selecionados;
+      OB_DIAS=prof.dias_selecionados.length;
+    }
+  }
 }
 
 let USER_GOAL = null; // {obj_id, nivel, dias_semana, target_pace_sec, target_date, onboard_done}
@@ -842,7 +859,7 @@ async function setUserStatus(uid, status){
 //  TABS
 // ═══════════════════════════════════════════════════
 function goTab(n){
-  ['home','treino','analise','plano','evolucao','admin'].forEach(t=>{
+  ['home','treino','analise','plano','evolucao','corridas','admin'].forEach(t=>{
     document.getElementById('pn-'+t).classList.toggle('active',t===n);
     const nb=document.getElementById('nb-'+t);
     if(nb) nb.classList.toggle('active',t===n);
@@ -852,6 +869,7 @@ function goTab(n){
   if(n==='analise')  renderAnalise();
   if(n==='plano')    renderPlano();
   if(n==='evolucao') renderEvolucao();
+  if(n==='corridas') renderCorridas();
   if(n==='admin')    loadAdminPanel();
 }
 
@@ -956,15 +974,29 @@ function renderOnboarding(el){
       <button class="btn btn-ghost" style="margin-top:8px" onclick="OB_STEP=1;renderHome()">← Voltar</button>`;
   }
   else if(OB_STEP===3){
-    body=`<div class="ob-heading">Quantos dias por semana?</div>
-      <div class="ob-sub">Seja realista. Consistência importa mais que volume.</div>
-      <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin-bottom:16px">
-      ${[2,3,4,5,6].map(d=>`<div class="obj-card${OB_DIAS===d?' sel':''}" style="text-align:center;padding:14px 8px" onclick="OB_DIAS=${d};renderHome()">
-        <div style="font-size:22px;font-weight:700;color:var(--neon)">${d}</div>
-        <div style="font-size:10px;color:var(--tx2)">dias</div>
-      </div>`).join('')}
+    const diasSem=[
+      {id:'seg',label:'SEG',full:'Segunda'},
+      {id:'ter',label:'TER',full:'Terça'},
+      {id:'qua',label:'QUA',full:'Quarta'},
+      {id:'qui',label:'QUI',full:'Quinta'},
+      {id:'sex',label:'SEX',full:'Sexta'},
+      {id:'sab',label:'SÁB',full:'Sábado'},
+      {id:'dom',label:'DOM',full:'Domingo'},
+    ];
+    const sel=OB_DIAS_SELECIONADOS;
+    body=`<div class="ob-heading">Quais dias você treina?</div>
+      <div class="ob-sub">Selecione os dias da semana que você vai correr. Isso define o seu plano personalizado.</div>
+      <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:16px">
+        ${diasSem.map(d=>`<div onclick="obToggleDay('${d.id}')" style="text-align:center;padding:12px 4px;border-radius:12px;cursor:pointer;border:2px solid ${sel.includes(d.id)?'var(--neon)':'var(--bd)'};background:${sel.includes(d.id)?'rgba(255,92,0,.08)':'var(--bg2)'};transition:all .2s">
+          <div style="font-size:13px;font-weight:700;color:${sel.includes(d.id)?'var(--neon)':'var(--tx3)'}">${d.label}</div>
+          ${sel.includes(d.id)?'<div style="width:6px;height:6px;border-radius:50%;background:var(--neon);margin:4px auto 0"></div>':'<div style="height:10px"></div>'}
+        </div>`).join('')}
       </div>
-      <button class="btn btn-neon" onclick="obNext(3)">Próximo →</button>
+      <div style="text-align:center;font-size:13px;color:var(--tx2);margin-bottom:16px">
+        ${sel.length===0?'Nenhum dia selecionado':sel.length===1?'1 dia selecionado':sel.length+' dias selecionados'}
+        ${sel.length>0?'· '+sel.map(d=>diasSem.find(x=>x.id===d)?.full||d).join(', '):''}
+      </div>
+      <button class="btn btn-neon" onclick="obNext(3)" ${sel.length>=2?'':'disabled style="opacity:.4;cursor:not-allowed"'}>Próximo →</button>
       <button class="btn btn-ghost" style="margin-top:8px" onclick="OB_STEP=2;renderHome()">← Voltar</button>`;
   }
   else if(OB_STEP===4){
@@ -1460,8 +1492,8 @@ Nota de 0 a 100 com classificação (90+ excelente / 70–89 bom / 50–69 aten�
     btn.textContent = '🔄 Gerar nova análise';
     btn.disabled = false;
   } catch(err) {
-    const keyMsg = err.message.includes('Configure') ? 
-      '<br><small>Clique em <strong>🤖 IA OFF</strong> no cabeçalho para configurar.</small>' : '';
+    const keyMsg = err.message.includes('indisponível') ? 
+      '<br><small>Tente novamente em alguns segundos.</small>' : '';
     out.innerHTML=`<div style="color:var(--red);font-size:13px;padding:12px;background:var(--red-dim);border-radius:var(--r);border-left:3px solid var(--red)">⚠️ ${err.message}${keyMsg}</div>`;
     btn.textContent = '✨ Tentar novamente';
     btn.disabled = false;
@@ -1598,57 +1630,213 @@ function renderPlano(){
 }
 
 // ─── Render plan from AI JSON ───────────────────────────────────
-function renderPlanSheet(plan, a){
-  const days=['seg','ter','qua','qui','sex','sab','dom'];
-  const dayLabels=['SEG','TER','QUA','QUI','SEX','SÁB','DOM'];
-  const zoneClass={Z1:'ps-z1',Z2:'ps-z2',Z3:'ps-z3',LONGAO:'ps-long',LONG:'ps-long',FORT:'ps-fort',OFF:'ps-off'};
-  const zoneColor={Z1:'var(--neon)',Z2:'var(--orange)',Z3:'var(--red)',LONGAO:'var(--teal)',LONG:'var(--teal)',FORT:'var(--purple)',OFF:'var(--tx3)'};
+function parsePaceRange(paceStr, zona){
+  // Convert single pace to a range (±5-10% depending on zone)
+  if(!paceStr || paceStr==='—') return '';
+  const sec = typeof paceStr==='number'?paceStr:
+    (paceStr.includes('/')?t2s(paceStr.split('/')[0]):t2s(paceStr));
+  if(!sec||sec<60) return paceStr;
+  const pct = zona==='Z3'?0.04 : zona==='Z2'?0.05 : 0.08;
+  const lo = Math.round(sec*(1-pct));
+  const hi = Math.round(sec*(1+pct));
+  return sp(lo)+' – '+sp(hi);
+}
 
-  let html=`<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-  <table class="plan-sheet">
-    <thead><tr>
-      <th style="width:40px"></th>
-      ${dayLabels.map(d=>`<th>${d}</th>`).join('')}
-    </tr></thead>
-    <tbody>`;
+function parseWorkoutBlocks(descricao, paceStr, zona){
+  // Split workout description into structured blocks
+  // Input like: "2km aquecimento 7:50 + 3km ritmo 6:41 + 1km leve 7:50"
+  if(!descricao) return [];
+  const blocks = [];
+  // Try to parse structured segments separated by +
+  const parts = descricao.split(/\s*\+\s*/);
+  const zoneColor = zona==='Z1'?'var(--teal)':zona==='Z2'?'var(--orange)':zona==='Z3'?'var(--red)':'var(--teal)';
 
-  plan.semanas.forEach((sem,si)=>{
-    const foco=sem.foco||('Semana '+(si+1));
-    html+=`<tr>
-      <td class="ps-week">SEM ${si+1}</td>`;
-    days.forEach(d=>{
-      const t=sem.treinos[d]||{tipo:'OFF',descricao:'Descanso',zona:'OFF'};
-      const zona=(t.zona||'OFF').toUpperCase().replace('LONGÃO','LONGAO');
-      const cls=zoneClass[zona]||'ps-off';
-      const col=zoneColor[zona]||'var(--tx3)';
-      if(zona==='OFF'){
-        html+=`<td class="${cls}">OFF</td>`;
-      } else {
-        const tipo=t.tipo||zona;
-        html+=`<td class="${cls}">
-          <div class="ps-type" style="color:${col}">${tipo}</div>
-          <div class="ps-desc">${t.descricao||''}</div>
-          ${t.pace?`<div class="ps-pace" style="color:${col}">${t.pace}</div>`:''}
-        </td>`;
-      }
-    });
-    html+=`</tr>`;
+  parts.forEach(part => {
+    part = part.trim();
+    // Detect pace in part: number:number pattern
+    const paceMatch = part.match(/(\d+:\d+)/);
+    let segPace = paceMatch ? paceMatch[1] : '';
+    let segDesc = part.replace(/\d+:\d+/g,'').replace(/\s+/g,' ').trim();
+    // Remove trailing "min/km" or similar
+    segDesc = segDesc.replace(/\/km$/,'').replace(/min\/km$/,'').trim();
+
+    // Detect segment type for coloring
+    let segZona = zona;
+    if(/aquec|leve|desaquec|warm/i.test(segDesc)) segZona='Z1';
+    else if(/ritmo|tempo|ritmado/i.test(segDesc)) segZona='Z2';
+    else if(/tiro|veloc|sprint|intervalo|1000m|400m|200m|80m|60m/i.test(segDesc)) segZona='Z3';
+
+    const segColor = segZona==='Z1'?'var(--teal)':segZona==='Z2'?'var(--orange)':segZona==='Z3'?'var(--red)':'var(--tx2)';
+    const paceRange = segPace ? parsePaceRange(segPace, segZona) : '';
+
+    blocks.push({desc:segDesc, pace:paceRange, color:segColor, zona:segZona});
   });
 
-  html+=`</tbody></table></div>`;
+  return blocks.length>0 ? blocks : [{desc:descricao, pace:parsePaceRange(paceStr,zona), color:zoneColor, zona}];
+}
 
-  // Add weekly focus summary
-  html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">`;
+function renderWorkoutCell(t, col, cls){
+  if(!t || (t.zona||'OFF').toUpperCase()==='OFF'){
+    return '<td class="ps-off">OFF</td>';
+  }
+  const zona=(t.zona||'Z1').toUpperCase().replace('LONGÃO','LONGAO');
+  const blocks = parseWorkoutBlocks(t.descricao, t.pace, zona);
+  const zclass = {'Z1':'ps-z1','Z2':'ps-z2','Z3':'ps-z3','LONGAO':'ps-long','LONG':'ps-long','FORT':'ps-fort'}[zona]||'ps-z1';
+  const ztopColor = {'Z1':'var(--neon)','Z2':'var(--orange)','Z3':'var(--red)','LONGAO':'var(--teal)','LONG':'var(--teal)','FORT':'var(--purple)'}[zona]||'var(--neon)';
+
+  let inner = `<div class="ps-type" style="color:${ztopColor}">${t.tipo||zona}</div>`;
+  blocks.forEach(b => {
+    inner += `<div class="ps-block">
+      <span class="ps-bdesc">${b.desc}</span>
+      ${b.pace?`<span class="ps-bpace" style="color:${b.color}">${b.pace}</span>`:''}
+    </div>`;
+  });
+
+  return `<td class="${zclass}" onclick="openDayModal(this)" data-treino='${JSON.stringify(t).replace(/'/g,"\'")}'>
+    ${inner}
+  </td>`;
+}
+
+function renderPlanSheet(plan, a){
+  const allDays=['seg','ter','qua','qui','sex','sab','dom'];
+  const allLabels=['SEG','TER','QUA','QUI','SEX','SÁB','DOM'];
+  const userDays = (USER_GOAL?.dias_selecionados && USER_GOAL.dias_selecionados.length>0)
+    ? USER_GOAL.dias_selecionados : allDays;
+
+  const zoneColor={Z1:'var(--neon)',Z2:'var(--orange)',Z3:'var(--red)',LONGAO:'var(--teal)',LONG:'var(--teal)',FORT:'var(--purple)',OFF:'var(--tx3)'};
+  const viewMode = window._planDayView||'table';
+
+  // View toggle
+  let html = `<div style="display:flex;gap:6px;margin-bottom:10px">
+    <button onclick="window._planDayView='table';document.getElementById('plano-output').innerHTML=renderPlanSheet(window._iaPlano||window._defaultPlan,null)" 
+      style="flex:1;padding:8px;border-radius:var(--r);border:2px solid ${viewMode==='table'?'var(--neon)':'var(--bd)'};background:${viewMode==='table'?'rgba(255,92,0,.08)':'var(--bg2)'};color:${viewMode==='table'?'var(--neon)':'var(--tx2)'};font-weight:700;font-size:12px;cursor:pointer;font-family:var(--sans)">
+      📋 Planilha
+    </button>
+    <button onclick="window._planDayView='cards';document.getElementById('plano-output').innerHTML=renderPlanSheet(window._iaPlano||window._defaultPlan,null)"
+      style="flex:1;padding:8px;border-radius:var(--r);border:2px solid ${viewMode==='cards'?'var(--neon)':'var(--bd)'};background:${viewMode==='cards'?'rgba(255,92,0,.08)':'var(--bg2)'};color:${viewMode==='cards'?'var(--neon)':'var(--tx2)'};font-weight:700;font-size:12px;cursor:pointer;font-family:var(--sans)">
+      📆 Por dia
+    </button>
+  </div>`;
+
+  if(viewMode==='table'){
+    // TABLE VIEW — show only active days
+    html+=`<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+    <table class="plan-sheet">
+      <thead><tr>
+        <th style="width:36px;min-width:36px"></th>
+        ${allDays.map((d,i)=>{
+          const isActive=userDays.includes(d);
+          return `<th style="${!isActive?'opacity:.35;':''}min-width:${isActive?'90px':'36px'}">${allLabels[i]}</th>`;
+        }).join('')}
+      </tr></thead>
+      <tbody>`;
+
+    plan.semanas.forEach((sem,si)=>{
+      html+=`<tr><td class="ps-week">SEM ${si+1}</td>`;
+      allDays.forEach(d=>{
+        const t=sem.treinos[d]||{tipo:'OFF',descricao:'Descanso',zona:'OFF'};
+        const isActive=userDays.includes(d);
+        if(!isActive){
+          html+=`<td class="ps-off" style="opacity:.3;min-width:36px">—</td>`;
+        } else {
+          html+=renderWorkoutCell(t);
+        }
+      });
+      html+=`</tr>`;
+    });
+    html+=`</tbody></table></div>`;
+
+  } else {
+    // CARDS VIEW — one card per workout day, expandable by week
+    html+=`<div>`;
+    plan.semanas.forEach((sem,si)=>{
+      html+=`<div style="margin-bottom:12px">
+        <div style="font-size:12px;font-weight:700;color:var(--neon);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;padding:8px 12px;background:rgba(255,92,0,.06);border-radius:var(--r)">
+          Semana ${si+1} — ${sem.foco||''}
+        </div>
+        <div style="display:flex;flex-direction:column;gap:8px">`;
+
+      const dayMeta={seg:'Segunda',ter:'Terça',qua:'Quarta',qui:'Quinta',sex:'Sexta',sab:'Sábado',dom:'Domingo'};
+      userDays.forEach(d=>{
+        const t=sem.treinos[d]||{tipo:'OFF',descricao:'Descanso',zona:'OFF'};
+        const zona=(t.zona||'OFF').toUpperCase().replace('LONGÃO','LONGAO');
+        const ztopColor={'Z1':'var(--neon)','Z2':'var(--orange)','Z3':'var(--red)','LONGAO':'var(--teal)','LONG':'var(--teal)','FORT':'var(--purple)','OFF':'var(--tx3)'}[zona]||'var(--tx3)';
+        const zbg={'Z1':'rgba(255,92,0,.04)','Z2':'rgba(9,132,227,.04)','Z3':'rgba(232,54,93,.04)','LONGAO':'rgba(0,184,148,.04)','LONG':'rgba(0,184,148,.04)','FORT':'rgba(108,92,231,.04)','OFF':'var(--bg3)'}[zona]||'var(--bg3)';
+        const zborder={'Z1':'rgba(255,92,0,.2)','Z2':'rgba(9,132,227,.2)','Z3':'rgba(232,54,93,.2)','LONGAO':'rgba(0,184,148,.2)','LONG':'rgba(0,184,148,.2)','FORT':'rgba(108,92,231,.2)','OFF':'var(--bd)'}[zona]||'var(--bd)';
+
+        if(zona==='OFF'){
+          html+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:var(--bg3);border:1px solid var(--bd)">
+            <div style="font-size:11px;font-weight:700;color:var(--tx3);width:32px">${dayMeta[d]?.slice(0,3)?.toUpperCase()}</div>
+            <div style="font-size:13px;font-weight:600;color:var(--tx3)">— Descanso</div>
+          </div>`;
+        } else {
+          const blocks=parseWorkoutBlocks(t.descricao, t.pace, zona);
+          html+=`<div style="border-radius:var(--rl);overflow:hidden;border:1px solid ${zborder};background:${zbg};box-shadow:0 2px 8px rgba(0,0,0,0.05)">
+            <div style="padding:10px 14px 8px;border-bottom:1px solid ${zborder};display:flex;justify-content:space-between;align-items:center">
+              <div style="display:flex;align-items:center;gap:8px">
+                <div style="font-size:10px;font-weight:700;color:var(--tx3);width:32px">${dayMeta[d]?.slice(0,3)?.toUpperCase()}</div>
+                <div style="font-size:14px;font-weight:700;color:var(--tx)">${t.tipo||zona}</div>
+              </div>
+              <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${zborder};color:${ztopColor}">${zona}</span>
+            </div>
+            <div style="padding:8px 14px">
+              ${blocks.map(b=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(0,0,0,0.04)">
+                <span style="font-size:12px;color:var(--tx)">${b.desc}</span>
+                ${b.pace?`<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${b.color};white-space:nowrap;margin-left:8px">${b.pace}</span>`:''}
+              </div>`).join('')}
+            </div>
+          </div>`;
+        }
+      });
+      html+=`</div></div>`;
+    });
+    html+=`</div>`;
+  }
+
+  // Week focus cards
+  html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">`;
   plan.semanas.forEach((sem,si)=>{
-    html+=`<div class="card" style="padding:10px 12px">
+    html+=`<div class="card" style="padding:12px 14px">
       <div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;margin-bottom:4px">Semana ${si+1}</div>
-      <div style="font-size:12px;font-weight:600;color:var(--tx);margin-bottom:4px">${sem.foco||'—'}</div>
+      <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:3px">${sem.foco||'—'}</div>
       ${sem.nota?`<div style="font-size:11px;color:var(--tx2)">${sem.nota}</div>`:''}
     </div>`;
   });
   html+=`</div>`;
 
   return html;
+}
+
+// Day detail modal
+function openDayModal(cell){
+  try{
+    const t=JSON.parse(cell.dataset.treino);
+    if(!t||t.zona==='OFF') return;
+    const zona=(t.zona||'Z1').toUpperCase().replace('LONGÃO','LONGAO');
+    const ztopColor={'Z1':'var(--neon)','Z2':'var(--orange)','Z3':'var(--red)','LONGAO':'var(--teal)','LONG':'var(--teal)'}[zona]||'var(--neon)';
+    const blocks=parseWorkoutBlocks(t.descricao,t.pace,zona);
+    const modal=document.createElement('div');
+    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:flex-end;justify-content:center;padding:0';
+    modal.innerHTML=`<div style="background:#fff;border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:720px;max-height:80vh;overflow-y:auto;box-shadow:0 -8px 32px rgba(0,0,0,.15)">
+      <div style="width:40px;height:4px;background:var(--bd2);border-radius:2px;margin:0 auto 16px"></div>
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div>
+          <div style="font-size:18px;font-weight:800;color:var(--tx)">${t.tipo||zona}</div>
+          <div style="font-size:12px;color:${ztopColor};font-weight:600;margin-top:2px">${zona} · Detalhes do treino</div>
+        </div>
+        <button onclick="this.closest('[style*=fixed]').remove()" style="background:var(--bg3);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px">✕</button>
+      </div>
+      ${blocks.map(b=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;margin-bottom:8px;border-radius:var(--r);background:var(--bg3)">
+        <span style="font-size:14px;color:var(--tx);font-weight:500">${b.desc}</span>
+        ${b.pace?`<div style="text-align:right">
+          <div style="font-family:var(--mono);font-size:14px;font-weight:700;color:${b.color}">${b.pace}</div>
+          <div style="font-size:10px;color:var(--tx3)">min/km</div>
+        </div>`:''}
+      </div>`).join('')}
+    </div>`;
+    modal.onclick=e=>{if(e.target===modal)modal.remove();};
+    document.body.appendChild(modal);
+  }catch(e){console.log(e);}
 }
 
 // ─── Default rule-based plan spreadsheet ────────────────────────
@@ -1728,6 +1916,7 @@ function renderDefaultPlanSheet(a, dias){
     });
   }
 
+  window._defaultPlan=plan;
   return renderPlanSheet(plan, a);
 }
 
@@ -1771,14 +1960,11 @@ DADOS DO ATLETA:
 HISTÓRICO (últimos ${Math.min(HIST.length,10)} treinos):
 ${histLines||'Nenhum treino anterior'}
 
-REGRAS DO MÉTODO CORREFIX/WEBURN:
-- Segunda: treino de base ou strides em subida
-- Terça: OFF (ou corrida leve diária para quem corre todos os dias)
-- Quarta: treino de qualidade (intervalado, tempo run)
-- Quinta: OFF (ou Fortalecimento)
-- Sexta: treino de qualidade (intervalado, velocidade)
-- Sábado: OFF
-- Domingo: longão progressivo
+DIAS DE TREINO DESTE ATLETA: ${(USER_GOAL?.dias_selecionados||['seg','qua','dom']).join(', ')}
+REGRAS: distribua os treinos APENAS nos dias acima. Dias não selecionados = OFF.
+- 1º treino ativo da semana: base ou strides em subida
+- Treinos intermediários: qualidade (intervalado, tempo run, velocidade)
+- Último treino da semana (domingo ou o último dia): longão progressivo
 
 TIPOS DE TREINO PERMITIDOS (use EXATAMENTE estas descrições):
 - BASE: "Xkm aquecimento ${z.e?sp(z.e.max):'—'} + Ykm ritmo PACE + 1km leve + alongamento"
@@ -1821,12 +2007,12 @@ Adapte o número de dias ativos conforme os dias disponíveis (${USER_GOAL?.dias
     if(!jsonMatch) throw new Error('Resposta inválida da IA');
 
     const plan=JSON.parse(jsonMatch[0]);
-    window._iaPlano=plan;
+    window._iaPlano=plan;window._defaultPlan=plan;
 
     el.innerHTML=renderPlanSheet(plan, a);
 
   } catch(err){
-    const keyMsg=err.message.includes('Configure')?`<br><small>Clique em <strong>🤖 IA OFF</strong> no cabeçalho para configurar sua chave.</small>`:'';
+    const keyMsg=err.message.includes('indisponível')?`<br><small>Tente novamente em alguns segundos.</small>`:'';
     el.innerHTML=`<div style="padding:16px;color:var(--red);font-size:13px;background:var(--red-dim);border-radius:var(--r);border-left:3px solid var(--red)">
       ⚠️ ${err.message}${keyMsg}
     </div>`;
@@ -2586,10 +2772,23 @@ function fillFormFromFile(r){
 // ═══════════════════════════════════════════════════
 function obPickObj(id){OB_OBJ=OBJS.find(o=>o.id===id)||null;OB_TARGET_PACE='';OB_TARGET_DATE='';renderHome();}
 
+function obToggleDay(id){
+  if(OB_DIAS_SELECIONADOS.includes(id)){
+    OB_DIAS_SELECIONADOS=OB_DIAS_SELECIONADOS.filter(d=>d!==id);
+  } else {
+    OB_DIAS_SELECIONADOS=[...OB_DIAS_SELECIONADOS,id];
+  }
+  // Sort by week order
+  const order=['seg','ter','qua','qui','sex','sab','dom'];
+  OB_DIAS_SELECIONADOS.sort((a,b)=>order.indexOf(a)-order.indexOf(b));
+  OB_DIAS=OB_DIAS_SELECIONADOS.length;
+  renderHome();
+}
+
 function obNext(step){
   if(step===1){if(!OB_OBJ)return;OB_STEP=2;}
   else if(step===2){if(!OB_NIVEL)return;OB_STEP=3;}
-  else if(step===3){OB_STEP=4;}
+  else if(step===3){if(OB_DIAS_SELECIONADOS.length<2)return;OB_STEP=4;}
   renderHome();
 }
 
@@ -2599,7 +2798,7 @@ async function obFinish(){
   const td=window._obTestData||{};
   await saveGoal({
     obj_id:OB_OBJ.id,nivel:OB_NIVEL,nivel_label:OB_NIVEL_LABEL||OB_NIVEL,
-    dias_semana:OB_DIAS||3,target_pace_sec:OB_TARGET_PACE?ps(OB_TARGET_PACE):0,
+    dias_semana:OB_DIAS||3,dias_selecionados:OB_DIAS_SELECIONADOS.length>0?OB_DIAS_SELECIONADOS:null,target_pace_sec:OB_TARGET_PACE?ps(OB_TARGET_PACE):0,
     target_date:OB_TARGET_DATE||null,onboard_done:true,
     test_time:OB_TEST_TIME,test_fcmax:OB_TEST_FCMAX||0,
     vam_pace:vam._vam?vam._vam.pace:0,
@@ -2620,6 +2819,259 @@ function resetGoal(){
   USER_GOAL=null;renderHome();
 }
 
+
+// ═══════════════════════════════════════════════════
+//  RACE CALENDAR (Calendário de Corridas)
+// ═══════════════════════════════════════════════════
+let RACES = [];
+let RACE_VIEW_DATE = new Date();
+
+// NOTE: Create this table in Supabase:
+// create table user_races (id uuid default gen_random_uuid() primary key, user_id uuid references auth.users not null, nome text, data text, distancia text, local text, obs text, created_at timestamptz default now());
+// alter table user_races enable row level security;
+// create policy "own" on user_races for all using (auth.uid()=user_id);
+async function loadRaces(){
+  try{
+    const {data}=await db.from('user_races').select('*').eq('user_id',CU.id).order('data');
+    RACES=(data||[]);
+  }catch(e){RACES=[];}
+}
+
+async function saveRace(r){
+  try{
+    const {data,error}=await db.from('user_races').insert({user_id:CU.id,...r}).select().single();
+    if(data) RACES.push(data);
+    return !error;
+  }catch(e){return false;}
+}
+
+async function deleteRace(id){
+  await db.from('user_races').delete().eq('id',id).eq('user_id',CU.id);
+  RACES=RACES.filter(r=>r.id!==id);
+}
+
+function renderCorridas(){
+  const el=document.getElementById('pn-corridas');
+  if(!el) return;
+  const now=RACE_VIEW_DATE;
+  const year=now.getFullYear();
+  const month=now.getMonth();
+  const monthNames=['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
+  const dayNames=['D','S','T','Q','Q','S','S'];
+
+  // Get races for this month
+  const monthStr=String(month+1).padStart(2,'0')+'/'+year;
+  const monthRaces=RACES.filter(r=>r.data&&r.data.slice(3,10)===monthStr);
+
+  // Build calendar grid
+  const firstDay=new Date(year,month,1).getDay();
+  const daysInMonth=new Date(year,month+1,0).getDate();
+  const today=new Date();
+
+  // Race days set
+  const raceDays=new Set(monthRaces.map(r=>parseInt(r.data.slice(0,2))));
+
+  let calHtml='';
+  // Day headers
+  dayNames.forEach(d=>{ calHtml+=`<div style="text-align:center;font-size:10px;font-weight:700;color:var(--tx3);padding:4px 0">${d}</div>`; });
+  // Empty cells
+  for(let i=0;i<firstDay;i++) calHtml+=`<div class="race-month-day other-month"></div>`;
+  // Day cells
+  for(let d=1;d<=daysInMonth;d++){
+    const isToday=today.getDate()===d&&today.getMonth()===month&&today.getFullYear()===year;
+    const hasRace=raceDays.has(d);
+    const isPast=new Date(year,month,d)<today&&!isToday;
+    calHtml+=`<div class="race-month-day${isToday?' today':''}${hasRace&&!isToday?' has-race':''}${isPast?' other-month':''}" 
+      onclick="scrollToRaceDay(${d})" style="${isPast?'opacity:.5':''}">
+      ${d}
+      ${hasRace&&!isToday?'<div class="race-badge"></div>':''}
+    </div>`;
+  }
+
+  // Upcoming races globally (next 90 days)
+  const todayMs=Date.now();
+  const upcoming=RACES.filter(r=>{
+    if(!r.data) return false;
+    const [dd,mm,yyyy]=r.data.split('/');
+    const rDate=new Date(yyyy,mm-1,dd);
+    return rDate>=today&&(rDate-today)<=90*86400000;
+  }).sort((a,b)=>{
+    const parse=s=>{const [dd,mm,yyyy]=s.split('/');return new Date(yyyy,mm-1,dd);};
+    return parse(a.data)-parse(b.data);
+  });
+
+  // Dist badge color
+  const distColor=d=>{
+    if(!d) return '#999';
+    if(d.includes('42')||d.toLowerCase().includes('marat')) return '#E8365D';
+    if(d.includes('21')||d.toLowerCase().includes('meia')) return '#6C5CE7';
+    if(d.includes('15')) return '#0984E3';
+    if(d.includes('10')) return '#FF5C00';
+    return '#00B894';
+  };
+
+  const raceListHtml = monthRaces.length===0
+    ? `<div class="empty"><div class="empty-icon">🏅</div><div class="empty-title">Nenhuma corrida em ${monthNames[month]}</div><div class="empty-sub">Adicione suas provas inscritas para organizar sua agenda.</div></div>`
+    : monthRaces.map(r=>`<div class="race-list-item" id="race-${r.data?.replace(/\//g,'-')}">
+        <div>
+          <div style="font-family:var(--mono);font-size:20px;font-weight:700;color:var(--neon);line-height:1">${r.data?.slice(0,2)||'—'}</div>
+          <div style="font-size:10px;color:var(--tx3);text-align:center">${monthNames[month].slice(0,3).toUpperCase()}</div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:3px">${r.nome}</div>
+          ${r.local?`<div style="font-size:12px;color:var(--tx2);margin-bottom:4px">📍 ${r.local}</div>`:''}
+          <div style="display:flex;gap:6px;flex-wrap:wrap">
+            ${r.distancia?`<span class="race-dist-badge" style="background:${distColor(r.distancia)}22;color:${distColor(r.distancia)}">${r.distancia}</span>`:''}
+            ${r.obs?`<span style="font-size:11px;color:var(--tx2)">${r.obs}</span>`:''}
+          </div>
+        </div>
+        <button onclick="doDeleteRace('${r.id}')" style="background:none;border:none;cursor:pointer;color:var(--tx3);font-size:16px;padding:4px">✕</button>
+      </div>`).join('');
+
+  // Próximas corridas card
+  const upcomingHtml = upcoming.length>0 ? `<div class="card" style="margin-bottom:12px">
+    <div class="clabel">📆 Próximas corridas (90 dias)</div>
+    ${upcoming.slice(0,5).map(r=>{
+      const [dd,mm,yyyy]=r.data.split('/');
+      const rDate=new Date(yyyy,mm-1,dd);
+      const diffDays=Math.ceil((rDate-today)/86400000);
+      return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--bd)">
+        <div style="min-width:36px;text-align:center">
+          <div style="font-size:13px;font-weight:700;color:var(--neon)">${diffDays}d</div>
+        </div>
+        <div style="flex:1">
+          <div style="font-size:13px;font-weight:600;color:var(--tx)">${r.nome}</div>
+          <div style="font-size:11px;color:var(--tx2)">${r.data}${r.distancia?' · '+r.distancia:''}${r.local?' · '+r.local:''}</div>
+        </div>
+      </div>`;
+    }).join('')}
+  </div>` : '';
+
+  el.innerHTML=`<div style="padding-top:8px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+      <div>
+        <div style="font-size:22px;font-weight:800;color:var(--tx)">🏅 Calendário de Corridas</div>
+        <div style="font-size:12px;color:var(--tx2);margin-top:2px">Provas inscritas e agenda de corridas</div>
+      </div>
+      <button class="btn btn-neon btn-sm" style="width:auto;padding:8px 16px" onclick="openAddRaceModal()">+ Adicionar prova</button>
+    </div>
+
+    ${upcomingHtml}
+
+    <div class="card">
+      <!-- Month navigation -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
+        <button onclick="changeRaceMonth(-1)" style="background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:6px 12px;cursor:pointer;font-size:16px">‹</button>
+        <div style="font-size:16px;font-weight:700;color:var(--tx)">${monthNames[month]} ${year}</div>
+        <button onclick="changeRaceMonth(1)" style="background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:6px 12px;cursor:pointer;font-size:16px">›</button>
+      </div>
+      <!-- Calendar grid -->
+      <div class="race-month-grid">${calHtml}</div>
+    </div>
+
+    <!-- Race list for month -->
+    <div style="margin-top:4px">${raceListHtml}</div>
+  </div>`;
+}
+
+function changeRaceMonth(dir){
+  RACE_VIEW_DATE=new Date(RACE_VIEW_DATE.getFullYear(), RACE_VIEW_DATE.getMonth()+dir, 1);
+  renderCorridas();
+}
+
+function scrollToRaceDay(day){
+  const padDay=String(day).padStart(2,'0');
+  const el=document.getElementById('race-'+padDay+'-'+
+    String(RACE_VIEW_DATE.getMonth()+1).padStart(2,'0')+'-'+
+    RACE_VIEW_DATE.getFullYear());
+  if(el) el.scrollIntoView({behavior:'smooth',block:'center'});
+}
+
+function openAddRaceModal(){
+  const today=new Date().toISOString().split('T')[0];
+  const modal=document.createElement('div');
+  modal.className='race-form-modal';
+  modal.innerHTML=`<div class="race-form-inner">
+    <div style="width:40px;height:4px;background:var(--bd2);border-radius:2px;margin:0 auto 16px"></div>
+    <div style="font-size:18px;font-weight:800;color:var(--tx);margin-bottom:16px">🏅 Adicionar prova</div>
+    <div class="field" style="margin-bottom:10px"><label>Nome da corrida *</label><input type="text" id="rc-nome" placeholder="ex: São Silvestre 10km"></div>
+    <div class="g2" style="margin-bottom:10px">
+      <div class="field"><label>Data *</label><input type="date" id="rc-data" value="${today}"></div>
+      <div class="field"><label>Distância</label>
+        <select id="rc-dist">
+          <option value="">Selecione</option>
+          <option value="5km">5km</option><option value="10km">10km</option>
+          <option value="15km">15km</option><option value="21km (Meia)">21km (Meia)</option>
+          <option value="42km (Maratona)">42km (Maratona)</option>
+          <option value="Trail">Trail</option><option value="Outra">Outra</option>
+        </select>
+      </div>
+    </div>
+    <div class="field" style="margin-bottom:10px"><label>Local / Cidade</label><input type="text" id="rc-local" placeholder="ex: São Paulo, SP"></div>
+    <div class="field" style="margin-bottom:16px"><label>Observações</label><input type="text" id="rc-obs" placeholder="ex: Objetivo: 55 min"></div>
+    <div id="rc-conflict" style="display:none;margin-bottom:10px;padding:10px 14px;background:rgba(232,54,93,.08);border-radius:var(--r);border-left:3px solid var(--red);font-size:12px;color:var(--red)"></div>
+    <div id="rc-msg" style="display:none;margin-bottom:10px;padding:10px;border-radius:var(--r);font-size:12px"></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-neon" style="flex:1" onclick="doAddRace()">💾 Salvar prova</button>
+      <button class="btn btn-ghost" style="width:auto;padding:12px 16px" onclick="this.closest('.race-form-modal').remove()">✕</button>
+    </div>
+  </div>`;
+
+  // Check conflicts on date change
+  modal.querySelector('#rc-data').addEventListener('change', function(){
+    const v=this.value;
+    if(!v) return;
+    const [y,m,d]=v.split('-');
+    const dataStr=d+'/'+m+'/'+y;
+    const conflicts=RACES.filter(r=>r.data===dataStr);
+    const conflEl=modal.querySelector('#rc-conflict');
+    if(conflicts.length>0){
+      conflEl.style.display='block';
+      conflEl.textContent='⚠️ Conflito! Já tem prova nesta data: '+conflicts.map(r=>r.nome).join(', ');
+    } else {
+      conflEl.style.display='none';
+    }
+  });
+
+  modal.onclick=e=>{if(e.target===modal)modal.remove();};
+  document.body.appendChild(modal);
+}
+
+async function doAddRace(){
+  const nomeEl=document.getElementById('rc-nome');
+  const dataEl=document.getElementById('rc-data');
+  const distEl=document.getElementById('rc-dist');
+  const localEl=document.getElementById('rc-local');
+  const obsEl=document.getElementById('rc-obs');
+  const msgEl=document.getElementById('rc-msg');
+
+  const nome=nomeEl?.value?.trim();
+  const dataISO=dataEl?.value;
+  if(!nome||!dataISO){
+    if(msgEl){msgEl.style.display='block';msgEl.style.background='var(--red-dim)';msgEl.style.color='var(--red)';msgEl.textContent='Preencha nome e data.';}
+    return;
+  }
+  const [y,m,d]=dataISO.split('-');
+  const data=d+'/'+m+'/'+y;
+
+  if(msgEl){msgEl.style.display='block';msgEl.style.background='var(--teal-dim)';msgEl.style.color='var(--teal)';msgEl.textContent='Salvando...';}
+  const ok=await saveRace({nome,data,distancia:distEl?.value||'',local:localEl?.value?.trim()||'',obs:obsEl?.value?.trim()||''});
+  if(ok){
+    document.querySelector('.race-form-modal')?.remove();
+    // Jump to that month
+    RACE_VIEW_DATE=new Date(y,m-1,1);
+    renderCorridas();
+  } else {
+    if(msgEl){msgEl.textContent='Erro ao salvar. Tente novamente.';}
+  }
+}
+
+async function doDeleteRace(id){
+  if(!confirm('Remover esta prova?')) return;
+  await deleteRace(id);
+  renderCorridas();
+}
+
 // ═══════════════════════════════════════════════════
 //  DELETE WORKOUT
 // ═══════════════════════════════════════════════════
@@ -2631,25 +3083,5 @@ async function doDelete(id){
 
 </script>
 
-<!-- ══ API KEY MODAL ══ -->
-<div id="modal-api" class="modal-overlay" style="display:none">
-  <div class="modal-box">
-    <div class="modal-title">🔑 Chave da API Anthropic</div>
-    <div class="modal-sub">
-      Para usar a análise e plano com IA, você precisa de uma chave da API Anthropic.<br>
-      <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--neon)">Obter chave em console.anthropic.com →</a><br><br>
-      A chave fica salva <strong>somente no seu navegador</strong> (localStorage). Nunca é enviada a terceiros.
-    </div>
-    <div class="field" style="margin-bottom:12px">
-      <label>Sua chave API (começa com sk-ant-...)</label>
-      <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." style="font-family:monospace;font-size:13px">
-    </div>
-    <div style="display:flex;gap:8px">
-      <button class="btn btn-neon" style="flex:1" onclick="saveAPIKey()">💾 Salvar</button>
-      <button class="btn btn-ghost" style="width:auto;padding:12px 16px" onclick="document.getElementById('modal-api').style.display='none'">✕</button>
-    </div>
-    <div id="api-msg" style="display:none;margin-top:10px;font-size:12px;padding:8px 12px;border-radius:var(--r)"></div>
-  </div>
-</div>
 </body>
 </html>
