@@ -305,6 +305,17 @@ select option{background:var(--bg3)}
 .ia-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;gap:10px}
 .ia-pulse{width:48px;height:48px;border-radius:50%;border:3px solid var(--neon-dim);border-top-color:var(--neon);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
+
+/* ══ API SETTINGS MODAL ══ */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:2000;display:flex;align-items:center;justify-content:center;padding:20px}
+.modal-box{background:var(--bg2);border:1px solid var(--bd2);border-radius:var(--rx);padding:24px;width:100%;max-width:420px}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:6px}
+.modal-sub{font-size:12px;color:var(--tx2);margin-bottom:16px;line-height:1.6}
+.settings-btn{background:none;border:1px solid var(--bd);border-radius:20px;padding:4px 10px;cursor:pointer;color:var(--tx2);font-size:11px;font-family:var(--sans);display:flex;align-items:center;gap:5px;transition:all .2s}
+.settings-btn:hover{border-color:var(--neon);color:var(--neon)}
+.key-status{display:inline-flex;align-items:center;gap:4px;font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px}
+.key-ok{background:rgba(0,229,204,.15);color:var(--teal);border:1px solid rgba(0,229,204,.2)}
+.key-miss{background:var(--red-dim);color:var(--red);border:1px solid rgba(255,61,90,.2)}
 </style>
 </head>
 <body>
@@ -362,9 +373,14 @@ select option{background:var(--bg3)}
         <div class="logo-icon">🏃</div>
         <div><div class="logo-text">Coach Run</div><div class="logo-sub">Treinador inteligente</div></div>
       </div>
-      <div class="user-badge" onclick="doLogout()">
-        <div class="user-avatar" id="user-avatar">?</div>
-        <div class="user-name" id="user-name-display">...</div>
+      <div style="display:flex;align-items:center;gap:8px">
+        <button class="settings-btn" onclick="openAPISettings()" id="btn-api-settings" title="Configurar chave IA">
+          🤖 <span id="api-key-status" class="key-status key-miss">IA OFF</span>
+        </button>
+        <div class="user-badge" onclick="doLogout()">
+          <div class="user-avatar" id="user-avatar">?</div>
+          <div class="user-name" id="user-name-display">...</div>
+        </div>
       </div>
     </div>
 
@@ -418,6 +434,53 @@ let OB_TARGET_DATE = '';
 let OB_TEST_TIME = '';
 let OB_TEST_FCMAX = 0;
 let OB_NIVEL_LABEL = '';
+
+
+// ═══════════════════════════════════════════════════
+//  API KEY MANAGEMENT
+// ═══════════════════════════════════════════════════
+let CLAUDE_API_KEY = localStorage.getItem('cr_api_key') || '';
+function updateKeyStatus(){
+  const el=document.getElementById('api-key-status');
+  if(!el) return;
+  if(CLAUDE_API_KEY){ el.textContent='IA ON'; el.className='key-status key-ok'; }
+  else{ el.textContent='IA OFF'; el.className='key-status key-miss'; }
+}
+function openAPISettings(){
+  const el=document.getElementById('api-key-input');
+  if(el) el.value=CLAUDE_API_KEY;
+  document.getElementById('modal-api').style.display='flex';
+}
+function saveAPIKey(){
+  const key=document.getElementById('api-key-input')?.value?.trim()||'';
+  const msg=document.getElementById('api-msg');
+  if(key&&!key.startsWith('sk-ant')){
+    msg.style.display='block';msg.style.background='var(--red-dim)';msg.style.color='var(--red)';
+    msg.textContent='⚠️ Chave inválida. Deve começar com sk-ant-...';return;
+  }
+  CLAUDE_API_KEY=key;
+  if(key) localStorage.setItem('cr_api_key',key);
+  else localStorage.removeItem('cr_api_key');
+  updateKeyStatus();
+  document.getElementById('modal-api').style.display='none';
+}
+
+async function callClaudeAPI(messages, maxTokens=1500){
+  if(!CLAUDE_API_KEY) throw new Error('Configure sua chave da API. Clique em 🤖 IA OFF no cabeçalho.');
+  const resp=await fetch('https://api.anthropic.com/v1/messages',{
+    method:'POST',
+    headers:{
+      'Content-Type':'application/json',
+      'x-api-key':CLAUDE_API_KEY,
+      'anthropic-version':'2023-06-01',
+      'anthropic-dangerous-direct-browser-access':'true'
+    },
+    body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:maxTokens,messages})
+  });
+  if(!resp.ok){const e=await resp.json().catch(()=>({}));throw new Error(e.error?.message||'HTTP '+resp.status);}
+  const data=await resp.json();
+  return data.content?.[0]?.text||'';
+}
 
 // ═══════════════════════════════════════════════════
 //  OBJECTIVES
@@ -549,6 +612,7 @@ function showScreen(s){
 }
 
 function setupUI(){
+  updateKeyStatus();
   const name=PROFILE?.name||CU.email.split('@')[0];
   document.getElementById('user-name-display').textContent=name.split(' ')[0];
   document.getElementById('user-avatar').textContent=name[0].toUpperCase();
@@ -836,9 +900,9 @@ function renderOnboarding(el){
         </div>
       </div>
 
-      ${OB_TEST_TIME ? `<div class="card card-teal" style="margin-bottom:12px">
-        <div style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:6px">✓ Pré-visualização das suas zonas:</div>
-        ${previewZones(OB_TEST_TIME, OB_TEST_FCMAX)}
+      ${OB_TEST_TIME ? `<div class="card card-teal" style="margin-bottom:10px">
+        <div style="font-size:12px;font-weight:700;color:var(--teal);margin-bottom:8px">✓ Análise do teste de corrida</div>
+        ${buildTestAnalysis(OB_TEST_TIME, OB_TEST_FCMAX, window._obTestData||{})}
       </div>` : ''}
 
       <button class="btn btn-neon" onclick="obFinish()" ${OB_TEST_TIME?'':'disabled style="opacity:.4;cursor:not-allowed"'}>Começar treinamento 🚀</button>
@@ -1288,26 +1352,14 @@ Gerar plano completo com ${dias} treinos. Cada um com: tipo, objetivo, estrutura
 Nota de 0 a 100 com classificação (90+ excelente / 70–89 bom / 50–69 atenção / <50 ruim) e breve explicação.`;
 
   try {
-    const resp = await fetch('https://api.anthropic.com/v1/messages', {
-      method: 'POST',
-      headers: {'Content-Type': 'application/json'},
-      body: JSON.stringify({
-        model: 'claude-sonnet-4-20250514',
-        max_tokens: 2500,
-        messages: [{role:'user', content: prompt}]
-      })
-    });
-
-    const data = await resp.json();
-    const text = data.content?.[0]?.text || 'Erro ao gerar análise.';
-
-    // Render markdown-like text nicely
+    const text = await callClaudeAPI([{role:'user', content: prompt}], 2500);
     out.innerHTML = renderIAText(text);
     btn.textContent = '🔄 Gerar nova análise';
     btn.disabled = false;
-
   } catch(err) {
-    out.innerHTML=`<div style="color:var(--red);font-size:13px;padding:12px">⚠️ Erro ao conectar com a IA: ${err.message}</div>`;
+    const keyMsg = err.message.includes('Configure') ? 
+      '<br><small>Clique em <strong>🤖 IA OFF</strong> no cabeçalho para configurar.</small>' : '';
+    out.innerHTML=`<div style="color:var(--red);font-size:13px;padding:12px;background:var(--red-dim);border-radius:var(--r);border-left:3px solid var(--red)">⚠️ ${err.message}${keyMsg}</div>`;
     btn.textContent = '✨ Tentar novamente';
     btn.disabled = false;
   }
@@ -1433,7 +1485,7 @@ function renderPlano(){
   <div class="card card-teal" style="margin-top:10px">
     <div class="clabel">🧠 Como o plano funciona</div>
     <div style="font-size:12px;color:var(--tx2);line-height:1.7">
-      Baseado na metodologia Correfix/WeBurn: <strong style="color:var(--teal)">80% leve + 10% moderado + 10% intenso</strong>.<br>
+      Baseado na metodologia treinamento polarizado: <strong style="color:var(--teal)">80% leve + 10% moderado + 10% intenso</strong>.<br>
       Clique em <strong style="color:var(--neon)">🤖 Gerar Plano IA</strong> para que o coach analise seu histórico e monte um plano de 4 semanas personalizado para o seu objetivo.
     </div>
   </div>
@@ -1600,7 +1652,7 @@ async function gerarPlanoIA(){
   const tp=a.tp;
   const obj=a.obj;
 
-  const prompt=`Você é um coach de corrida especialista no método Correfix/WeBurn. Gere um plano de 4 semanas personalizado.
+  const prompt=`Você é um coach de corrida especialista no método treinamento polarizado. Gere um plano de 4 semanas personalizado.
 
 DADOS DO ATLETA:
 - Objetivo: ${obj.t}
@@ -1659,17 +1711,7 @@ RETORNE APENAS JSON VÁLIDO (sem texto antes ou depois), no formato:
 Adapte o número de dias ativos conforme os dias disponíveis (${USER_GOAL?.dias_semana||3} dias). Se poucos dias, concentre os treinos nos dias mais importantes.`;
 
   try {
-    const resp=await fetch('https://api.anthropic.com/v1/messages',{
-      method:'POST',
-      headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({
-        model:'claude-sonnet-4-20250514',
-        max_tokens:2000,
-        messages:[{role:'user',content:prompt}]
-      })
-    });
-    const data=await resp.json();
-    let text=data.content?.[0]?.text||'';
+    let text=await callClaudeAPI([{role:'user',content:prompt}],2000);
 
     // Extract JSON
     const jsonMatch=text.match(/\{[\s\S]*\}/);
@@ -1681,14 +1723,11 @@ Adapte o número de dias ativos conforme os dias disponíveis (${USER_GOAL?.dias
     el.innerHTML=renderPlanSheet(plan, a);
 
   } catch(err){
+    const keyMsg=err.message.includes('Configure')?`<br><small>Clique em <strong>🤖 IA OFF</strong> no cabeçalho para configurar sua chave.</small>`:'';
     el.innerHTML=`<div style="padding:16px;color:var(--red);font-size:13px;background:var(--red-dim);border-radius:var(--r);border-left:3px solid var(--red)">
-      ⚠️ Erro ao gerar plano: ${err.message}<br>
-      <span style="font-size:11px;color:var(--tx2)">Usando plano base. Tente novamente em alguns segundos.</span>
+      ⚠️ ${err.message}${keyMsg}
     </div>`;
-    // Fall back to default
-    setTimeout(()=>{
-      el.innerHTML=renderDefaultPlanSheet(a, USER_GOAL?.dias_semana||3);
-    }, 2000);
+    setTimeout(()=>{ el.innerHTML=renderDefaultPlanSheet(a, USER_GOAL?.dias_semana||3); }, 3000);
   }
 }
 
@@ -2002,6 +2041,110 @@ function showSaveMsg(msg,type){
 // ═══════════════════════════════════════════════════
 //  TEST FILE UPLOAD (onboarding step 4)
 // ═══════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════
+//  BUILD TEST ANALYSIS — comprehensive from test file
+// ═══════════════════════════════════════════════════
+function buildTestAnalysis(testTime, fcmax, extra){
+  const z=calcZonesFromTest(testTime, fcmax);
+  if(!z) return '<div style="font-size:12px;color:var(--tx2)">Tempo inválido. Ex: 21:22</div>';
+
+  const secs=t2s(testTime);
+  const vam=z._vam;
+  const dist=extra.dist||3;
+  const durSec=extra.durSec||secs;
+  const pace=sp(Math.round(durSec/dist));
+  const fcmed=extra.fcmed||0;
+  const elevGain=extra.elevGain||0;
+  const cad=extra.cad||0;
+  const splits=extra.splits||[];
+
+  // Pacing analysis from splits
+  let paceAnalysis='';
+  if(splits.length>=2){
+    const sv=splits.map(s=>t2s(s));
+    const first=sv[0],last=sv[sv.length-1];
+    const diff=last-first;
+    if(diff>30) paceAnalysis='⚠️ Saiu muito rápido e desacelerou — pacing irregular';
+    else if(diff<-15) paceAnalysis='✅ Acelerou progressivamente — excelente pacing';
+    else paceAnalysis='✅ Ritmo uniforme e controlado';
+  }
+
+  // Effort assessment
+  let effortLabel='', effortColor='var(--neon)';
+  if(fcmax>0&&fcmed>0){
+    const pct=Math.round(fcmed/fcmax*100);
+    if(pct>92){effortLabel=`FC média em ${pct}% da FCmax — esforço máximo`;effortColor='var(--red)';}
+    else if(pct>85){effortLabel=`FC média em ${pct}% da FCmax — esforço alto`;effortColor='var(--orange)';}
+    else{effortLabel=`FC média em ${pct}% da FCmax — esforço controlado`;effortColor='var(--teal)';}
+  }
+
+  // Zones HTML
+  const zonesHtml=Object.values(z).filter(zv=>zv.label).map(zv=>
+    `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 10px;border-radius:7px;margin-bottom:4px;background:${zv.bg}">
+      <div>
+        <span style="font-size:12px;font-weight:700;color:${zv.color}">${zv.emoji} ${zv.label}</span>
+        <div style="font-size:10px;color:var(--tx2)">${zv.desc}</div>
+      </div>
+      <span style="font-family:var(--mono);font-size:12px;font-weight:700;color:${zv.color}">${sp(zv.min)}–${sp(zv.max)}</span>
+    </div>`
+  ).join('');
+
+  return `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px">
+      <div style="background:var(--bg3);border-radius:var(--r);padding:10px;text-align:center">
+        <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Pace médio</div>
+        <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--neon)">${pace}</div>
+        <div style="font-size:10px;color:var(--tx2)">min/km</div>
+      </div>
+      <div style="background:var(--bg3);border-radius:var(--r);padding:10px;text-align:center">
+        <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">VAM</div>
+        <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--teal)">${vam.kmh}</div>
+        <div style="font-size:10px;color:var(--tx2)">km/h</div>
+      </div>
+      ${fcmax>0?`<div style="background:var(--bg3);border-radius:var(--r);padding:10px;text-align:center">
+        <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">FC Máxima</div>
+        <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--red)">${fcmax}</div>
+        <div style="font-size:10px;color:var(--tx2)">bpm</div>
+      </div>`:''}
+      ${fcmed>0?`<div style="background:var(--bg3);border-radius:var(--r);padding:10px;text-align:center">
+        <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">FC Média</div>
+        <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--orange)">${fcmed}</div>
+        <div style="font-size:10px;color:var(--tx2)">bpm</div>
+      </div>`:''}
+      ${cad>0?`<div style="background:var(--bg3);border-radius:var(--r);padding:10px;text-align:center">
+        <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Cadência</div>
+        <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--purple)">${cad}</div>
+        <div style="font-size:10px;color:var(--tx2)">passos/min</div>
+      </div>`:''}
+      ${elevGain>0?`<div style="background:var(--bg3);border-radius:var(--r);padding:10px;text-align:center">
+        <div style="font-size:10px;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Elevação</div>
+        <div style="font-family:var(--mono);font-size:18px;font-weight:700;color:var(--teal)">${elevGain}m</div>
+        <div style="font-size:10px;color:var(--tx2)">ganho total</div>
+      </div>`:''}
+    </div>
+
+    ${splits.length>0?`<div style="margin-bottom:10px">
+      <div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:5px">Splits por km</div>
+      <div style="display:flex;gap:5px;flex-wrap:wrap">
+        ${splits.map((s,i)=>{
+          const sv=splits.map(x=>t2s(x));
+          const mn=Math.min(...sv),mx=Math.max(...sv);
+          const v=t2s(s);
+          const col=v===mn?'var(--neon)':v===mx?'var(--red)':'var(--tx2)';
+          return `<div style="padding:4px 10px;border-radius:16px;background:var(--bg4);border:1px solid var(--bd);font-family:var(--mono);font-size:11px;font-weight:700;color:${col}">km${i+1} ${s}</div>`;
+        }).join('')}
+      </div>
+      ${paceAnalysis?`<div style="font-size:11px;color:var(--tx2);margin-top:5px">${paceAnalysis}</div>`:''}
+    </div>`:''}
+
+    ${effortLabel?`<div style="font-size:11px;color:${effortColor};margin-bottom:10px;padding:6px 10px;background:${effortColor}22;border-radius:var(--r);border-left:3px solid ${effortColor}">${effortLabel}</div>`:''}
+
+    <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px">Suas zonas de treinamento</div>
+    ${zonesHtml}
+  `;
+}
+
 function handleTestFileUpload(input){
   const f=input.files[0];
   if(!f) return;
@@ -2018,29 +2161,50 @@ function handleTestFileUpload(input){
       else{if(st){st.style.background='var(--red-dim)';st.style.color='var(--red)';st.style.borderColor='var(--red)';st.textContent='Formato não suportado. Use GPX ou TCX.';}return;}
 
       if(r&&r.durSec>0){
-        // Fill in the time and FC fields
+        // Calculate the actual distance covered (should be ~3km for test)
+        const actualDist=r.dist>0?r.dist:3;
+        const mins=Math.floor(r.durSec/60);
+        const secs=Math.round(r.durSec%60);
+        const timeStr=mins+':'+String(secs).padStart(2,'0');
+
+        // Store ALL extracted data for comprehensive analysis
+        window._obTestData={
+          dist:actualDist,
+          durSec:r.durSec,
+          fcmed:r.fcmed,
+          fcmax:r.fcmax,
+          cad:r.cad,
+          elevGain:r.elevGain,
+          splits:r.splits,
+          date:r.date
+        };
+
+        // Fill fields
         const tField=document.getElementById('ob-test-time');
         const fcField=document.getElementById('ob-test-fcmax');
-        if(tField){
-          const mins=Math.floor(r.durSec/60);
-          const secs=Math.round(r.durSec%60);
-          const timeStr=mins+':'+String(secs).padStart(2,'0');
-          tField.value=timeStr;
-          OB_TEST_TIME=timeStr;
-        }
-        if(fcField&&r.fcmax>0){
-          fcField.value=r.fcmax;
-          OB_TEST_FCMAX=r.fcmax;
-        }
-        const distInfo=r.dist>0?` | ${r.dist}km`:'';
-        const fcInfo=r.fcmax>0?` | FC máx: ${r.fcmax} bpm`:'';
-        if(st){st.style.background='var(--teal-dim)';st.style.color='var(--teal)';st.style.borderColor='var(--teal)';st.textContent='✓ Arquivo lido! Tempo: '+tField.value+distInfo+fcInfo+' — confirme abaixo e clique em Começar.';}
-        renderHome(); // re-render to show the preview zones
+        if(tField){tField.value=timeStr;OB_TEST_TIME=timeStr;}
+        if(fcField&&r.fcmax>0){fcField.value=r.fcmax;OB_TEST_FCMAX=r.fcmax;}
+
+        const info=[
+          r.dist>0?`${r.dist}km`:'',
+          `Pace: ${sp(Math.round(r.durSec/actualDist))}/km`,
+          r.fcmed>0?`FC med: ${r.fcmed}bpm`:'',
+          r.fcmax>0?`FC máx: ${r.fcmax}bpm`:'',
+          r.cad>0?`Cad: ${r.cad}spm`:'',
+          r.elevGain>0?`Elev: ${r.elevGain}m`:'',
+          r.splits&&r.splits.length>0?`${r.splits.length} splits`:'',
+        ].filter(Boolean).join(' · ');
+
+        if(st){st.style.background='var(--teal-dim)';st.style.color='var(--teal)';st.style.borderColor='var(--teal)';
+          st.textContent='✓ '+info+' — análise completa abaixo';}
+        renderHome(); // re-render to show full analysis
       } else {
-        if(st){st.style.background='var(--red-dim)';st.style.color='var(--red)';st.style.borderColor='var(--red)';st.textContent='Não foi possível extrair o tempo do arquivo. Insira manualmente.';}
+        if(st){st.style.background='var(--red-dim)';st.style.color='var(--red)';st.style.borderColor='var(--red)';
+          st.textContent='Não foi possível extrair dados. Insira manualmente o tempo abaixo.';}
       }
     }catch(err){
-      if(st){st.style.background='var(--red-dim)';st.style.color='var(--red)';st.style.borderColor='var(--red)';st.textContent='Erro ao ler arquivo: '+err.message;}
+      if(st){st.style.background='var(--red-dim)';st.style.color='var(--red)';st.style.borderColor='var(--red)';
+        st.textContent='Erro ao ler arquivo: '+err.message;}
     }
   };
   reader.readAsText(f);
@@ -2087,54 +2251,83 @@ function parseGPX(xml){
   const pts=[...doc.querySelectorAll('trkpt,rtept')];
   if(!pts.length) return null;
 
+  // ── Timestamps ──
   const times=pts.map(p=>{
     const t=p.querySelector('time');
-    const d=t?new Date(t.textContent):null;
-    return d&&+d>0?d:null;
+    const d=t?new Date(t.textContent.trim()):null;
+    return d&&!isNaN(+d)?d:null;
   });
-  const lats=pts.map(p=>parseFloat(p.getAttribute('lat')));
-  const lons=pts.map(p=>parseFloat(p.getAttribute('lon')));
 
-  // HR — try multiple namespace variants
+  // ── Coordinates — robust parsing ──
+  const lats=pts.map(p=>{
+    const v=parseFloat(String(p.getAttribute('lat')||'').replace(',','.'));
+    return (isNaN(v)||v<-90||v>90)?NaN:v;
+  });
+  const lons=pts.map(p=>{
+    const v=parseFloat(String(p.getAttribute('lon')||'').replace(',','.'));
+    return (isNaN(v)||v<-180||v>180)?NaN:v;
+  });
+
+  // ── HR — multiple namespace variants ──
   const hrs=[];
   pts.forEach(p=>{
-    const hrEl=p.querySelector('hr')||
-               p.getElementsByTagNameNS('http://www.garmin.com/xmlschemas/TrackPointExtension/v1','hr')[0]||
-               p.getElementsByTagNameNS('http://www.garmin.com/xmlschemas/TrackPointExtension/v2','hr')[0];
-    const v=hrEl?parseInt(hrEl.textContent):0;
-    if(v>40&&v<230) hrs.push(v);
+    // Try all common HR tag names
+    const candidates=['hr','HeartRateBpm','Value'];
+    let val=0;
+    for(const tag of candidates){
+      const el=p.querySelector(tag)||
+               p.getElementsByTagNameNS('http://www.garmin.com/xmlschemas/TrackPointExtension/v1',tag)[0]||
+               p.getElementsByTagNameNS('http://www.garmin.com/xmlschemas/TrackPointExtension/v2',tag)[0];
+      if(el){val=parseInt(el.textContent);break;}
+    }
+    if(val>40&&val<230) hrs.push(val);
   });
 
-  // Cadence
+  // ── Cadence ──
   const cads=[];
   pts.forEach(p=>{
-    const cEl=p.querySelector('cad')||
-               p.getElementsByTagNameNS('http://www.garmin.com/xmlschemas/TrackPointExtension/v1','cad')[0];
-    const v=cEl?parseInt(cEl.textContent)*2:0;
-    if(v>100&&v<240) cads.push(v);
+    const candidates=['cad','RunCadence','Cadence'];
+    let val=0;
+    for(const tag of candidates){
+      const el=p.querySelector(tag)||
+               p.getElementsByTagNameNS('http://www.garmin.com/xmlschemas/TrackPointExtension/v1',tag)[0]||
+               p.getElementsByTagNameNS('http://www.garmin.com/xmlschemas/TrackPointExtension/v2',tag)[0];
+      if(el){val=parseInt(el.textContent);break;}
+    }
+    // GPX cad is one-foot steps/min, multiply by 2 for both feet
+    if(val>50&&val<120) val=val*2;
+    if(val>100&&val<240) cads.push(val);
   });
 
-  // Elevation gain
+  // ── Elevation ──
   let elevGain=0;
-  const elevs=pts.map(p=>parseFloat(p.querySelector('ele')?.textContent||NaN));
-  for(let i=1;i<elevs.length;i++){if(!isNaN(elevs[i])&&!isNaN(elevs[i-1])&&elevs[i]-elevs[i-1]>0)elevGain+=elevs[i]-elevs[i-1];}
+  const elevs=pts.map(p=>{
+    const el=p.querySelector('ele');
+    return el?parseFloat(el.textContent):NaN;
+  });
+  for(let i=1;i<elevs.length;i++){
+    if(!isNaN(elevs[i])&&!isNaN(elevs[i-1])&&elevs[i]-elevs[i-1]>0.5)
+      elevGain+=elevs[i]-elevs[i-1];
+  }
 
-  // Distance via haversine
+  // ── Distance via haversine ──
   let dist=0;
+  let validCoords=0;
   for(let i=1;i<lats.length;i++){
-    if(!isNaN(lats[i])&&!isNaN(lons[i])&&!isNaN(lats[i-1])&&!isNaN(lons[i-1]))
+    if(!isNaN(lats[i])&&!isNaN(lons[i])&&!isNaN(lats[i-1])&&!isNaN(lons[i-1])){
       dist+=haversine(lats[i-1],lons[i-1],lats[i],lons[i]);
+      validCoords++;
+    }
   }
   dist=Math.round(dist*100)/100;
 
+  // ── Duration ──
   const validTimes=times.filter(Boolean);
   const durSec=validTimes.length>=2?(+validTimes[validTimes.length-1]-+validTimes[0])/1000:0;
-  const fcmed=hrs.length?Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length):0;
-  const fcmax=hrs.length?Math.max(...hrs):0;
-  const cadAvg=cads.length?Math.round(cads.reduce((a,b)=>a+b,0)/cads.length):0;
 
-  // Splits per km
-  const splits=[];let cumDist=0,lastKm=0,lastT=validTimes[0];
+  // ── Splits per km ──
+  const splits=[];
+  let cumDist=0,lastKm=0,lastT=validTimes[0];
   for(let i=1;i<pts.length;i++){
     if(isNaN(lats[i])||isNaN(lons[i])) continue;
     cumDist+=haversine(lats[i-1],lons[i-1],lats[i],lons[i]);
@@ -2144,7 +2337,37 @@ function parseGPX(xml){
       lastT=times[i];lastKm=Math.floor(cumDist);
     }
   }
-  return {dist,durSec,fcmed,fcmax,cad:cadAvg,elevGain:Math.round(elevGain),splits,date:validTimes[0]||new Date()};
+
+  // ── Fallback: estimate distance from splits if GPS coords failed ──
+  if(dist<0.1&&splits.length>0&&durSec>0){
+    const splitSecs=splits.map(s=>t2s(s));
+    const totalSplitSec=splitSecs.reduce((a,b)=>a+b,0);
+    const avgPaceSec=totalSplitSec/splits.length;
+    const remainingSec=Math.max(0,durSec-totalSplitSec);
+    const remainingKm=avgPaceSec>0?remainingSec/avgPaceSec:0;
+    dist=Math.round((splits.length+remainingKm)*100)/100;
+  }
+
+  // ── Also check <distance> tag (some apps export it directly) ──
+  if(dist<0.1){
+    const distEl=doc.querySelector('distance,Distance,totalDistance');
+    if(distEl){
+      const v=parseFloat(distEl.textContent);
+      if(v>0) dist=v>1000?Math.round(v/10)/100:v; // convert meters to km if >1000
+    }
+  }
+
+  const fcmed=hrs.length?Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length):0;
+  const fcmax=hrs.length?Math.max(...hrs):0;
+  const cadAvg=cads.length?Math.round(cads.reduce((a,b)=>a+b,0)/cads.length):0;
+
+  return {
+    dist,durSec,fcmed,fcmax,
+    cad:cadAvg,
+    elevGain:Math.round(elevGain),
+    splits,
+    date:validTimes[0]||new Date()
+  };
 }
 
 function parseTCX(xml){
@@ -2220,19 +2443,32 @@ function parseCSV(txt){
 
 function fillFormFromFile(r){
   const dateStr=r.date?r.date.toISOString().split('T')[0]:new Date().toISOString().split('T')[0];
-  const setV=(id,v)=>{const el=document.getElementById(id);if(el&&v)el.value=v;};
+  const setV=(id,v)=>{const el=document.getElementById(id);if(el&&v!==undefined&&v!==null&&v!=='')el.value=v;};
+
   setV('t-data',dateStr);
+
   if(r.dist>0) setV('t-dist',r.dist);
+
   if(r.durSec>0){
-    const ts=s2t(Math.round(r.durSec));
-    setV('t-tempo',ts);
-    if(r.dist>0) setV('t-pace',sp(Math.round(r.durSec/r.dist)));
+    setV('t-tempo',s2t(Math.round(r.durSec)));
   }
+
+  // Auto-calculate pace from dist+time, or from splits average
+  if(r.dist>0&&r.durSec>0){
+    setV('t-pace',sp(Math.round(r.durSec/r.dist)));
+  } else if(r.splits&&r.splits.length>0){
+    const avgSec=r.splits.map(s=>t2s(s)).reduce((a,b)=>a+b,0)/r.splits.length;
+    if(avgSec>0) setV('t-pace',sp(Math.round(avgSec)));
+  }
+
   if(r.fcmed>0) setV('t-fcmed',r.fcmed);
   if(r.fcmax>0) setV('t-fcmax',r.fcmax);
   if(r.cad>0)   setV('t-cad',r.cad);
   if(r.elevGain>0) setV('t-elev',r.elevGain);
   if(r.splits&&r.splits.length>0) setV('t-splits',r.splits.join(', '));
+
+  // Trigger auto-calc in case some fields are still missing
+  setTimeout(autoCalcPace, 100);
 }
 
 // ═══════════════════════════════════════════════════
@@ -2250,12 +2486,19 @@ function obNext(step){
 async function obFinish(){
   if(!OB_TEST_TIME)return;
   const vam=calcZonesFromTest(OB_TEST_TIME,OB_TEST_FCMAX)||{};
+  const td=window._obTestData||{};
   await saveGoal({
     obj_id:OB_OBJ.id,nivel:OB_NIVEL,nivel_label:OB_NIVEL_LABEL||OB_NIVEL,
     dias_semana:OB_DIAS||3,target_pace_sec:OB_TARGET_PACE?ps(OB_TARGET_PACE):0,
     target_date:OB_TARGET_DATE||null,onboard_done:true,
     test_time:OB_TEST_TIME,test_fcmax:OB_TEST_FCMAX||0,
-    vam_pace:vam._vam?vam._vam.pace:0
+    vam_pace:vam._vam?vam._vam.pace:0,
+    // Store full test data for accurate analysis
+    test_dist:td.dist||3,
+    test_fcmed:td.fcmed||0,
+    test_cad:td.cad||0,
+    test_elev:td.elevGain||0,
+    test_splits:td.splits||[]
   });
   renderHome();
 }
@@ -2277,5 +2520,26 @@ async function doDelete(id){
 }
 
 </script>
+
+<!-- ══ API KEY MODAL ══ -->
+<div id="modal-api" class="modal-overlay" style="display:none">
+  <div class="modal-box">
+    <div class="modal-title">🔑 Chave da API Anthropic</div>
+    <div class="modal-sub">
+      Para usar a análise e plano com IA, você precisa de uma chave da API Anthropic.<br>
+      <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--neon)">Obter chave em console.anthropic.com →</a><br><br>
+      A chave fica salva <strong>somente no seu navegador</strong> (localStorage). Nunca é enviada a terceiros.
+    </div>
+    <div class="field" style="margin-bottom:12px">
+      <label>Sua chave API (começa com sk-ant-...)</label>
+      <input type="password" id="api-key-input" placeholder="sk-ant-api03-..." style="font-family:monospace;font-size:13px">
+    </div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-neon" style="flex:1" onclick="saveAPIKey()">💾 Salvar</button>
+      <button class="btn btn-ghost" style="width:auto;padding:12px 16px" onclick="document.getElementById('modal-api').style.display='none'">✕</button>
+    </div>
+    <div id="api-msg" style="display:none;margin-top:10px;font-size:12px;padding:8px 12px;border-radius:var(--r)"></div>
+  </div>
+</div>
 </body>
 </html>
