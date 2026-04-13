@@ -569,7 +569,7 @@ let OB_NIVEL_LABEL = '';
 // ═══════════════════════════════════════════════════
 //  PROXY CONFIG — aponte para seu Cloudflare Worker
 // ═══════════════════════════════════════════════════
-const PROXY_URL = 'https://coach-run-api.secretaria-turismo-saocarlos.workers.dev';
+const PROXY_URL = 'https://coach-run-api.SEU_USUARIO.workers.dev';
 // ↑ Troque pelo endereço do seu Worker após o deploy
 
 async function callClaudeAPI(messages, maxTokens=1500){
@@ -1630,12 +1630,22 @@ function renderPlano(){
 }
 
 // ─── Render plan from AI JSON ───────────────────────────────────
-function parsePaceRange(paceStr, zona){
-  // Convert single pace to a range (±5-10% depending on zone)
+function parsePaceRange(paceStr, zona, segDesc){
+  // Strides / tiros em subida / sprints curtos — mostrar esforço, não pace
+  // (pace de 60m ou 200m em min/km seria absurdo)
+  const isStride = segDesc && /veloc|strides|subida|sprint|80m|60m/i.test(segDesc);
+  if(isStride) return 'máx. esforço';
+
   if(!paceStr || paceStr==='—') return '';
-  const sec = typeof paceStr==='number'?paceStr:
-    (paceStr.includes('/')?t2s(paceStr.split('/')[0]):t2s(paceStr));
-  if(!sec||sec<60) return paceStr;
+  // If it's already labeled as "veloc. máxima" etc, just show effort
+  if(/veloc|máximo|máx/i.test(paceStr)) return 'máx. esforço';
+
+  // Parse the pace string
+  let cleanPace = paceStr.replace(/[^\d:]/g,'').trim();
+  if(!cleanPace.includes(':')) return '';
+  const sec = t2s(cleanPace);
+  // Sanity check — pace must be between 2:00 and 20:00 min/km
+  if(!sec || sec < 120 || sec > 1200) return '';
   const pct = zona==='Z3'?0.04 : zona==='Z2'?0.05 : 0.08;
   const lo = Math.round(sec*(1-pct));
   const hi = Math.round(sec*(1+pct));
@@ -1667,9 +1677,14 @@ function parseWorkoutBlocks(descricao, paceStr, zona){
     else if(/tiro|veloc|sprint|intervalo|1000m|400m|200m|80m|60m/i.test(segDesc)) segZona='Z3';
 
     const segColor = segZona==='Z1'?'var(--teal)':segZona==='Z2'?'var(--orange)':segZona==='Z3'?'var(--red)':'var(--tx2)';
-    const paceRange = segPace ? parsePaceRange(segPace, segZona) : '';
+    const paceRange = segPace ? parsePaceRange(segPace, segZona, segDesc) : '';
 
-    blocks.push({desc:segDesc, pace:paceRange, color:segColor, zona:segZona});
+    // If "leve" block has no pace, note Z1 range
+    let finalPace = paceRange;
+    if(!finalPace && /leve|desaquec/i.test(segDesc)){
+      finalPace = 'pace Z1';
+    }
+    blocks.push({desc:segDesc, pace:finalPace, color:segColor, zona:segZona});
   });
 
   return blocks.length>0 ? blocks : [{desc:descricao, pace:parsePaceRange(paceStr,zona), color:zoneColor, zona}];
@@ -1862,7 +1877,7 @@ function renderDefaultPlanSheet(a, dias){
       treinos:{
         seg:{tipo:'BASE',descricao:`2km aquec ${pAq} + 3km ritmo ${pBase} + 1km leve + alongamento`,zona:'Z1',pace:pBase},
         ter:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
-        qua:{tipo:'STRIDES',descricao:`2km aquec ${pAq} + 10×60m veloc. máxima subida, 1:30 caminhando de volta + 1km leve`,zona:'Z3',pace:pSprint},
+        qua:{tipo:'STRIDES',descricao:`2km aquec ${pAq} + 10×60m veloc. máxima subida, 1:30 caminhando de volta + 1km leve`,zona:'Z3',pace:'veloc. máxima'},
         qui:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
         sex:{tipo:'INTERVALADO',descricao:`2km aquec ${pAq} + 10×200m ritmo ${pForte}, 1min caminhando + 1km leve`,zona:'Z3',pace:pForte},
         sab:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
@@ -1884,7 +1899,7 @@ function renderDefaultPlanSheet(a, dias){
     {
       foco:'Qualidade e especificidade',nota:'Treinos mais próximos do ritmo objetivo',
       treinos:{
-        seg:{tipo:'STRIDES',descricao:`2km aquec + 12×80m veloc. máxima subida, 1:30 caminhando + 1km leve`,zona:'Z3',pace:pSprint},
+        seg:{tipo:'STRIDES',descricao:`2km aquec + 12×80m veloc. máxima subida, 1:30 caminhando + 1km leve`,zona:'Z3',pace:'veloc. máxima'},
         ter:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
         qua:{tipo:'INTERVALADO',descricao:`2km aquec + 5×1000m ritmo ${pForte}, 2:30 trotando + 1km leve`,zona:'Z3',pace:pForte},
         qui:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
@@ -1966,14 +1981,22 @@ REGRAS: distribua os treinos APENAS nos dias acima. Dias não selecionados = OFF
 - Treinos intermediários: qualidade (intervalado, tempo run, velocidade)
 - Último treino da semana (domingo ou o último dia): longão progressivo
 
-TIPOS DE TREINO PERMITIDOS (use EXATAMENTE estas descrições):
-- BASE: "Xkm aquecimento ${z.e?sp(z.e.max):'—'} + Ykm ritmo PACE + 1km leve + alongamento"
-- STRIDES: "2km aquecimento PACE + Nx60m/80m velocidade máxima subida, 1:30 caminhando de volta + 1km leve"
-- INTERVALADO CURTO: "2km aquecimento PACE + Nx200m/400m ritmo PACE_FORTE, 1min caminhando + 1km leve"
-- INTERVALADO LONGO: "2km aquecimento PACE + Nx1000m ritmo PACE_FORTE, 2:30 trotando + 1km leve"
-- TEMPO: "2km aquecimento PACE + Xkm ritmo PACE_ALVO + 1km leve"
-- LONGÃO: "1km aquecimento + Xkm ritmo PACE_CONFORT + 1km leve"
+TIPOS DE TREINO PERMITIDOS — formatos exatos:
+- BASE: "Xkm aquecimento ${z.e?sp(z.e.max):'—'} + Ykm ritmo ${z.e?sp(z.e.min):'—'} + 1km leve + alongamento"
+- STRIDES: "2km aquecimento ${z.e?sp(z.e.max):'—'} + Nx60m velocidade máxima subida, 1:30 caminhando + 1km leve" — pace do campo = "veloc. máxima" SEMPRE
+- INTERVALADO CURTO: "2km aquecimento ${z.e?sp(z.e.max):'—'} + Nx200m ritmo ${z.i?sp(z.i.min):'—'}, 1min caminhando + 1km leve"
+- INTERVALADO LONGO: "2km aquecimento ${z.e?sp(z.e.max):'—'} + Nx1000m ritmo ${z.i?sp(z.i.min):'—'}, 2:30 trotando + 1km leve"
+- TEMPO: "2km aquecimento ${z.e?sp(z.e.max):'—'} + Xkm ritmo ${z.t?sp(z.t.min):'—'} + 1km leve"
+- LONGÃO: "1km aquecimento + Xkm ritmo ${z.m?sp(z.m.min):'—'} + 1km leve"
 - OFF: descanso
+
+REGRAS DE PACE — CRÍTICO:
+- Use APENAS os paces das zonas calculadas acima
+- STRIDES e tiros curtos (60m/80m): campo pace = "veloc. máxima" (nunca número impossível)
+- Aquecimento/desaquecimento: limite superior Z1 = ${z.e?sp(z.e.max):'—'}
+- Corrida leve Z1: ${z.e?sp(z.e.min)+' – '+sp(z.e.max):'—'}
+- Tempo run Z2: ${z.t?sp(z.t.min)+' – '+sp(z.t.max):'—'}
+- Intervalado Z3: ${z.i?sp(z.i.min)+' – '+sp(z.i.max):'—'}
 
 PROGRESSÃO (semana a semana): aumente volume ou intensidade progressivamente, semana 4 pode ter pico ou recuo.
 
