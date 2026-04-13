@@ -285,6 +285,26 @@ select option{background:var(--bg3)}
   .evo-grid{grid-template-columns:1fr 1fr}
   .admin-actions{flex-direction:column}
 }
+
+/* ══ PLAN SPREADSHEET ══ */
+.plan-sheet{width:100%;border-collapse:collapse;font-size:11px;margin-top:8px}
+.plan-sheet th{padding:7px 5px;text-align:center;font-size:10px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;border:1px solid var(--bd);background:var(--bg3);color:var(--tx2)}
+.plan-sheet td{padding:6px 5px;vertical-align:top;border:1px solid var(--bd);min-height:60px;font-size:10px;line-height:1.5;cursor:pointer;transition:background .15s}
+.plan-sheet td:hover{background:rgba(255,255,255,.03)}
+.plan-sheet .ps-week{font-size:9px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;writing-mode:vertical-lr;transform:rotate(180deg);padding:8px 4px;text-align:center;background:var(--bg3);border:1px solid var(--bd);white-space:nowrap}
+.ps-off{background:rgba(255,255,255,.02);color:var(--tx3);text-align:center;font-weight:700;padding:20px 4px}
+.ps-z1{border-top:3px solid var(--neon) !important;background:rgba(232,255,0,.03)}
+.ps-z2{border-top:3px solid var(--orange) !important;background:rgba(255,92,0,.03)}
+.ps-z3{border-top:3px solid var(--red) !important;background:rgba(255,61,90,.03)}
+.ps-long{border-top:3px solid var(--teal) !important;background:rgba(0,229,204,.03)}
+.ps-fort{border-top:3px solid var(--purple) !important;background:rgba(180,79,255,.03)}
+.ps-type{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+.ps-desc{font-size:10px;color:var(--tx);line-height:1.5}
+.ps-pace{font-family:var(--mono);font-size:10px;font-weight:700;margin-top:3px}
+.ps-week-label{font-size:10px;font-weight:700;color:var(--tx2);padding:6px 8px;background:var(--bg3);border:1px solid var(--bd);text-align:center;letter-spacing:.4px}
+.ia-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 20px;gap:10px}
+.ia-pulse{width:48px;height:48px;border-radius:50%;border:3px solid var(--neon-dim);border-top-color:var(--neon);animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
 </style>
 </head>
 <body>
@@ -1346,290 +1366,331 @@ function renderIAText(text){
 }
 
 // ═══════════════════════════════════════════════════
-//  RENDER PLAN
+//  RENDER PLAN — Planilha semanal IA
 // ═══════════════════════════════════════════════════
 function renderPlano(){
   const a=computeAnalise();
   const el=document.getElementById('pn-plano');
-  if(!a){el.innerHTML=`<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Sem dados</div><div class="empty-sub">Configure seu objetivo e adicione treinos.</div></div>`;return;}
-
-  const z=a.z, obj=a.obj, h=a.h, n=h.length;
+  if(!a){
+    el.innerHTML=`<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Sem dados</div><div class="empty-sub">Configure seu objetivo e adicione treinos para ativar o plano.</div></div>`;
+    return;
+  }
+  const obj=a.obj;
   const dias=USER_GOAL.dias_semana||3;
+  const z=a.z;
+  const z1=z.e?`${sp(z.e.min)}–${sp(z.e.max)}/km`:'—';
+  const z2=z.t?`${sp(z.t.min)}–${sp(z.t.max)}/km`:'—';
+  const z3=z.i?`${sp(z.i.min)}–${sp(z.i.max)}/km`:'—';
+  const zlong=z.m?`${sp(z.m.min)}–${sp(z.m.max)}/km`:'—';
 
-  // Zone paces
-  const z1min=z.e?sp(z.e.min):'—', z1max=z.e?sp(z.e.max):'—';
-  const z2min=z.t?sp(z.t.min):'—', z2max=z.t?sp(z.t.max):'—';
-  const z3min=z.i?sp(z.i.min):'—', z3max=z.i?sp(z.i.max):'—';
-  const z1=z.e?`${z1min}–${z1max}/km`:'—';
-  const z2=z.t?`${z2min}–${z2max}/km`:'—';
-  const z3=z.i?`${z3min}–${z3max}/km`:'—';
-  const z3fast=z.r?sp(z.r.min):'—';
+  // Try to load saved plan from state
+  const savedPlan=window._iaPlano;
 
-  // Workout history analysis for dynamic prescription
-  const recentZones=h.slice(-4).map(w=>{
-    if(!z.i||!w.paceSec)return'z1';
-    if(w.paceSec<=z.i.min*1.05)return'z3';
-    if(w.paceSec<=z.t.max*1.05)return'z2';
-    return'z1';
-  });
-  const z3cnt=recentZones.filter(x=>x==='z3').length;
-  const z2cnt=recentZones.filter(x=>x==='z2').length;
-  const lastZ=recentZones[recentZones.length-1]||'none';
-  const maxDist=h.length?Math.max(...h.map(w=>w.dist)):4;
-  const avgDist=h.length?Math.round(h.slice(-4).reduce((a,w)=>a+w.dist,0)/Math.min(4,h.length)*10)/10:4;
-  const hadLong=h.slice(-5).some(w=>w.dist>=Math.max(7,maxDist*0.9));
-
-  // View toggle state
-  const viewMode=window._planView||'dist';
-
-  let html=`<div style="padding-top:8px;margin-bottom:12px">
-    <div style="display:flex;justify-content:space-between;align-items:center">
+  let html=`<div style="padding-top:8px">
+    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:10px">
       <div>
         <div style="font-size:18px;font-weight:700;letter-spacing:-.3px">📅 Plano de Treinamento</div>
-        <div style="font-size:12px;color:var(--tx2);margin-top:2px">${obj.t} · ${dias} dias/semana</div>
+        <div style="font-size:12px;color:var(--tx2);margin-top:2px">${obj.t} · ${dias} dias/semana · Pace atual: ${sp(a.basePace)}/km</div>
       </div>
-      <div style="display:flex;gap:6px">
-        <button onclick="window._planView='dist';renderPlano()" style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);border:1px solid ${viewMode==='dist'?'var(--neon)':'var(--bd)'};background:${viewMode==='dist'?'var(--neon-dim)':'var(--bg3)'};color:${viewMode==='dist'?'var(--neon)':'var(--tx2)'}">📏 Distância</button>
-        <button onclick="window._planView='time';renderPlano()" style="padding:5px 12px;border-radius:20px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans);border:1px solid ${viewMode==='time'?'var(--neon)':'var(--bd)'};background:${viewMode==='time'?'var(--neon-dim)':'var(--bg3)'};color:${viewMode==='time'?'var(--neon)':'var(--tx2)'}">⏱ Tempo</button>
+      <button class="btn btn-neon btn-sm" style="width:auto;padding:8px 16px" onclick="gerarPlanoIA()">🤖 Gerar Plano IA</button>
+    </div>
+
+    <!-- Legenda de zonas -->
+    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
+      <div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:rgba(232,255,0,.08);border:1px solid rgba(232,255,0,.2)">
+        <div style="width:8px;height:8px;border-radius:2px;background:var(--neon)"></div>
+        <span style="font-size:10px;font-weight:700;color:var(--neon)">Z1 BASE</span>
+        <span style="font-size:10px;color:var(--tx3)">${z1}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:rgba(255,92,0,.08);border:1px solid rgba(255,92,0,.2)">
+        <div style="width:8px;height:8px;border-radius:2px;background:var(--orange)"></div>
+        <span style="font-size:10px;font-weight:700;color:var(--orange)">Z2 TEMPO</span>
+        <span style="font-size:10px;color:var(--tx3)">${z2}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:rgba(255,61,90,.08);border:1px solid rgba(255,61,90,.2)">
+        <div style="width:8px;height:8px;border-radius:2px;background:var(--red)"></div>
+        <span style="font-size:10px;font-weight:700;color:var(--red)">Z3 FORTE</span>
+        <span style="font-size:10px;color:var(--tx3)">${z3}</span>
+      </div>
+      <div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:rgba(0,229,204,.08);border:1px solid rgba(0,229,204,.2)">
+        <div style="width:8px;height:8px;border-radius:2px;background:var(--teal)"></div>
+        <span style="font-size:10px;font-weight:700;color:var(--teal)">LONGÃO</span>
+        <span style="font-size:10px;color:var(--tx3)">${zlong}</span>
       </div>
     </div>
-  </div>`;
 
-  // Zone reference card
-  html+=`<div class="card" style="margin-bottom:10px;padding:12px 14px">
-    <div class="clabel" style="margin-bottom:8px">⚡ Seus paces de treino</div>
-    <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px">
-      <div style="padding:8px;border-radius:var(--r);background:var(--neon-dim);border:1px solid rgba(232,255,0,.2);text-align:center">
-        <div style="font-size:10px;font-weight:700;color:var(--neon);margin-bottom:2px">Z1 BASE</div>
-        <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--neon)">${z1min}–${z1max}</div>
-        <div style="font-size:9px;color:var(--tx3)">conversa normal</div>
-      </div>
-      <div style="padding:8px;border-radius:var(--r);background:var(--orange-dim);border:1px solid rgba(255,92,0,.2);text-align:center">
-        <div style="font-size:10px;font-weight:700;color:var(--orange);margin-bottom:2px">Z2 LIMIAR</div>
-        <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--orange)">${z2min}–${z2max}</div>
-        <div style="font-size:9px;color:var(--tx3)">difícil, sustentável</div>
-      </div>
-      <div style="padding:8px;border-radius:var(--r);background:var(--red-dim);border:1px solid rgba(255,61,90,.2);text-align:center">
-        <div style="font-size:10px;font-weight:700;color:var(--red);margin-bottom:2px">Z3 TIRO</div>
-        <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:var(--red)">${z3min}–${z3fast}</div>
-        <div style="font-size:9px;color:var(--tx3)">muito difícil</div>
-      </div>
-    </div>
-  </div>`;
+    <div id="plano-output">`;
 
-  // Dynamic prescription
-  function buildWorkout(type, num){
-    const nextDist=Math.round(maxDist*1.1*10)/10;
-    const baseKm=Math.max(avgDist,3);
-
-    const workouts={
-      recovery:{
-        nome:'Treino de Recuperação',
-        tipo:'Z1 — Recuperação Ativa',
-        cor:'var(--neon)',bg:'rgba(232,255,0,.04)',border:'rgba(232,255,0,.15)',
-        obs:'⚠️ Recuperação após intensidade. Não force — a adaptação acontece no descanso.',
-        dist_km:`${Math.max(3,Math.round(baseKm*.7*10)/10)}`,
-        dur_min:25,
-        blocos_dist:[
-          {label:'Corrida Z1',km:Math.max(3,Math.round(baseKm*.7*10)/10),pace:z1max,zone:'Z1',desc:'Ritmo completamente confortável'}
-        ],
-        blocos_time:[
-          {label:'Corrida Z1',min:25,pace:z1max,zone:'Z1',desc:'FC <65% FCmax. Se sentir pernas pesadas, caminhe.'}
-        ]
-      },
-      z1_base:{
-        nome:'Treino de Base',
-        tipo:'Z1 — Base Aeróbica',
-        cor:'var(--neon)',bg:'rgba(232,255,0,.04)',border:'rgba(232,255,0,.15)',
-        obs:'70–80% do volume total deve ser Z1. Constrói a fundação de toda melhoria.',
-        dist_km:`${baseKm}`,
-        dur_min:35,
-        blocos_dist:[
-          {label:'Aquecimento',km:.5,pace:z1max,zone:'Z1',desc:'Trote leve para ativar'},
-          {label:'Corrida Z1',km:Math.max(3,Math.round((baseKm-.5)*10)/10),pace:z1,zone:'Z1',desc:'Conversa normal o tempo todo'},
-          {label:'Desaquecimento',km:.5,pace:z1max,zone:'Z1',desc:'Trote + alongamento'}
-        ],
-        blocos_time:[
-          {label:'Aquecimento',min:5,pace:z1max,zone:'Z1',desc:'Trote leve'},
-          {label:'Corrida Z1',min:25,pace:z1,zone:'Z1',desc:'Conversa normal. Não acelere.'},
-          {label:'Desaquecimento',min:5,pace:z1max,zone:'Z1',desc:'Trote + alongamento'}
-        ]
-      },
-      z1_long:{
-        nome:'Longão',
-        tipo:'Z1 — Treino Longo',
-        cor:'var(--teal)',bg:'rgba(0,229,204,.04)',border:'rgba(0,229,204,.15)',
-        obs:`O treino mais importante da semana. Meta: ${nextDist}km (+10% do máximo anterior).`,
-        dist_km:`${nextDist}`,
-        dur_min:Math.round(nextDist*parseFloat(z1min.replace(':','.'))*60/60)||60,
-        blocos_dist:[
-          {label:'Aquecimento',km:.5,pace:z1max,zone:'Z1',desc:'Trote leve'},
-          {label:'Longão Z1',km:Math.max(maxDist,6),pace:z1,zone:'Z1',desc:'Mesmo ritmo do início ao fim. Hidrate a cada 20 min.'},
-          {label:'Desaquecimento',km:.5,pace:z1max,zone:'Z1',desc:'Caminhe + alongamento completo'}
-        ],
-        blocos_time:[
-          {label:'Aquecimento',min:5,pace:z1max,zone:'Z1',desc:'Trote leve'},
-          {label:'Longão Z1',min:Math.max(45,Math.round(nextDist*6)),pace:z1,zone:'Z1',desc:'Ritmo Z1 uniforme. Não acelere no final.'},
-          {label:'Desaquecimento',min:5,pace:z1max,zone:'Z1',desc:'Caminhada + alongamento'}
-        ]
-      },
-      z2_tempo:{
-        nome:'Treino Ritmado (Tempo Run)',
-        tipo:'Z2 — Limiar',
-        cor:'var(--orange)',bg:'rgba(255,92,0,.04)',border:'rgba(255,92,0,.2)',
-        obs:'Desenvolve limiar láctico — maior motor de melhoria de pace. 10–20% do volume.',
-        dist_km:`${Math.round((baseKm+2)*10)/10}`,
-        dur_min:45,
-        blocos_dist:[
-          {label:'Aquecimento',km:1.5,pace:z1,zone:'Z1',desc:'Trote leve Z1'},
-          {label:'Ritmo Z2',km:Math.max(3,Math.round(baseKm*10)/10),pace:z2,zone:'Z2',desc:'"Comfortably hard" — difícil mas sustentável. Fala só palavras isoladas.'},
-          {label:'Desaquecimento',km:1,pace:z1,zone:'Z1',desc:'Trote Z1 + alongamento'}
-        ],
-        blocos_time:[
-          {label:'Aquecimento',min:10,pace:z1,zone:'Z1',desc:'Trote Z1'},
-          {label:'Tempo Run Z2',min:20,pace:z2,zone:'Z2',desc:'"Comfortably hard" — fala só palavras. Mantenha o pace.'},
-          {label:'Moderado',min:8,pace:z1,zone:'Z1',desc:'Baixe o ritmo gradualmente'},
-          {label:'Desaquecimento',min:5,pace:z1max,zone:'Z1',desc:'Caminhada + alongamento'}
-        ]
-      },
-      z3_strides:{
-        nome:'Treino de Tiro em Subida',
-        tipo:'Z3 — Strides / Força',
-        cor:'var(--red)',bg:'rgba(255,61,90,.04)',border:'rgba(255,61,90,.2)',
-        obs:'Força neuromuscular sem fadiga excessiva. Método Correfix. 1–2x/semana no máximo.',
-        dist_km:'5',
-        dur_min:40,
-        blocos_dist:[
-          {label:'Aquecimento',km:2,pace:z1,zone:'Z1',desc:'Trote Z1'},
-          {label:'10× Tiro subida',km:'10×60m',pace:z3fast+'/km',zone:'Z3',desc:'Velocidade máxima em subida suave. Descanso: 1min30 caminhando de volta.'},
-          {label:'Desaquecimento',km:1,pace:z1,zone:'Z1',desc:'Trote Z1 + alongamento'}
-        ],
-        blocos_time:[
-          {label:'Aquecimento',min:15,pace:z1,zone:'Z1',desc:'Trote Z1'},
-          {label:'10× Tiro subida',min:20,pace:z3fast+'/km',zone:'Z3',desc:'60m subida em velocidade máxima. 1min30 de caminhada entre cada.'},
-          {label:'Desaquecimento',min:5,pace:z1,zone:'Z1',desc:'Trote Z1 + alongamento'}
-        ]
-      },
-      z3_interval:{
-        nome:'Treino Intervalado VO2max',
-        tipo:'Z3 — Intervalado',
-        cor:'var(--red)',bg:'rgba(255,61,90,.04)',border:'rgba(255,61,90,.2)',
-        obs:'Eleva teto aeróbico. 5–10% do volume total. Nunca 2 dias Z3 seguidos.',
-        dist_km:'6',
-        dur_min:45,
-        blocos_dist:[
-          {label:'Aquecimento',km:2,pace:z1,zone:'Z1',desc:'Trote Z1. Inclua 3×20seg aceleração.'},
-          {label:'5 × 1000m Z3',km:'5×1km',pace:z3,zone:'Z3',desc:`Pace Z3 (${z3}). Rec: 2 min trote Z1 entre cada. RPE 8–9.`},
-          {label:'Desaquecimento',km:1,pace:z1,zone:'Z1',desc:'Trote Z1 + alongamento'}
-        ],
-        blocos_time:[
-          {label:'Aquecimento',min:12,pace:z1,zone:'Z1',desc:'Trote Z1'},
-          {label:'5 × 4 min Z3',min:25,pace:z3,zone:'Z3',desc:`4 min em Z3 (${z3}) + 2 min trote Z1 entre cada. RPE 8–9.`},
-          {label:'Desaquecimento',min:8,pace:z1,zone:'Z1',desc:'Trote Z1 + alongamento'}
-        ]
-      }
-    };
-    return workouts[type]||workouts.z1_base;
-  }
-
-  // Prescription logic
-  let seq=[];
-  if(n===0){
-    seq=['z1_base','z3_strides','z1_long'].slice(0,dias);
+  if(savedPlan){
+    html+=renderPlanSheet(savedPlan,a);
   } else {
-    if(lastZ==='z3'||a.evoSt==='regressao') seq.push('recovery');
-    else if(lastZ==='z2') seq.push('z1_base');
-    else if(!hadLong) seq.push('z1_long');
-    else seq.push('z1_base');
-
-    if(z3cnt===0) seq.push('z3_strides');
-    else if(z3cnt>=2) seq.push('z1_base');
-    else seq.push('z2_tempo');
-
-    if(!hadLong&&!seq.includes('z1_long')) seq.push('z1_long');
-    else if(z3cnt<1) seq.push('z3_interval');
-    else seq.push('z1_base');
-
-    const extras=['z1_base','z3_strides','z2_tempo','z1_long','z1_base'];
-    while(seq.length<dias) seq.push(extras[seq.length%extras.length]);
+    // Default rule-based plan in spreadsheet format
+    html+=renderDefaultPlanSheet(a,dias);
   }
-  seq=seq.slice(0,dias);
 
-  // Assessment
-  html+=`<div class="card card-accent" style="margin-bottom:10px">
-    <div style="font-size:12px;font-weight:700;margin-bottom:6px">🤖 Análise do treinador</div>
-    <div style="font-size:12px;color:var(--tx2);line-height:1.6">${
-      n===0?'Nenhum treino inserido. Plano baseado no seu perfil.':
-      `${n} treino${n>1?'s':''} analisado${n>1?'s':''}. Último: ${h[n-1].dist}km a ${h[n-1].pace}/km. Distribuição recente: ${recentZones.filter(z=>z==='z1').length} Z1 · ${z2cnt} Z2 · ${z3cnt} Z3.`
-    }</div>
-  </div>`;
+  html+=`</div>
 
-  // Render workouts as table
-  seq.forEach((type,i)=>{
-    const w=buildWorkout(type,i+1);
-    const blocos=viewMode==='dist'?w.blocos_dist:w.blocos_time;
-    const zBadge=type.startsWith('recovery')||type.startsWith('z1')?'Z1':type.startsWith('z2')?'Z2':'Z3';
-    const zColor=zBadge==='Z1'?'var(--neon)':zBadge==='Z2'?'var(--orange)':'var(--red)';
-
-    html+=`<div style="border:1px solid ${w.border};border-radius:var(--rl);margin-bottom:10px;overflow:hidden">
-      <div style="background:${w.bg};padding:12px 14px;border-bottom:1px solid ${w.border}">
-        <div style="display:flex;justify-content:space-between;align-items:flex-start">
-          <div>
-            <div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Dia ${i+1}</div>
-            <div style="font-size:14px;font-weight:700;color:var(--tx)">${w.nome}</div>
-            <div style="font-size:11px;color:${w.cor};font-weight:600;margin-top:2px">${w.tipo}</div>
-          </div>
-          <div style="text-align:right">
-            <span style="padding:3px 10px;border-radius:12px;font-size:11px;font-weight:700;background:${zColor}22;color:${zColor};border:1px solid ${zColor}33">${zBadge}</span>
-            <div style="font-size:10px;color:var(--tx3);margin-top:4px">${viewMode==='dist'?w.dist_km+' km':w.dur_min+' min'}</div>
-          </div>
-        </div>
-        <div style="font-size:11px;color:var(--tx2);margin-top:6px;line-height:1.5">${w.obs}</div>
-      </div>
-      <div style="background:var(--bg2)">
-        <table style="width:100%;border-collapse:collapse;font-size:12px">
-          <thead>
-            <tr style="background:var(--bg3)">
-              <th style="padding:6px 10px;text-align:left;color:var(--tx3);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd)">${viewMode==='dist'?'Bloco':'Bloco'}</th>
-              <th style="padding:6px 10px;text-align:center;color:var(--tx3);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd)">${viewMode==='dist'?'Distância':'Duração'}</th>
-              <th style="padding:6px 10px;text-align:center;color:var(--tx3);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd)">Pace</th>
-              <th style="padding:6px 10px;text-align:center;color:var(--tx3);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;border-bottom:1px solid var(--bd)">Zona</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${blocos.map((b,bi)=>{
-              const bz=b.zone==='Z1'?'var(--neon)':b.zone==='Z2'?'var(--orange)':'var(--red)';
-              return `<tr style="border-bottom:1px solid var(--bd)${bi===blocos.length-1?';border-bottom:none':''}">
-                <td style="padding:8px 10px">
-                  <div style="font-weight:600;color:var(--tx)">${b.label}</div>
-                  <div style="font-size:10px;color:var(--tx2);margin-top:1px">${b.desc}</div>
-                </td>
-                <td style="padding:8px 10px;text-align:center;font-family:var(--mono);font-size:12px;font-weight:700;color:var(--tx2)">${viewMode==='dist'?b.km:b.min+' min'}</td>
-                <td style="padding:8px 10px;text-align:center;font-family:var(--mono);font-size:12px;font-weight:700;color:${bz}">${b.pace}</td>
-                <td style="padding:8px 10px;text-align:center"><span style="padding:2px 7px;border-radius:10px;font-size:10px;font-weight:700;background:${bz}22;color:${bz}">${b.zone}</span></td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>`;
-  });
-
-  html+=`<div class="card card-teal" style="margin-top:4px">
-    <div class="clabel">⚡ Como funciona o plano dinâmico</div>
+  <div class="card card-teal" style="margin-top:10px">
+    <div class="clabel">🧠 Como o plano funciona</div>
     <div style="font-size:12px;color:var(--tx2);line-height:1.7">
-      Cada treino inserido atualiza automaticamente os próximos:<br>
-      • <strong style="color:var(--neon)">Após Z3</strong> → recuperação Z1<br>
-      • <strong style="color:var(--orange)">Sem Z2</strong> → insere treino ritmado<br>
-      • <strong style="color:var(--red)">Sem Z3</strong> → insere tiro ou intervalado<br>
-      • <strong style="color:var(--teal)">Sem longão</strong> → insere longão +10%<br>
-      Paces baseados nos seus treinos reais (${sp(a.basePace)}/km atual)
+      Baseado na metodologia Correfix/WeBurn: <strong style="color:var(--teal)">80% leve + 10% moderado + 10% intenso</strong>.<br>
+      Clique em <strong style="color:var(--neon)">🤖 Gerar Plano IA</strong> para que o coach analise seu histórico e monte um plano de 4 semanas personalizado para o seu objetivo.
     </div>
+  </div>
   </div>`;
 
-  document.getElementById('pn-plano').innerHTML=html;
+  el.innerHTML=html;
 }
 
+// ─── Render plan from AI JSON ───────────────────────────────────
+function renderPlanSheet(plan, a){
+  const days=['seg','ter','qua','qui','sex','sab','dom'];
+  const dayLabels=['SEG','TER','QUA','QUI','SEX','SÁB','DOM'];
+  const zoneClass={Z1:'ps-z1',Z2:'ps-z2',Z3:'ps-z3',LONGAO:'ps-long',LONG:'ps-long',FORT:'ps-fort',OFF:'ps-off'};
+  const zoneColor={Z1:'var(--neon)',Z2:'var(--orange)',Z3:'var(--red)',LONGAO:'var(--teal)',LONG:'var(--teal)',FORT:'var(--purple)',OFF:'var(--tx3)'};
+
+  let html=`<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
+  <table class="plan-sheet">
+    <thead><tr>
+      <th style="width:40px"></th>
+      ${dayLabels.map(d=>`<th>${d}</th>`).join('')}
+    </tr></thead>
+    <tbody>`;
+
+  plan.semanas.forEach((sem,si)=>{
+    const foco=sem.foco||('Semana '+(si+1));
+    html+=`<tr>
+      <td class="ps-week">SEM ${si+1}</td>`;
+    days.forEach(d=>{
+      const t=sem.treinos[d]||{tipo:'OFF',descricao:'Descanso',zona:'OFF'};
+      const zona=(t.zona||'OFF').toUpperCase().replace('LONGÃO','LONGAO');
+      const cls=zoneClass[zona]||'ps-off';
+      const col=zoneColor[zona]||'var(--tx3)';
+      if(zona==='OFF'){
+        html+=`<td class="${cls}">OFF</td>`;
+      } else {
+        const tipo=t.tipo||zona;
+        html+=`<td class="${cls}">
+          <div class="ps-type" style="color:${col}">${tipo}</div>
+          <div class="ps-desc">${t.descricao||''}</div>
+          ${t.pace?`<div class="ps-pace" style="color:${col}">${t.pace}</div>`:''}
+        </td>`;
+      }
+    });
+    html+=`</tr>`;
+  });
+
+  html+=`</tbody></table></div>`;
+
+  // Add weekly focus summary
+  html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:10px">`;
+  plan.semanas.forEach((sem,si)=>{
+    html+=`<div class="card" style="padding:10px 12px">
+      <div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;margin-bottom:4px">Semana ${si+1}</div>
+      <div style="font-size:12px;font-weight:600;color:var(--tx);margin-bottom:4px">${sem.foco||'—'}</div>
+      ${sem.nota?`<div style="font-size:11px;color:var(--tx2)">${sem.nota}</div>`:''}
+    </div>`;
+  });
+  html+=`</div>`;
+
+  return html;
+}
+
+// ─── Default rule-based plan spreadsheet ────────────────────────
+function renderDefaultPlanSheet(a, dias){
+  const z=a.z;
+  const bp=a.basePace;
+  const tp=a.tp||bp;
+
+  // Calculate paces from zones
+  const pAq=z.e?sp(z.e.max):'—';       // aquecimento
+  const pBase=z.e?sp(z.e.min):'—';     // base
+  const pTempo=z.t?sp(z.t.min):'—';    // tempo
+  const pForte=z.i?sp(z.i.max):'—';    // forte/interval
+  const pSprint=z.r?sp(z.r.min):'—';   // sprint/strides
+
+  const maxDist=a.h.length?Math.max(...a.h.map(w=>w.dist)):5;
+  const longDist=Math.round(Math.max(maxDist, 8)*1.1*10)/10;
+
+  // Build 4 weeks
+  const plan={semanas:[
+    {
+      foco:'Adaptação e base aeróbica',nota:'Foco em ritmo constante e confortável',
+      treinos:{
+        seg:{tipo:'BASE',descricao:`2km aquec ${pAq} + 3km ritmo ${pBase} + 1km leve + alongamento`,zona:'Z1',pace:pBase},
+        ter:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
+        qua:{tipo:'STRIDES',descricao:`2km aquec ${pAq} + 10×60m veloc. máxima subida, 1:30 caminhando de volta + 1km leve`,zona:'Z3',pace:pSprint},
+        qui:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
+        sex:{tipo:'INTERVALADO',descricao:`2km aquec ${pAq} + 10×200m ritmo ${pForte}, 1min caminhando + 1km leve`,zona:'Z3',pace:pForte},
+        sab:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
+        dom:{tipo:'LONGÃO',descricao:`1km aquec + ${Math.round(longDist*0.8*10)/10}km ritmo ${sp(Math.round(bp*1.08))} + 1km leve`,zona:'LONGAO',pace:sp(Math.round(bp*1.08))}
+      }
+    },
+    {
+      foco:'Volume + velocidade',nota:'Aumentar distâncias e incluir ritmo de prova',
+      treinos:{
+        seg:{tipo:'BASE',descricao:`5km ritmo ${pBase} + alongamento`,zona:'Z1',pace:pBase},
+        ter:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
+        qua:{tipo:'TEMPO',descricao:`2km aquec ${pAq} + 4km ritmo ${pTempo>0?sp(tp):pTempo} + 1km leve`,zona:'Z2',pace:pTempo>0?sp(tp):pTempo},
+        qui:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
+        sex:{tipo:'INTERVALADO',descricao:`2km aquec + 8×400m ritmo ${pForte}, 1:30 caminhando + 1km leve`,zona:'Z3',pace:pForte},
+        sab:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
+        dom:{tipo:'LONGÃO',descricao:`1km aquec + ${Math.round(longDist*0.9*10)/10}km ritmo ${sp(Math.round(bp*1.06))} + 1km leve`,zona:'LONGAO',pace:sp(Math.round(bp*1.06))}
+      }
+    },
+    {
+      foco:'Qualidade e especificidade',nota:'Treinos mais próximos do ritmo objetivo',
+      treinos:{
+        seg:{tipo:'STRIDES',descricao:`2km aquec + 12×80m veloc. máxima subida, 1:30 caminhando + 1km leve`,zona:'Z3',pace:pSprint},
+        ter:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
+        qua:{tipo:'INTERVALADO',descricao:`2km aquec + 5×1000m ritmo ${pForte}, 2:30 trotando + 1km leve`,zona:'Z3',pace:pForte},
+        qui:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
+        sex:{tipo:'TEMPO',descricao:`2km aquec + 6km ritmo ${pTempo>0?sp(tp):pBase} + 1km leve`,zona:'Z2',pace:pTempo>0?sp(tp):pBase},
+        sab:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
+        dom:{tipo:'LONGÃO',descricao:`1km aquec + ${longDist}km ritmo ${sp(Math.round(bp*1.05))} + 1km leve`,zona:'LONGAO',pace:sp(Math.round(bp*1.05))}
+      }
+    },
+    {
+      foco:'Consolidação e progressão',nota:'Aumentar repetições e distâncias de qualidade',
+      treinos:{
+        seg:{tipo:'BASE',descricao:`7km ritmo ${pBase} + alongamento`,zona:'Z1',pace:pBase},
+        ter:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
+        qua:{tipo:'TEMPO',descricao:`2km aquec + 6km ritmo ${pTempo>0?sp(tp):pBase} + 1km leve`,zona:'Z2',pace:pTempo>0?sp(tp):pBase},
+        qui:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
+        sex:{tipo:'INTERVALADO',descricao:`2km aquec + 15×200m ritmo ${pForte}, 1min caminhando + 1km leve`,zona:'Z3',pace:pForte},
+        sab:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
+        dom:{tipo:'LONGÃO',descricao:`1km aquec + ${Math.round(longDist*1.1*10)/10}km ritmo ${sp(Math.round(bp*1.04))} + 1km leve`,zona:'LONGAO',pace:sp(Math.round(bp*1.04))}
+      }
+    }
+  ]};
+
+  // Adapt based on dias/week
+  if(dias<=3){
+    plan.semanas.forEach(s=>{
+      s.treinos.ter={tipo:'OFF',descricao:'Descanso',zona:'OFF'};
+      s.treinos.qui={tipo:'OFF',descricao:'Descanso',zona:'OFF'};
+      s.treinos.sab={tipo:'OFF',descricao:'Descanso',zona:'OFF'};
+    });
+  }
+
+  return renderPlanSheet(plan, a);
+}
+
+// ─── Generate plan via AI ────────────────────────────────────────
+async function gerarPlanoIA(){
+  const a=computeAnalise();
+  if(!a) return;
+
+  const el=document.getElementById('plano-output');
+  if(!el) return;
+
+  // Show loading
+  el.innerHTML=`<div class="ia-loading">
+    <div class="ia-pulse"></div>
+    <div style="font-size:13px;font-weight:600;color:var(--neon)">Coach IA gerando seu plano...</div>
+    <div style="font-size:11px;color:var(--tx2)">Analisando histórico e criando 4 semanas personalizadas</div>
+  </div>`;
+
+  const histLines=HIST.slice(-10).map((t,i)=>
+    `Treino ${i+1}: ${t.data} | ${t.dist}km | Pace: ${t.pace}/km${t.fcmed?' | FC: '+t.fcmed:''}${t.pse?' | PSE: '+t.pse+'/10':''}`
+  ).join('\n');
+
+  const z=a.z;
+  const bp=a.basePace;
+  const tp=a.tp;
+  const obj=a.obj;
+
+  const prompt=`Você é um coach de corrida especialista no método Correfix/WeBurn. Gere um plano de 4 semanas personalizado.
+
+DADOS DO ATLETA:
+- Objetivo: ${obj.t}
+- Nível: ${USER_GOAL?.nivel_label||'não informado'}
+- Dias/semana disponíveis: ${USER_GOAL?.dias_semana||3}
+- Pace atual (média últimos treinos): ${sp(bp)}/km
+- Pace alvo (objetivo): ${tp>0?sp(tp)+'/km':'não definido'}
+- Z1 Base: ${z.e?sp(z.e.min)+'–'+sp(z.e.max)+'/km':'—'}
+- Z2 Limiar: ${z.t?sp(z.t.min)+'–'+sp(z.t.max)+'/km':'—'}
+- Z3 Forte: ${z.i?sp(z.i.min)+'–'+sp(z.i.max)+'/km':'—'}
+- Máximo longão já feito: ${a.h.length?Math.max(...a.h.map(w=>w.dist)):0}km
+
+HISTÓRICO (últimos ${Math.min(HIST.length,10)} treinos):
+${histLines||'Nenhum treino anterior'}
+
+REGRAS DO MÉTODO CORREFIX/WEBURN:
+- Segunda: treino de base ou strides em subida
+- Terça: OFF (ou corrida leve diária para quem corre todos os dias)
+- Quarta: treino de qualidade (intervalado, tempo run)
+- Quinta: OFF (ou Fortalecimento)
+- Sexta: treino de qualidade (intervalado, velocidade)
+- Sábado: OFF
+- Domingo: longão progressivo
+
+TIPOS DE TREINO PERMITIDOS (use EXATAMENTE estas descrições):
+- BASE: "Xkm aquecimento ${z.e?sp(z.e.max):'—'} + Ykm ritmo PACE + 1km leve + alongamento"
+- STRIDES: "2km aquecimento PACE + Nx60m/80m velocidade máxima subida, 1:30 caminhando de volta + 1km leve"
+- INTERVALADO CURTO: "2km aquecimento PACE + Nx200m/400m ritmo PACE_FORTE, 1min caminhando + 1km leve"
+- INTERVALADO LONGO: "2km aquecimento PACE + Nx1000m ritmo PACE_FORTE, 2:30 trotando + 1km leve"
+- TEMPO: "2km aquecimento PACE + Xkm ritmo PACE_ALVO + 1km leve"
+- LONGÃO: "1km aquecimento + Xkm ritmo PACE_CONFORT + 1km leve"
+- OFF: descanso
+
+PROGRESSÃO (semana a semana): aumente volume ou intensidade progressivamente, semana 4 pode ter pico ou recuo.
+
+RETORNE APENAS JSON VÁLIDO (sem texto antes ou depois), no formato:
+{
+  "semanas": [
+    {
+      "semana": 1,
+      "foco": "título curto do foco da semana",
+      "nota": "dica importante para esta semana",
+      "treinos": {
+        "seg": {"tipo": "BASE", "descricao": "descrição completa", "zona": "Z1", "pace": "X:XX/km"},
+        "ter": {"tipo": "OFF", "descricao": "Descanso", "zona": "OFF"},
+        "qua": {"tipo": "STRIDES", "descricao": "descrição completa", "zona": "Z3", "pace": "veloc. máxima"},
+        "qui": {"tipo": "OFF", "descricao": "Descanso", "zona": "OFF"},
+        "sex": {"tipo": "INTERVALADO", "descricao": "descrição completa", "zona": "Z3", "pace": "X:XX/km"},
+        "sab": {"tipo": "OFF", "descricao": "Descanso", "zona": "OFF"},
+        "dom": {"tipo": "LONGÃO", "descricao": "descrição completa", "zona": "LONGAO", "pace": "X:XX/km"}
+      }
+    }
+  ]
+}
+
+Adapte o número de dias ativos conforme os dias disponíveis (${USER_GOAL?.dias_semana||3} dias). Se poucos dias, concentre os treinos nos dias mais importantes.`;
+
+  try {
+    const resp=await fetch('https://api.anthropic.com/v1/messages',{
+      method:'POST',
+      headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({
+        model:'claude-sonnet-4-20250514',
+        max_tokens:2000,
+        messages:[{role:'user',content:prompt}]
+      })
+    });
+    const data=await resp.json();
+    let text=data.content?.[0]?.text||'';
+
+    // Extract JSON
+    const jsonMatch=text.match(/\{[\s\S]*\}/);
+    if(!jsonMatch) throw new Error('Resposta inválida da IA');
+
+    const plan=JSON.parse(jsonMatch[0]);
+    window._iaPlano=plan;
+
+    el.innerHTML=renderPlanSheet(plan, a);
+
+  } catch(err){
+    el.innerHTML=`<div style="padding:16px;color:var(--red);font-size:13px;background:var(--red-dim);border-radius:var(--r);border-left:3px solid var(--red)">
+      ⚠️ Erro ao gerar plano: ${err.message}<br>
+      <span style="font-size:11px;color:var(--tx2)">Usando plano base. Tente novamente em alguns segundos.</span>
+    </div>`;
+    // Fall back to default
+    setTimeout(()=>{
+      el.innerHTML=renderDefaultPlanSheet(a, USER_GOAL?.dias_semana||3);
+    }, 2000);
+  }
+}
 
 // ═══════════════════════════════════════════════════
 //  RENDER EVOLUTION
