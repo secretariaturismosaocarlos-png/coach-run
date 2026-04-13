@@ -559,6 +559,7 @@ let OB_OBJ = null;
 let OB_NIVEL = null;
 let OB_DIAS = 3;
 let OB_DIAS_SELECIONADOS = [];
+let OB_TEMPO_TREINO = 45;
 let OB_TARGET_PACE = '';
 let OB_TARGET_DATE = '';
 let OB_TEST_TIME = '';
@@ -569,7 +570,7 @@ let OB_NIVEL_LABEL = '';
 // ═══════════════════════════════════════════════════
 //  PROXY CONFIG — aponte para seu Cloudflare Worker
 // ═══════════════════════════════════════════════════
-const PROXY_URL = 'https://coach-run-api.SEU_USUARIO.workers.dev';
+const PROXY_URL = 'https://coach-run-api.secretaria-turismo-saocarlos.workers.dev';
 // ↑ Troque pelo endereço do seu Worker após o deploy
 
 async function callClaudeAPI(messages, maxTokens=1500){
@@ -768,6 +769,7 @@ async function loadData(){
   if(prof){
     USER_GOAL = prof;
     // Restore selected days for onboarding
+    if(prof.tempo_treino) OB_TEMPO_TREINO=prof.tempo_treino;
     if(prof.dias_selecionados && prof.dias_selecionados.length>0){
       OB_DIAS_SELECIONADOS=prof.dias_selecionados;
       OB_DIAS=prof.dias_selecionados.length;
@@ -995,6 +997,16 @@ function renderOnboarding(el){
       <div style="text-align:center;font-size:13px;color:var(--tx2);margin-bottom:16px">
         ${sel.length===0?'Nenhum dia selecionado':sel.length===1?'1 dia selecionado':sel.length+' dias selecionados'}
         ${sel.length>0?'· '+sel.map(d=>diasSem.find(x=>x.id===d)?.full||d).join(', '):''}
+      </div>
+      <div style="margin-bottom:16px">
+        <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:8px">Quanto tempo você tem por treino?</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+          ${[30,45,60,90].map(t=>`<div onclick="OB_TEMPO_TREINO=${t};renderHome()" style="text-align:center;padding:12px 4px;border-radius:12px;cursor:pointer;border:2px solid ${OB_TEMPO_TREINO===t?'var(--neon)':'var(--bd)'};background:${OB_TEMPO_TREINO===t?'rgba(255,92,0,.08)':'var(--bg2)'};transition:all .2s">
+            <div style="font-size:16px;font-weight:700;color:${OB_TEMPO_TREINO===t?'var(--neon)':'var(--tx2)'}">${t}</div>
+            <div style="font-size:10px;color:var(--tx3)">min</div>
+          </div>`).join('')}
+        </div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:8px;text-align:center">Os treinos serão ajustados para caber no seu tempo disponível</div>
       </div>
       <button class="btn btn-neon" onclick="obNext(3)" ${sel.length>=2?'':'disabled style="opacity:.4;cursor:not-allowed"'}>Próximo →</button>
       <button class="btn btn-ghost" style="margin-top:8px" onclick="OB_STEP=2;renderHome()">← Voltar</button>`;
@@ -1653,41 +1665,50 @@ function parsePaceRange(paceStr, zona, segDesc){
 }
 
 function parseWorkoutBlocks(descricao, paceStr, zona){
-  // Split workout description into structured blocks
-  // Input like: "2km aquecimento 7:50 + 3km ritmo 6:41 + 1km leve 7:50"
   if(!descricao) return [];
   const blocks = [];
-  // Try to parse structured segments separated by +
-  const parts = descricao.split(/\s*\+\s*/);
   const zoneColor = zona==='Z1'?'var(--teal)':zona==='Z2'?'var(--orange)':zona==='Z3'?'var(--red)':'var(--teal)';
+
+  // Split by + (main separator between workout blocks)
+  const parts = descricao.split(/\s*\+\s*/);
 
   parts.forEach(part => {
     part = part.trim();
-    // Detect pace in part: number:number pattern
-    const paceMatch = part.match(/(\d+:\d+)/);
-    let segPace = paceMatch ? paceMatch[1] : '';
-    let segDesc = part.replace(/\d+:\d+/g,'').replace(/\s+/g,' ').trim();
-    // Remove trailing "min/km" or similar
-    segDesc = segDesc.replace(/\/km$/,'').replace(/min\/km$/,'').trim();
+    if(!part) return;
 
-    // Detect segment type for coloring
+    // Split main effort from rest info by comma
+    // e.g. "8x400m ritmo 6:41, 1min caminhando" -> ["8x400m ritmo 6:41","1min caminhando"]
+    const commaParts = part.split(/,\s*/);
+    const mainPart = commaParts[0].trim();
+    const restPart = commaParts.slice(1).join(', ').trim();
+
+    // Extract pace only from mainPart
+    const paceMatch = mainPart.match(/(\d+:\d+)/);
+    let segPace = paceMatch ? paceMatch[1] : '';
+    let segDesc = mainPart.replace(/\d+:\d+/g,'').replace(/\s+/g,' ').trim();
+    segDesc = segDesc.replace(/\/km$/i,'').replace(/min\/km$/i,'').trim();
+
+    // Detect zone
     let segZona = zona;
-    if(/aquec|leve|desaquec|warm/i.test(segDesc)) segZona='Z1';
-    else if(/ritmo|tempo|ritmado/i.test(segDesc)) segZona='Z2';
-    else if(/tiro|veloc|sprint|intervalo|1000m|400m|200m|80m|60m/i.test(segDesc)) segZona='Z3';
+    if(/aquec|warm/i.test(segDesc)) segZona='Z1';
+    else if(/\bleve\b|desaquec/i.test(segDesc)) segZona='Z1';
+    else if(/\britmo\b|tempo run|ritmado/i.test(segDesc) && !/tiro|sprint|veloc/i.test(segDesc)) segZona='Z2';
+    else if(/tiro|veloc|sprint|strides|1000m|400m|200m|80m|60m/i.test(segDesc)) segZona='Z3';
 
     const segColor = segZona==='Z1'?'var(--teal)':segZona==='Z2'?'var(--orange)':segZona==='Z3'?'var(--red)':'var(--tx2)';
-    const paceRange = segPace ? parsePaceRange(segPace, segZona, segDesc) : '';
+    let finalPace = segPace ? parsePaceRange(segPace, segZona, segDesc) : '';
+    if(!finalPace && segZona==='Z1') finalPace = 'Z1 confortável';
 
-    // If "leve" block has no pace, note Z1 range
-    let finalPace = paceRange;
-    if(!finalPace && /leve|desaquec/i.test(segDesc)){
-      finalPace = 'pace Z1';
-    }
     blocks.push({desc:segDesc, pace:finalPace, color:segColor, zona:segZona});
+
+    // Add rest as a separate dimmed row
+    if(restPart && /caminh|recup|descanso|trote|rest|jog/i.test(restPart)){
+      const restClean = restPart.replace(/\d+:\d+/g,'').replace(/\s+/g,' ').trim();
+      blocks.push({desc:'↩ descanso: '+restClean, pace:'', color:'var(--tx3)', zona:'Z1', isRest:true});
+    }
   });
 
-  return blocks.length>0 ? blocks : [{desc:descricao, pace:parsePaceRange(paceStr,zona), color:zoneColor, zona}];
+  return blocks.length>0 ? blocks : [{desc:descricao, pace:parsePaceRange(paceStr,zona,descricao), color:zoneColor, zona}];
 }
 
 function renderWorkoutCell(t, col, cls){
@@ -1701,10 +1722,16 @@ function renderWorkoutCell(t, col, cls){
 
   let inner = `<div class="ps-type" style="color:${ztopColor}">${t.tipo||zona}</div>`;
   blocks.forEach(b => {
-    inner += `<div class="ps-block">
-      <span class="ps-bdesc">${b.desc}</span>
-      ${b.pace?`<span class="ps-bpace" style="color:${b.color}">${b.pace}</span>`:''}
-    </div>`;
+    if(b.isRest){
+      inner += `<div class="ps-block" style="opacity:.6">
+        <span class="ps-bdesc" style="color:var(--tx3);font-style:italic">${b.desc}</span>
+      </div>`;
+    } else {
+      inner += `<div class="ps-block">
+        <span class="ps-bdesc">${b.desc}</span>
+        ${b.pace?`<span class="ps-bpace" style="color:${b.color}">${b.pace}</span>`:''}
+      </div>`;
+    }
   });
 
   return `<td class="${zclass}" onclick="openDayModal(this)" data-treino='${JSON.stringify(t).replace(/'/g,"\'")}'>
@@ -1965,6 +1992,7 @@ DADOS DO ATLETA:
 - Objetivo: ${obj.t}
 - Nível: ${USER_GOAL?.nivel_label||'não informado'}
 - Dias/semana disponíveis: ${USER_GOAL?.dias_semana||3}
+- Tempo máximo por treino: ${USER_GOAL?.tempo_treino||45} minutos (CRÍTICO: todos os treinos devem caber neste tempo)
 - Pace atual (média últimos treinos): ${sp(bp)}/km
 - Pace alvo (objetivo): ${tp>0?sp(tp)+'/km':'não definido'}
 - Z1 Base: ${z.e?sp(z.e.min)+'–'+sp(z.e.max)+'/km':'—'}
@@ -1997,6 +2025,14 @@ REGRAS DE PACE — CRÍTICO:
 - Corrida leve Z1: ${z.e?sp(z.e.min)+' – '+sp(z.e.max):'—'}
 - Tempo run Z2: ${z.t?sp(z.t.min)+' – '+sp(z.t.max):'—'}
 - Intervalado Z3: ${z.i?sp(z.i.min)+' – '+sp(z.i.max):'—'}
+
+TEMPO POR TREINO — CRÍTICO:
+- Tempo máximo disponível: ${USER_GOAL?.tempo_treino||45} minutos
+- Ajuste volumes (km e repetições) para que o treino caiba nesse tempo
+- Para 30 min: treinos mais curtos, menos repetições
+- Para 45 min: volumes médios conforme as zonas
+- Para 60 min: volumes normais
+- Para 90 min: volumes maiores, longão mais longo
 
 PROGRESSÃO (semana a semana): aumente volume ou intensidade progressivamente, semana 4 pode ter pico ou recuo.
 
@@ -2821,7 +2857,7 @@ async function obFinish(){
   const td=window._obTestData||{};
   await saveGoal({
     obj_id:OB_OBJ.id,nivel:OB_NIVEL,nivel_label:OB_NIVEL_LABEL||OB_NIVEL,
-    dias_semana:OB_DIAS||3,dias_selecionados:OB_DIAS_SELECIONADOS.length>0?OB_DIAS_SELECIONADOS:null,target_pace_sec:OB_TARGET_PACE?ps(OB_TARGET_PACE):0,
+    dias_semana:OB_DIAS||3,tempo_treino:OB_TEMPO_TREINO||45,dias_selecionados:OB_DIAS_SELECIONADOS.length>0?OB_DIAS_SELECIONADOS:null,target_pace_sec:OB_TARGET_PACE?ps(OB_TARGET_PACE):0,
     target_date:OB_TARGET_DATE||null,onboard_done:true,
     test_time:OB_TEST_TIME,test_fcmax:OB_TEST_FCMAX||0,
     vam_pace:vam._vam?vam._vam.pace:0,
