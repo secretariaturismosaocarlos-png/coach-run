@@ -1240,45 +1240,94 @@ function calcZonesFromTest(testTime, fcmax){
   const secs = t2s(testTime);
   if(!secs || secs < 600 || secs > 2400) return null;
 
-  const vam_ms = 3000 / secs;
-  const vam_kmh = Math.round(vam_ms * 3.6 * 10)/10;
-  const vam_pace = Math.round(1000 / vam_ms);
+  // VAM = Velocidade Aeróbica Máxima (pace no teste de 3km)
+  const vam_ms   = 3000 / secs;
+  const vam_pace = Math.round(1000 / vam_ms); // sec/km at VO2max
 
-  // Anchor zones to athlete's ACTUAL workout pace — never show zones
-  // slower than what the athlete already does
+  // ── ZONAS BASEADAS EM VAM (modelo Seiler + Stöggl & Sperlich) ──
+  // Z1 Base:     65–75% VAM  → conversa normal, maioria dos treinos (80%)
+  // Z1+ Leve:    76–82% VAM  → longão confortável
+  // Z2 Limiar:   83–88% VAM  → "comfortably hard", 20min+, lactate threshold
+  // Z3 VO2max:   95–105% VAM → intervalado curto, máx 10-15min acumulados
+  // Z3+ Sprint:  106%+ VAM   → strides, tiros 60-200m
+
+  // Se o atleta já tem treinos, refinar pelo pace real observado
   let refPace = vam_pace;
-  if(typeof HIST !== 'undefined' && HIST && HIST.length > 0){
-    const recent = HIST.slice(-5).filter(w => w.paceSec > 60 && w.paceSec < 900);
-    if(recent.length > 0){
-      const avg = Math.round(recent.reduce((a,w)=>a+w.paceSec,0)/recent.length);
-      refPace = Math.min(vam_pace, avg);
+  if(typeof HIST !== 'undefined' && HIST && HIST.length >= 3){
+    // Usar mediana dos últimos 5 treinos como ancora
+    const recent = HIST.slice(-5).filter(w => w.paceSec > 120 && w.paceSec < 900);
+    if(recent.length >= 2){
+      const sorted = recent.map(w=>w.paceSec).sort((a,b)=>a-b);
+      const median = sorted[Math.floor(sorted.length/2)];
+      // Usar o mais rápido entre VAM e pace real (evita zonas abaixo do nível atual)
+      refPace = Math.min(vam_pace, median);
     }
   }
 
+  // FC zones se disponível
+  const fcZones = fcmax > 0 ? {
+    z1max: Math.round(fcmax * 0.75),
+    z1min: Math.round(fcmax * 0.65),
+    z2max: Math.round(fcmax * 0.87),
+    z2min: Math.round(fcmax * 0.76),
+    z3min: Math.round(fcmax * 0.88),
+  } : null;
+
+  const fcLabel = (zname) => {
+    if(!fcZones) return '';
+    if(zname==='z1') return ` · FC ${fcZones.z1min}–${fcZones.z1max} bpm`;
+    if(zname==='z2') return ` · FC ${fcZones.z2min}–${fcZones.z2max} bpm`;
+    if(zname==='z3') return ` · FC ${fcZones.z3min}–${fcmax} bpm`;
+    return '';
+  };
+
   return {
-    e: { min:Math.round(refPace*1.10), max:Math.round(refPace*1.25),
-         label:'Z1 — Base aeróbica', emoji:'🟢',
-         desc:'Conversa normal. 70–80% dos treinos.',
-         color:'var(--neon)', bg:'var(--neon-dim)' },
-    m: { min:Math.round(refPace*1.03), max:Math.round(refPace*1.09),
-         label:'Z1+ — Leve/Moderado', emoji:'🔵',
-         desc:'Fala frases curtas. Longões.',
-         color:'#4da6ff', bg:'rgba(77,166,255,.08)' },
-    t: { min:Math.round(refPace*0.95), max:Math.round(refPace*1.02),
-         label:'Z2 — Limiar', emoji:'🟡',
-         desc:'Difícil mas sustentável 20+ min.',
-         color:'var(--orange)', bg:'var(--orange-dim)' },
-    i: { min:Math.round(refPace*0.87), max:Math.round(refPace*0.94),
-         label:'Z3 — Intervalo VO2max', emoji:'🔴',
-         desc:'Muito difícil. Máx 10–15 min acumulados.',
-         color:'var(--red)', bg:'var(--red-dim)' },
-    r: { min:Math.round(refPace*0.80), max:Math.round(refPace*0.86),
-         label:'Z3+ — Sprint', emoji:'💀',
-         desc:'Sprint curto. Máx 400m ou 2 min por rep.',
-         color:'var(--purple)', bg:'var(--purple-dim)' },
-    _vam: { ms:vam_ms, kmh:vam_kmh, pace:vam_pace }
+    e: {
+      min: Math.round(refPace * 1.12), max: Math.round(refPace * 1.28),
+      label: 'Z1 — Base aeróbica', emoji: '🟢',
+      desc: `Conversa normal. 80% dos treinos.${fcLabel('z1')}`,
+      color: 'var(--teal)', bg: 'var(--teal-dim)',
+      pct: '65–75% VAM'
+    },
+    m: {
+      min: Math.round(refPace * 1.04), max: Math.round(refPace * 1.11),
+      label: 'Z1+ — Leve/Longão', emoji: '🔵',
+      desc: `Fala frases curtas. Longões e recuperação ativa.`,
+      color: '#4da6ff', bg: 'rgba(77,166,255,.08)',
+      pct: '76–82% VAM'
+    },
+    t: {
+      min: Math.round(refPace * 0.94), max: Math.round(refPace * 1.03),
+      label: 'Z2 — Limiar láctico', emoji: '🟡',
+      desc: `Difícil mas sustentável 20min+. "Comfortably hard".${fcLabel('z2')}`,
+      color: 'var(--orange)', bg: 'var(--orange-dim)',
+      pct: '83–88% VAM'
+    },
+    i: {
+      min: Math.round(refPace * 0.86), max: Math.round(refPace * 0.93),
+      label: 'Z3 — Intervalo VO2max', emoji: '🔴',
+      desc: `Muito difícil. Máx 10–15 min acumulados.${fcLabel('z3')}`,
+      color: 'var(--red)', bg: 'var(--red-dim)',
+      pct: '95–105% VAM'
+    },
+    r: {
+      min: Math.round(refPace * 0.78), max: Math.round(refPace * 0.85),
+      label: 'Z3+ — Sprint/Strides', emoji: '💀',
+      desc: 'Tiros 60–200m em subida. Máximo esforço.',
+      color: 'var(--purple)', bg: 'var(--purple-dim)',
+      pct: '106%+ VAM'
+    },
+    _vam: {
+      ms: vam_ms,
+      kmh: Math.round(vam_ms * 3.6 * 10)/10,
+      pace: vam_pace,
+      refPace,
+      fcmax: fcmax||0,
+      fcZones
+    }
   };
 }
+
 
 function buildHumanAnalysis(last, basePace, evoSt, evoMag, obj, n, h){
   const pace = last.pace;
@@ -1466,6 +1515,20 @@ function renderAnalise(){
     </div>
   </div>`;
 
+  // Test calibration info (compact)
+  if(USER_GOAL?.test_time){
+    const vz = calcZonesFromTest(USER_GOAL.test_time, USER_GOAL.test_fcmax||0);
+    if(vz){
+      html+=`<div style="display:flex;gap:8px;align-items:center;padding:10px 14px;border-radius:var(--r);background:rgba(0,184,148,.06);border:1px solid rgba(0,184,148,.2);margin-bottom:10px;flex-wrap:wrap">
+        <span style="font-size:11px;font-weight:700;color:var(--teal)">📐 Calibrado pelo teste</span>
+        <span style="font-size:11px;color:var(--tx2)">Teste: ${USER_GOAL.test_dist||3}km em ${USER_GOAL.test_time}</span>
+        <span style="font-size:11px;color:var(--tx2)">· VAM: ${vz._vam.kmh}km/h</span>
+        ${USER_GOAL.test_fcmax?`<span style="font-size:11px;color:var(--tx2)">· FCmax: ${USER_GOAL.test_fcmax}bpm</span>`:''}
+        ${HIST.length>=3?`<span style="font-size:11px;color:var(--teal);font-weight:600">· ${HIST.length} treinos registrados</span>`:''}
+      </div>`;
+    }
+  }
+
   // Metrics
   html+=`<div class="metrics">
     <div class="metric metric-neon"><div class="mlabel">Ritmo</div><div class="mval" style="color:var(--neon)">${a.last.pace}</div><div class="msub">min por km</div></div>
@@ -1486,10 +1549,22 @@ function renderAnalise(){
     <div class="prog-bg"><div class="prog-fill" style="width:${a.progPct}%;background:${a.progPct>=100?'var(--neon)':a.progPct>=50?'var(--orange)':'var(--teal)'}"></div></div></div>`:''}
   </div>`;
 
+  // Drift / consistency alert
+  if(a.driftAlert){
+    const dColor = a.driftAlert.type==='fadiga'?'var(--red)':'var(--teal)';
+    const dBg = a.driftAlert.type==='fadiga'?'var(--red-dim)':'var(--teal-dim)';
+    const dIcon = a.driftAlert.type==='fadiga'?'⚠️':'📈';
+    html+=`<div style="padding:10px 14px;border-radius:var(--r);background:${dBg};border-left:4px solid ${dColor};margin-bottom:8px;font-size:12px;color:${dColor}">
+      ${dIcon} ${a.driftAlert.msg}
+    </div>`;
+  }
+
   // Coach message
   html+=`<div class="card card-teal">
     <div class="clabel">💬 Mensagem do treinador</div>
     <div style="font-size:14px;line-height:1.8;color:var(--tx)">${a.analysis.coachMsg}</div>
+    ${a.evoDetails?`<div style="font-size:11px;color:var(--tx2);margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">📊 Evolução: ${a.evoDetails}</div>`:''}
+    ${a.consistency>0?`<div style="font-size:11px;color:var(--tx2);margin-top:4px">🗓️ Consistência de treino: ${a.consistency}%</div>`:''}
   </div>`;
 
   // O que você fez bem
@@ -1589,36 +1664,76 @@ async function gerarAnaliseIA(){
   const nivel=USER_GOAL?.nivel_label||USER_GOAL?.nivel||'não informado';
   const dias=USER_GOAL?.dias_semana||3;
 
-  const prompt=`Você é um treinador de corrida profissional de alto nível, especializado em ciência do esporte, fisiologia do exercício e análise de dados de performance. Você atua como um sistema inteligente de treinamento, capaz de analisar treinos profundamente, interpretar evolução ao longo do tempo, ajustar estratégias automaticamente, gerar treinos e planos semanais personalizados e prevenir fadiga e overtraining. Você toma decisões baseadas em dados. Nunca seja genérico.
+  const testData = USER_GOAL;
+  const vamZones = testData?.test_time ? calcZonesFromTest(testData.test_time, testData.test_fcmax||0) : null;
+  const vamInfo = vamZones ? `
+- VAM (Velocidade Aeróbica Máxima): ${vamZones._vam.kmh} km/h (pace ${sp(vamZones._vam.pace)}/km)
+- Pace de referência calibrado: ${sp(vamZones._vam.refPace)}/km
+- Z1 Base (treinos leves): ${sp(vamZones.e.min)}–${sp(vamZones.e.max)}/km
+- Z2 Limiar: ${sp(vamZones.t.min)}–${sp(vamZones.t.max)}/km
+- Z3 VO2max: ${sp(vamZones.i.min)}–${sp(vamZones.i.max)}/km
+- FC máxima no teste: ${testData.test_fcmax||'não informada'} bpm` : '- Teste não realizado — zonas estimadas pelo pace atual';
 
----
+  // Build complete workout history for context
+  const histLines = HIST.map((t,i)=>{
+    const zoneLabel = vamZones ? (
+      t.paceSec <= vamZones.i.max ? 'Z3' :
+      t.paceSec <= vamZones.t.max ? 'Z2' : 'Z1'
+    ) : '';
+    return `T${i+1}(${t.data}): ${t.dist}km pace ${t.pace}/km${t.tempo?' dur:'+t.tempo:''}${t.fcmed?' FC:'+t.fcmed:''}${t.fcmax?' FCmax:'+t.fcmax:''}${t.cad?' cad:'+t.cad:''}${t.pse?' PSE:'+t.pse+'/10':''}${t.elev?' elev:'+t.elev+'m':''}${t.splits&&t.splits.length?' splits:['+t.splits.join(',')+']':''}${zoneLabel?' zona:'+zoneLabel:''}`;
+  }).join('\n');
 
-# 🧠 MEMÓRIA DO ATLETA (HISTÓRICO)
-${histLines||'Nenhum histórico anterior disponível.'}
+  // Evolution metrics
+  const a = computeAnalise();
+  const evoInfo = a ? `
+- Pace atual (mediana): ${sp(a.basePace)}/km
+- Evolução: ${a.evoDetails||a.evoSt}
+- Consistência de treinos: ${a.consistency||'—'}%
+- Drift cardíaco: ${a.driftAlert?.msg||'normal'}
+- Estimativa de tempo na prova (${obj.dist}km): ${a.raceEst||'—'}
+- Progresso rumo ao objetivo: ${a.progPct||0}%
+- ETA para objetivo: ${a.weeksETA} semanas` : '';
 
----
+  const prompt=`Você é um coach de corrida especialista em fisiologia do exercício e treinamento polarizado. Analise TODOS os dados abaixo com precisão científica. Nunca seja genérico — use os números reais.
 
-# 👤 PERFIL DO USUÁRIO
-- Nível: ${nivel}
-- Objetivo: ${obj.t}
-- Categoria: ${OBJS.find(o=>o.id===USER_GOAL?.obj_id)?.cat||'5K'} (${obj.dist}km)
-- Plano base: Preparação Nível ${USER_GOAL?.nivel==='iniciante'||USER_GOAL?.nivel==='iniciante_ativo'?'1':'2'} — ${obj.t}
+═══ CALIBRAÇÃO INICIAL (TESTE DE CORRIDA) ═══
+- Data do teste: ${testData?.created_at?.slice(0,10)||'não informada'}
+- Distância do teste: ${testData?.test_dist||3}km
+- Tempo no teste: ${testData?.test_time||'não informado'}
+- FC máxima no teste: ${testData?.test_fcmax||'não informada'} bpm
+- FC média no teste: ${testData?.test_fcmed||'não informada'} bpm
+- Splits do teste: ${testData?.test_splits?.join(', ')||'não informados'}
+- Elevação no teste: ${testData?.test_elev||0}m
+${vamInfo}
+
+═══ PERFIL DO ATLETA ═══
+- Nome implícito: atleta
+- Objetivo: ${obj.t} (${obj.dist}km)
+- Pace alvo: ${tp>0?sp(tp)+'/km':'não definido'}
+- Nível declarado: ${nivel}
 - Dias por semana: ${dias}
+- Tempo por treino (semana): ${USER_GOAL?.tempo_treino||45}min
+- Longão: ${USER_GOAL?.tempo_longao>0?USER_GOAL.tempo_longao+'min':'livre'}
 
----
+═══ HISTÓRICO COMPLETO DE TREINOS (${HIST.length} treinos) ═══
+${histLines||'Nenhum treino registrado ainda.'}
 
-# 📊 TREINO ATUAL
+═══ MÉTRICAS DE EVOLUÇÃO ═══
+${evoInfo}
+
+═══ TREINO MAIS RECENTE (analisar em detalhe) ═══
+- Data: ${last.data}
 - Distância: ${last.dist}km
-- Tempo: ${last.tempo||'não informado'}
+- Duração: ${last.tempo||'não informado'}
 - Pace médio: ${last.pace}/km
-- Frequência cardíaca média: ${last.fcmed||'não informada'} bpm
-- Frequência cardíaca máxima: ${last.fcmax||'não informada'} bpm
+- FC média: ${last.fcmed||'não informada'} bpm
+- FC máxima: ${last.fcmax||'não informada'} bpm
 - Cadência: ${last.cad||'não informada'} spm
-- PSE (percepção de esforço): ${last.pse||'não informada'}/10
+- PSE: ${last.pse||'não informado'}/10
 - Splits: ${last.splits&&last.splits.length?last.splits.join(', '):'não informados'}
-- Elevação: ${last.elev||'não informada'} m
+- Elevação: ${last.elev||0}m
 
----
+═══════════════════════════════════════════════
 
 Agora gere a análise completa seguindo TODAS as etapas abaixo. Use linguagem clara, direta e prática. Seja específico com os dados — nunca genérico.
 
@@ -2219,9 +2334,12 @@ DADOS DO ATLETA:
 - Tempo do longão (fim de semana): ${USER_GOAL?.tempo_longao>0?(USER_GOAL.tempo_longao+' minutos'):'sem limite — pode ser mais longo'} 
 - Pace atual (média últimos treinos): ${sp(bp)}/km
 - Pace alvo (objetivo): ${tp>0?sp(tp)+'/km':'não definido'}
-- Z1 Base: ${z.e?sp(z.e.min)+'–'+sp(z.e.max)+'/km':'—'}
-- Z2 Limiar: ${z.t?sp(z.t.min)+'–'+sp(z.t.max)+'/km':'—'}
-- Z3 Forte: ${z.i?sp(z.i.min)+'–'+sp(z.i.max)+'/km':'—'}
+- Z1 Base: ${z.e?sp(z.e.min)+'–'+sp(z.e.max)+'/km':'—'} ${z.e?.pct?'('+z.e.pct+')':''}
+- Z2 Limiar: ${z.t?sp(z.t.min)+'–'+sp(z.t.max)+'/km':'—'} ${z.t?.pct?'('+z.t.pct+')':''}
+- Z3 VO2max: ${z.i?sp(z.i.min)+'–'+sp(z.i.max)+'/km':'—'} ${z.i?.pct?'('+z.i.pct+')':''}
+- VAM (velocidade máx aeróbica): ${USER_GOAL?.vam_pace?sp(USER_GOAL.vam_pace)+'/km':'estimada'}
+- Pace atual do atleta: ${sp(a.basePace)}/km
+- Evolução recente: ${a.evoDetails||a.evoSt}
 - Máximo longão já feito: ${a.h.length?Math.max(...a.h.map(w=>w.dist)):0}km
 
 HISTÓRICO (últimos ${Math.min(HIST.length,10)} treinos):
@@ -2456,41 +2574,143 @@ function computeAnalise(){
   const h=HIST; const n=h.length; if(n===0) return null;
   const obj=OBJS.find(o=>o.id===USER_GOAL.obj_id)||OBJS[0];
   const last=h[n-1];
-  const recent=h.slice(-5).filter(w=>w.paceSec>60&&w.paceSec<900);
-  const basePace=recent.length>0?Math.round(recent.reduce((a,w)=>a+w.paceSec,0)/recent.length):last.paceSec;
-  let evoSt='estavel',evoMag=0;
-  if(n>=3){
-    const prev=h.slice(-4,-1).filter(w=>w.paceSec>0);
-    if(prev.length>0){const prevAvg=prev.reduce((a,w)=>a+w.paceSec,0)/prev.length;evoMag=prevAvg-basePace;if(evoMag>10)evoSt='evolucao';else if(evoMag<-15)evoSt='regressao';}
+
+  // ── PACE BASE: mediana dos treinos recentes (mais robusto que média) ──
+  const recent=h.slice(-8).filter(w=>w.paceSec>120&&w.paceSec<900);
+  let basePace = last.paceSec;
+  if(recent.length >= 2){
+    const sorted = recent.map(w=>w.paceSec).sort((a,b)=>a-b);
+    basePace = sorted[Math.floor(sorted.length/2)];
   }
-  let z={};
-  if(USER_GOAL.test_time){z=calcZonesFromTest(USER_GOAL.test_time,USER_GOAL.test_fcmax||0)||{};}
+
+  // ── TENDÊNCIA DE EVOLUÇÃO (compara blocos de treinos) ──
+  let evoSt='estavel', evoMag=0, evoDetails='';
+  if(n>=4){
+    const block1 = h.slice(0, Math.floor(n/2)).filter(w=>w.paceSec>0);
+    const block2 = h.slice(Math.floor(n/2)).filter(w=>w.paceSec>0);
+    if(block1.length>0 && block2.length>0){
+      const avg1 = block1.reduce((a,w)=>a+w.paceSec,0)/block1.length;
+      const avg2 = block2.reduce((a,w)=>a+w.paceSec,0)/block2.length;
+      evoMag = avg1 - avg2; // positive = improving (faster)
+      const pctChange = Math.round(Math.abs(evoMag)/avg1*100);
+      if(evoMag > 15)     { evoSt='evolucao';  evoDetails=`${sp(Math.abs(evoMag))}/km mais rápido (${pctChange}% evolução)`; }
+      else if(evoMag < -20){ evoSt='regressao'; evoDetails=`${sp(Math.abs(evoMag))}/km mais lento`; }
+      else                  { evoDetails='ritmo estável'; }
+    }
+  } else if(n>=2){
+    const older = h.slice(0,-1).map(w=>w.paceSec).filter(v=>v>0);
+    const prevAvg = older.reduce((a,b)=>a+b,0)/older.length;
+    evoMag = prevAvg - last.paceSec;
+    if(evoMag > 10)      { evoSt='evolucao';  evoDetails=`Último treino ${sp(Math.abs(evoMag))}/km mais rápido`; }
+    else if(evoMag < -15){ evoSt='regressao'; evoDetails=`Último treino ${sp(Math.abs(evoMag))}/km mais lento`; }
+  }
+
+  // ── ZONAS: calibradas pelo TESTE + refinadas pelos treinos reais ──
+  let z = {};
+  if(USER_GOAL.test_time){
+    z = calcZonesFromTest(USER_GOAL.test_time, USER_GOAL.test_fcmax||0) || {};
+  }
   if(!z||!z.e){
-    z={
-      e:{min:Math.round(basePace*1.10),max:Math.round(basePace*1.25),label:'Z1 — Base aeróbica',emoji:'🟢',desc:'Conversa normal.',color:'var(--neon)',bg:'var(--neon-dim)'},
-      m:{min:Math.round(basePace*1.03),max:Math.round(basePace*1.09),label:'Z1+ — Leve/Moderado',emoji:'🔵',desc:'Frases curtas.',color:'#4da6ff',bg:'rgba(77,166,255,.08)'},
-      t:{min:Math.round(basePace*0.95),max:Math.round(basePace*1.02),label:'Z2 — Limiar',emoji:'🟡',desc:'Difícil, sustentável.',color:'var(--orange)',bg:'var(--orange-dim)'},
-      i:{min:Math.round(basePace*0.87),max:Math.round(basePace*0.94),label:'Z3 — Intervalo VO2max',emoji:'🔴',desc:'Muito difícil.',color:'var(--red)',bg:'var(--red-dim)'},
-      r:{min:Math.round(basePace*0.80),max:Math.round(basePace*0.86),label:'Z3+ — Sprint',emoji:'💀',desc:'Sprint curto.',color:'var(--purple)',bg:'var(--purple-dim)'},
+    // Fallback sem teste: baseado no pace atual
+    z = {
+      e:{min:Math.round(basePace*1.12),max:Math.round(basePace*1.28),label:'Z1 — Base aeróbica',emoji:'🟢',desc:'Conversa normal.',color:'var(--teal)',bg:'var(--teal-dim)'},
+      m:{min:Math.round(basePace*1.04),max:Math.round(basePace*1.11),label:'Z1+ — Leve/Longão',emoji:'🔵',desc:'Frases curtas.',color:'#4da6ff',bg:'rgba(77,166,255,.08)'},
+      t:{min:Math.round(basePace*0.94),max:Math.round(basePace*1.03),label:'Z2 — Limiar',emoji:'🟡',desc:'Difícil, sustentável.',color:'var(--orange)',bg:'var(--orange-dim)'},
+      i:{min:Math.round(basePace*0.86),max:Math.round(basePace*0.93),label:'Z3 — VO2max',emoji:'🔴',desc:'Muito difícil.',color:'var(--red)',bg:'var(--red-dim)'},
+      r:{min:Math.round(basePace*0.78),max:Math.round(basePace*0.85),label:'Z3+ — Sprint',emoji:'💀',desc:'Tiros curtos máximos.',color:'var(--purple)',bg:'var(--purple-dim)'},
     };
   }
-  let score=50;
-  if(n>=5)score+=10;if(evoSt==='evolucao')score+=15;if(evoSt==='regressao')score-=10;
-  if(last.fcmed>0&&last.fcmed<160)score+=10;if(last.dist>=5)score+=10;if(last.splits&&last.splits.length>1)score+=5;
-  score=Math.max(10,Math.min(99,score));
-  const tp=USER_GOAL.target_pace_sec||0;
-  const startPace=h[0].paceSec;
-  let progPct=0,gapSec=0;
-  if(tp>0){gapSec=Math.max(0,basePace-tp);const totalGap=startPace-tp;progPct=totalGap>0?Math.min(100,Math.round((startPace-basePace)/totalGap*100)):0;}
-  let raceEst='';
-  if(obj.dist>0&&basePace>0){raceEst=s2t(Math.round(basePace*obj.dist*1.08));}
-  const improvPerWeek=8;
-  const weeksETA=tp>0&&gapSec>0?Math.ceil(gapSec/improvPerWeek):obj.weeks||12;
-  const etaD=new Date();etaD.setDate(etaD.getDate()+weeksETA*7);
-  const etaDate=etaD.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
-  const analysis=buildHumanAnalysis(last,basePace,evoSt,evoMag,obj,n,h);
-  return {last,h,n,score,evoSt,evoMag,basePace,z,obj,tp,gapSec,progPct,raceEst,weeksETA,etaDate,analysis};
+
+  // ── DRIFT CARDÍACO: detectar overtraining/fadiga ──
+  let driftAlert = null;
+  if(n >= 3 && last.fcmed > 0){
+    const prevWithFC = h.slice(-6,-1).filter(w=>w.fcmed>0&&w.paceSec>0);
+    if(prevWithFC.length >= 2){
+      const prevEfficiency = prevWithFC.map(w=>w.fcmed/w.paceSec);
+      const avgPrevEff = prevEfficiency.reduce((a,b)=>a+b,0)/prevEfficiency.length;
+      const curEff = last.fcmed/last.paceSec;
+      const drift = (curEff - avgPrevEff)/avgPrevEff;
+      if(drift > 0.08) driftAlert = {type:'fadiga', msg:`FC ${Math.round(drift*100)}% acima do esperado para esse ritmo — sinal de fadiga acumulada`};
+      else if(drift < -0.08) driftAlert = {type:'melhora', msg:`FC ${Math.round(Math.abs(drift)*100)}% abaixo do esperado — coração mais eficiente, ótima evolução!`};
+    }
+  }
+
+  // ── CONSISTÊNCIA ──
+  let consistency = 0;
+  if(n >= 4){
+    const intervals = [];
+    for(let i=1;i<Math.min(n,8);i++){
+      const d1 = new Date(h[i-1].data.split('/').reverse().join('-'));
+      const d2 = new Date(h[i].data.split('/').reverse().join('-'));
+      if(!isNaN(d1)&&!isNaN(d2)) intervals.push((d2-d1)/(86400000));
+    }
+    if(intervals.length > 0){
+      const avgGap = intervals.reduce((a,b)=>a+b,0)/intervals.length;
+      const targetGap = 7 / (USER_GOAL?.dias_semana||3); // expected days between workouts
+      consistency = Math.max(0, Math.min(100, Math.round(100 - Math.abs(avgGap-targetGap)/targetGap*50)));
+    }
+  }
+
+  // ── SCORE ──
+  let score = 40;
+  if(n >= 3)  score += 10;
+  if(n >= 7)  score += 5;
+  if(evoSt==='evolucao')  score += 20;
+  if(evoSt==='regressao') score -= 15;
+  if(last.fcmed>0 && last.fcmed<165) score += 8;
+  if(last.dist >= obj.dist*0.6)  score += 8;
+  if(last.splits&&last.splits.length>1) score += 5;
+  if(consistency > 70) score += 8;
+  if(driftAlert?.type==='melhora') score += 5;
+  if(driftAlert?.type==='fadiga')  score -= 10;
+  score = Math.max(10, Math.min(99, score));
+
+  // ── PROGRESSO RUMO AO OBJETIVO ──
+  const tp = USER_GOAL.target_pace_sec || (USER_GOAL.target_pace ? ps(USER_GOAL.target_pace) : 0);
+  const startPace = h[0].paceSec;
+  let progPct=0, gapSec=0;
+  if(tp>0){
+    gapSec = Math.max(0, basePace - tp);
+    const totalGap = Math.max(1, startPace - tp);
+    progPct = Math.min(100, Math.round((startPace - basePace) / totalGap * 100));
+  }
+
+  // ── ESTIMATIVA DE TEMPO NA PROVA ──
+  // Riegel formula: T2 = T1 × (D2/D1)^1.06
+  let raceEst = '';
+  if(obj.dist>0 && basePace>0){
+    // Use test as reference if available
+    if(USER_GOAL.test_time && USER_GOAL.test_dist){
+      const testSecs = t2s(USER_GOAL.test_time);
+      const testDist = USER_GOAL.test_dist||3;
+      const raceTimeSec = testSecs * Math.pow(obj.dist/testDist, 1.06);
+      raceEst = s2t(Math.round(raceTimeSec));
+    } else {
+      raceEst = s2t(Math.round(basePace * obj.dist * 1.08));
+    }
+  }
+
+  // ── ETA ──
+  // Based on actual improvement rate
+  let weeksETA = obj.weeks || 12;
+  if(tp>0 && gapSec>0 && n>=4){
+    const improvTotal = startPace - basePace;
+    const weeksElapsed = Math.max(1, n / (USER_GOAL?.dias_semana||3));
+    const improvPerWeek = improvTotal / weeksElapsed;
+    weeksETA = improvPerWeek > 0 ? Math.ceil(gapSec / improvPerWeek) : obj.weeks;
+    weeksETA = Math.min(weeksETA, obj.weeks * 2); // cap at 2x expected
+  }
+  const etaD = new Date();
+  etaD.setDate(etaD.getDate() + weeksETA * 7);
+  const etaDate = etaD.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+
+  const analysis = buildHumanAnalysis(last, basePace, evoSt, evoMag, obj, n, h);
+
+  return {last, h, n, score, evoSt, evoMag, evoDetails, basePace, z, obj,
+          tp, gapSec, progPct, raceEst, weeksETA, etaDate,
+          consistency, driftAlert, analysis};
 }
+
 
 // ═══════════════════════════════════════════════════
 //  RENDER TREINO
