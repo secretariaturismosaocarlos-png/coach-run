@@ -643,31 +643,31 @@ const OBJS = [
   {id:'5k_700',        cat:'5K',    icon:'🏃', t:'5km · Abaixo de 7:00 min/km',    s:'Nível 1 — corrida leve e consistente',
    dist:5,  weeks:8,  hasPace:true, label:'Pace alvo', paceOptions:['7:30','7:00','6:45']},
   {id:'5k_600',        cat:'5K',    icon:'🏃', t:'5km · Abaixo de 6:00 min/km',    s:'Nível 1/2 — base sólida construída',
-   dist:5,  weeks:10, hasPace:true, label:'Pace alvo', paceOptions:['6:30','6:15','6:00']},
+   dist:5,  weeks:10, hasPace:true, label:'Pace alvo', paceOptions:['5:50','5:40','5:30','5:20']},
   {id:'5k_530',        cat:'5K',    icon:'⚡', t:'5km · Abaixo de 5:30 min/km',    s:'Nível experiente — ganho de velocidade',
-   dist:5,  weeks:10, hasPace:true, label:'Pace alvo', paceOptions:['5:50','5:40','5:30']},
+   dist:5,  weeks:10, hasPace:true, label:'Pace alvo', paceOptions:['5:20','5:10','5:00','4:50']},
   {id:'5k_500',        cat:'5K',    icon:'⚡', t:'5km · Abaixo de 5:00 min/km',    s:'Nível 2 — treino intenso estruturado',
-   dist:5,  weeks:12, hasPace:true, label:'Pace alvo', paceOptions:['5:15','5:05','5:00']},
+   dist:5,  weeks:12, hasPace:true, label:'Pace alvo', paceOptions:['4:55','4:45','4:35','4:25']},
   {id:'5k_430',        cat:'5K',    icon:'💨', t:'5km · Abaixo de 4:30 min/km',    s:'Nível avançado — alta performance',
-   dist:5,  weeks:12, hasPace:true, label:'Pace alvo', paceOptions:['4:45','4:35','4:30']},
+   dist:5,  weeks:12, hasPace:true, label:'Pace alvo', paceOptions:['4:25','4:15','4:05','3:55']},
   {id:'5k_400',        cat:'5K',    icon:'💨', t:'5km · Abaixo de 4:00 min/km',    s:'Nível competidor — treino específico',
-   dist:5,  weeks:14, hasPace:true, label:'Pace alvo', paceOptions:['4:10','4:05','4:00']},
+   dist:5,  weeks:14, hasPace:true, label:'Pace alvo', paceOptions:['3:55','3:45','3:35','3:25']},
 
   // ── 10KM ─────────────────────────────────────────────
   {id:'10k_700',       cat:'10K',   icon:'🏃', t:'10km · Abaixo de 7:00 min/km',         s:'Nível 1 — foco em completar bem',
-   dist:10, weeks:12, hasPace:true, label:'Pace alvo', paceOptions:['7:30','7:15','7:00']},
+   dist:10, weeks:12, hasPace:true, label:'Pace alvo', paceOptions:['6:50','6:40','6:30','6:20']},
   {id:'10k_630',       cat:'10K',   icon:'🏃', t:'10km · Abaixo de 6:30 min/km',         s:'Nível 1 — construção de base',
-   dist:10, weeks:12, hasPace:true, label:'Pace alvo', paceOptions:['6:45','6:35','6:30']},
+   dist:10, weeks:12, hasPace:true, label:'Pace alvo', paceOptions:['6:20','6:10','6:00','5:50']},
   {id:'10k_600',       cat:'10K',   icon:'⚡', t:'10km · Abaixo de 6:00 min/km',         s:'Nível 1/2 — ritmo consistente',
-   dist:10, weeks:14, hasPace:true, label:'Pace alvo', paceOptions:['6:15','6:05','6:00']},
+   dist:10, weeks:14, hasPace:true, label:'Pace alvo', paceOptions:['5:50','5:40','5:30','5:20']},
   {id:'10k_530',       cat:'10K',   icon:'⚡', t:'10km · Abaixo de 5:30 min/km',         s:'Nível 2 — treino de qualidade',
-   dist:10, weeks:14, hasPace:true, label:'Pace alvo', paceOptions:['5:45','5:35','5:30']},
+   dist:10, weeks:14, hasPace:true, label:'Pace alvo', paceOptions:['5:20','5:10','5:00','4:50']},
   {id:'10k_500',       cat:'10K',   icon:'💨', t:'10km · Abaixo de 5:00 min/km',         s:'Nível avançado — intervalados fortes',
-   dist:10, weeks:16, hasPace:true, label:'Pace alvo', paceOptions:['5:10','5:05','5:00']},
+   dist:10, weeks:16, hasPace:true, label:'Pace alvo', paceOptions:['4:55','4:45','4:35','4:25']},
   {id:'10k_430',       cat:'10K',   icon:'💨', t:'10km · Abaixo de 4:30 min/km',         s:'Nível competidor — alta intensidade',
-   dist:10, weeks:16, hasPace:true, label:'Pace alvo', paceOptions:['4:40','4:35','4:30']},
+   dist:10, weeks:16, hasPace:true, label:'Pace alvo', paceOptions:['4:25','4:15','4:05','3:55']},
   {id:'10k_400',       cat:'10K',   icon:'🔥', t:'10km · Abaixo de 4:00 min/km',         s:'Elite amador — treinamento específico',
-   dist:10, weeks:18, hasPace:true, label:'Pace alvo', paceOptions:['4:10','4:05','4:00']},
+   dist:10, weeks:18, hasPace:true, label:'Pace alvo', paceOptions:['3:55','3:45','3:35','3:25']},
 
   // ── 21KM (MEIA MARATONA) ─────────────────────────────
   {id:'21k_600',       cat:'21K',   icon:'🥈', t:'Meia maratona · Abaixo de 6:00 min/km', s:'Nível 1 — completar com conforto',
@@ -850,6 +850,11 @@ async function loadData(){
   HIST = (workouts||[]).map(w=>({...w, paceSec:ps(w.pace)}));
   const {data:prof} = await db.from('user_goals').select('*').eq('user_id', CU.id).single();
   await loadRaces();
+  // Load previously generated plan
+  try{
+    const savedPlan = localStorage.getItem('cr_plan_'+CU?.id);
+    if(savedPlan){ const p=JSON.parse(savedPlan); window._iaPlano=p.plan; window._defaultPlan=p.plan; }
+  }catch(e){}
   if(prof){
     USER_GOAL = prof;
     // Restore selected days for onboarding
@@ -1483,9 +1488,152 @@ function getCoachMsg(obj, evoSt, basePace, dist, n){
 // ═══════════════════════════════════════════════════
 //  RENDER ANALYSIS — HUMAN FRIENDLY
 // ═══════════════════════════════════════════════════
+
+// ═══════════════════════════════════════════════════
+//  RENDER TEST ANALYSIS — first workout = test calibration
+// ═══════════════════════════════════════════════════
+function renderTestAnalise(el, a){
+  const z = a.z;
+  const vam = z._vam || {};
+  const tg = USER_GOAL;
+  const tp = a.tp;
+  const obj = a.obj;
+
+  // Zone display
+  const zonesHtml = Object.values(z).filter(zv=>zv.label).map(zv=>`
+    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;border-radius:var(--r);margin-bottom:6px;background:${zv.bg};border:1px solid ${zv.bg.replace('.10)','.25)')}"
+      ">
+      <div>
+        <div style="font-size:13px;font-weight:700;color:${zv.color}">${zv.emoji} ${zv.label}</div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:2px">${zv.desc}</div>
+        ${zv.pct?`<div style="font-size:10px;color:var(--tx3);margin-top:1px">${zv.pct} da VAM</div>`:''}
+      </div>
+      <div style="text-align:right">
+        <div style="font-family:var(--mono);font-size:14px;font-weight:700;color:${zv.color}">${sp(zv.min)}–${sp(zv.max)}</div>
+        <div style="font-size:10px;color:var(--tx3)">min/km</div>
+      </div>
+    </div>`).join('');
+
+  // Splits analysis
+  const splits = tg.test_splits || [];
+  let splitsHtml = '';
+  if(splits.length >= 2){
+    const sv = splits.map(s=>t2s(s));
+    const mn = Math.min(...sv), mx = Math.max(...sv);
+    const diff = mx - mn;
+    const trend = sv[sv.length-1] < sv[0] ? '📈 Negativo split — acelerou no final' :
+                  diff > 30 ? '⚠️ Pacing irregular — saiu rápido e desacelerou' :
+                  '✅ Pacing uniforme e controlado';
+    splitsHtml = `<div class="card" style="margin-bottom:12px">
+      <div class="clabel">⏱ Splits do teste</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
+        ${splits.map((s,i)=>{
+          const v=t2s(s);
+          const col=v===mn?'var(--teal)':v===mx?'var(--red)':'var(--tx2)';
+          return `<div style="padding:6px 12px;border-radius:20px;background:var(--bg3);border:1px solid var(--bd);font-family:var(--mono);font-size:12px;font-weight:700;color:${col}">km${i+1} ${s}</div>`;
+        }).join('')}
+      </div>
+      <div style="font-size:12px;color:var(--tx2)">${trend}</div>
+    </div>`;
+  }
+
+  // Effort analysis from FC
+  let fcAnalysis = '';
+  if(tg.test_fcmax > 0 && tg.test_fcmed > 0){
+    const pct = Math.round(tg.test_fcmed / tg.test_fcmax * 100);
+    const effortLabel = pct >= 95 ? 'Esforço máximo — teste bem executado ✅' :
+                        pct >= 88 ? 'Esforço alto — bom teste' :
+                        'Esforço moderado — pode ter potencial maior';
+    fcAnalysis = `<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:rgba(232,54,93,.06);border:1px solid rgba(232,54,93,.15);margin-bottom:8px">
+      <div style="font-size:24px;font-weight:800;font-family:var(--mono);color:var(--red)">${pct}%</div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--red)">${effortLabel}</div>
+        <div style="font-size:11px;color:var(--tx2)">FC média ${tg.test_fcmed} bpm de ${tg.test_fcmax} bpm máx</div>
+      </div>
+    </div>`;
+  }
+
+  // Race estimate using Riegel
+  let raceEst = '';
+  if(tg.test_time && obj.dist > 0){
+    const testSec = t2s(tg.test_time);
+    const testDist = tg.test_dist || 3;
+    const est = testSec * Math.pow(obj.dist / testDist, 1.06);
+    raceEst = s2t(Math.round(est));
+  }
+
+  el.innerHTML = `<div style="padding-top:8px">
+
+    <div style="margin-bottom:16px">
+      <div style="font-size:12px;font-weight:700;color:var(--neon);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">📐 Análise do Teste de Calibração</div>
+      <div style="font-size:22px;font-weight:800;color:var(--tx)">Suas zonas de treino</div>
+      <div style="font-size:13px;color:var(--tx2);margin-top:2px">Baseadas no seu teste de ${tg.test_dist||3}km em ${tg.test_time}</div>
+    </div>
+
+    <!-- Key metrics from test -->
+    <div class="metrics" style="margin-bottom:12px">
+      <div class="metric metric-neon">
+        <div class="mlabel">Pace no teste</div>
+        <div class="mval" style="color:var(--neon)">${tg.test_time?(()=>{const s=t2s(tg.test_time);return sp(Math.round(s/(tg.test_dist||3)))})():'—'}</div>
+        <div class="msub">min/km</div>
+      </div>
+      <div class="metric metric-orange">
+        <div class="mlabel">VAM</div>
+        <div class="mval" style="color:var(--orange)">${vam.kmh||'—'}</div>
+        <div class="msub">km/h</div>
+      </div>
+      <div class="metric metric-teal">
+        <div class="mlabel">Estimativa ${obj.dist}km</div>
+        <div class="mval" style="font-size:16px;color:var(--teal)">${raceEst||'—'}</div>
+        <div class="msub">tempo estimado</div>
+      </div>
+    </div>
+
+    <!-- FC effort -->
+    ${fcAnalysis}
+
+    <!-- Splits -->
+    ${splitsHtml}
+
+    <!-- Target -->
+    ${tp>0?`<div class="card card-accent" style="margin-bottom:12px">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px">🎯 ${obj.t}</div>
+      <div class="grow"><span class="gkey">Seu pace atual</span><span class="gval">${sp(a.basePace)}/km</span></div>
+      <div class="grow"><span class="gkey">Pace alvo</span><span class="gval" style="color:var(--neon)">${sp(tp)}/km</span></div>
+      <div class="grow"><span class="gkey">Diferença a reduzir</span><span class="gval">${sp(Math.max(0,a.basePace-tp))}/km</span></div>
+      <div class="grow"><span class="gkey">Prazo estimado</span><span class="gval" style="color:var(--orange)">${a.weeksETA} semanas (até ${a.etaDate})</span></div>
+    </div>`:''}
+
+    <!-- Zones -->
+    <div class="card" style="margin-bottom:12px">
+      <div class="clabel">🏃 Zonas de treinamento calibradas</div>
+      <div style="font-size:11px;color:var(--tx2);margin-bottom:10px">Use esses ritmos em todos os treinos do plano. As zonas serão refinadas conforme você treina.</div>
+      ${zonesHtml}
+    </div>
+
+    <!-- Next steps -->
+    <div class="card card-teal">
+      <div class="clabel">✅ Próximos passos</div>
+      <div style="font-size:13px;line-height:1.8;color:var(--tx)">
+        1. Acesse <strong>📅 Plano</strong> → <strong>Gerar Plano IA</strong> para seu plano personalizado de 4 semanas<br>
+        2. Execute os treinos respeitando as zonas acima<br>
+        3. Insira cada treino no app — a análise vai comparar com o plano e orientar os ajustes<br>
+        4. As zonas serão refinadas automaticamente conforme seu desempenho real
+      </div>
+    </div>
+
+  </div>`;
+}
+
 function renderAnalise(){
   const a=computeAnalise();const el=document.getElementById('pn-analise');
   if(!a){el.innerHTML=`<div class="empty"><div class="empty-icon">📊</div><div class="empty-title">Sem dados</div><div class="empty-sub">Adicione treinos para ver a análise.</div></div>`;return;}
+
+  // ── SPECIAL: if only 1 workout and test exists, show test analysis first ──
+  if(HIST.length===1 && USER_GOAL?.test_time){
+    renderTestAnalise(el, a);
+    return;
+  }
 
   const sc=a.score>=90?{c:'var(--neon)',l:'EXCELENTE'}:a.score>=70?{c:'var(--teal)',l:'BOM'}:a.score>=50?{c:'var(--orange)',l:'ATENÇÃO'}:{c:'var(--red)',l:'REVISAR'};
   const ecBadge=a.evoSt==='evolucao'?'badge-neon':a.evoSt==='regressao'?'badge-red':'badge-orange';
@@ -1731,46 +1879,74 @@ ${evoInfo}
 
 ═══════════════════════════════════════════════
 
-Agora gere a análise completa seguindo TODAS as etapas abaixo. Use linguagem clara, direta e prática. Seja específico com os dados — nunca genérico.
+Agora gere a análise COMPLETA e PERSONALIZADA. Use os dados reais acima — nunca seja genérico.
 
-# 🧠 ETAPA 1 — RESUMO DO TREINO
-Explique em até 2 frases como foi o treino e a percepção geral.
+═══ PLANO PRESCRITO (compare com o treino realizado) ═══
+${(()=>{
+  const plan = window._iaPlano || window._defaultPlan;
+  if(!plan || !plan.semanas) return 'Nenhum plano gerado ainda — esta é a primeira análise';
+  // Find what was prescribed for the day of this workout
+  const workoutDate = new Date(last.data.split('/').reverse().join('-'));
+  const dayMap = ['dom','seg','ter','qua','qui','sex','sab'];
+  const dayKey = dayMap[workoutDate.getDay()];
+  // Find the most recent week's prescription for this day type
+  const sem = plan.semanas[Math.min(Math.floor(HIST.length/3), plan.semanas.length-1)];
+  const prescribed = sem?.treinos?.[dayKey];
+  if(!prescribed || prescribed.zona==='OFF') return 'Dia de descanso prescrito para ' + dayKey;
+  return `Treino prescrito para este dia (${dayKey}):
+- Tipo: ${prescribed.tipo}
+- Zona: ${prescribed.zona}
+- Descrição: ${prescribed.descricao}
+- Pace prescrito: ${prescribed.pace}`;
+})()}
 
-# 👍 ETAPA 2 — PONTOS FORTES
-Liste até 3 pontos positivos claros baseados nos dados.
+═══════════════════════════════════════════════
 
-# ⚠️ ETAPA 3 — PONTOS A MELHORAR
-Liste até 3 pontos objetivos com o que fazer.
+# 🧠 ETAPA 1 — RESUMO E CONFORMIDADE COM O PLANO
+Compare o treino realizado com o prescrito:
+- O atleta seguiu o plano? Se não, o que divergiu?
+- Pace estava na zona correta?
+- Distância/duração compatível com o prescrito?
 
-# 🔍 ETAPA 4 — ANÁLISE TÉCNICA
-Avalie esforço vs ritmo (eficiência), FC, consistência, cadência e fadiga. Traduzir para linguagem prática.
+# ✅ ETAPA 2 — PONTOS FORTES
+Baseado nos dados reais e na comparação com o plano.
 
-# 📈 ETAPA 5 — ANÁLISE DE EVOLUÇÃO
-Compare com o histórico: evolução, manutenção ou regressão? Basear em pace, FC e consistência.
+# ⚠️ ETAPA 3 — DESVIOS DO PLANO E CORREÇÕES
+Se o treino divergiu do prescrito:
+- O que ficou diferente (pace, distância, zona)?
+- Por que isso importa para o objetivo?
+- Como corrigir no próximo treino?
+Se seguiu o plano: confirmar e parabenizar.
 
-# 🚨 ETAPA 6 — ALERTAS INTELIGENTES
-Se necessário: esforço alto demais, risco de fadiga, excesso de intensidade, falta de estímulo.
+# 🔍 ETAPA 4 — ANÁLISE TÉCNICA FISIOLÓGICA
+- Eficiência: pace vs FC (estava na zona certa?)
+- Drift cardíaco (FC aumentou ao longo do treino?)
+- Cadência e pacing (splits consistentes?)
+- Sinais de fadiga ou overtraining
 
-# 🧠 ETAPA 7 — ZONAS DE TREINO (baseadas no pace atual)
-Calcule e apresente:
-- Z1 Leve: pace +15% a +25%
-- Z2 Moderado: pace +5% a +10%  
-- Z3 Forte: pace -5% a -10%
+# 📈 ETAPA 5 — EVOLUÇÃO EM RELAÇÃO AO OBJETIVO
+Compare com o histórico e o teste de calibração:
+- Está no ritmo para atingir ${obj.t}?
+- Pace atual (${sp(a.basePace)}/km) vs pace alvo (${tp>0?sp(tp)+'/km':'não definido'})
+- ETA atualizado baseado na evolução real
 
-# 🧠 ETAPA 8 — DECISÃO DO SISTEMA
-Com base na evolução, decidir: aumentar carga, manter ou recuar. Explicar a decisão.
+# 🚨 ETAPA 6 — ALERTAS
+Gerar alertas SE necessário (não invente problemas):
+- Pace muito acima/abaixo do prescrito
+- Risco de fadiga ou lesão
+- Falta de estímulo na zona correta
 
-# 🎯 ETAPA 9 — FOCO DA SEMANA
-Dizer claramente o foco e ajustes imediatos.
+# 🎯 ETAPA 7 — PRÓXIMO TREINO (formato relógio)
+Com base no plano e na evolução:
+- Tipo, objetivo, distância, duração estimada
+- Aquecimento: X min a Y:YY/km
+- Bloco principal: estrutura detalhada com pace em faixa
+- Desaquecimento: X min a Y:YY/km
+⚠️ Paces DEVEM usar as zonas calibradas pelo teste
 
-# 🏃 ETAPA 10 — PRÓXIMO TREINO COMPLETO
-Gerar treino com: tipo, objetivo, duração, distância. Estrutura: aquecimento + blocos principais + desaquecimento. Com pace em faixa ou esforço claro. Formato pronto para relógio.
-
-# 📅 ETAPA 11 — PLANO SEMANAL (${dias} dias)
-Gerar plano completo com ${dias} treinos. Cada um com: tipo, objetivo, estrutura, duração, distância e pace detalhado.
-
-# 📊 ETAPA 12 — SCORE DO TREINO
-Nota de 0 a 100 com classificação (90+ excelente / 70–89 bom / 50–69 atenção / <50 ruim) e breve explicação.`;
+# 📊 ETAPA 8 — SCORE DO TREINO
+Nota 0–100 considerando: execução do plano (40%), zona correta (30%), consistência (30%)
+Classificação: 90+ excelente / 70–89 bom / 50–69 atenção / <50 revisar`;
 
   try {
     const text = await callClaudeAPI([{role:'user', content: prompt}], 2500);
@@ -2408,6 +2584,8 @@ Adapte o número de dias ativos conforme os dias disponíveis (${USER_GOAL?.dias
 
     const plan=JSON.parse(jsonMatch[0]);
     window._iaPlano=plan;window._defaultPlan=plan;
+    // Save plan to localStorage so analysis can compare against it
+    try{ localStorage.setItem('cr_plan_'+CU?.id, JSON.stringify({plan, savedAt: new Date().toISOString()})); }catch(e){}
 
     el.innerHTML=renderPlanSheet(plan, a);
 
