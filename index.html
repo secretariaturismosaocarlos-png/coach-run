@@ -890,7 +890,7 @@ let USER_GOAL = null; // {obj_id, nivel, dias_semana, target_pace_sec, target_da
 
 async function saveGoal(g){
   USER_GOAL = g;
-  await db.from('user_goals').upsert({user_id:CU.id, ...g, updated_at:new Date()});
+  await db.from('user_goals').upsert({user_id:CU.id, ...g});
 }
 
 async function saveWorkout(t){
@@ -1986,7 +1986,19 @@ RESPONDA em formato markdown direto:
 [Fadiga, saiu muito da zona, risco de lesão — baseado nos dados reais]`;
   }
 
+  // ── CALL CLAUDE API ──
+  try {
+    const text = await callClaudeAPI([{role:'user', content: prompt}], 1200);
+    out.innerHTML = renderIAText(text);
+    btn.textContent = '✨ Gerar nova análise';
+    btn.disabled = false;
+  } catch(err) {
+    const keyMsg = '';
+    out.innerHTML = `<div style="color:var(--red);font-size:13px;padding:10px;background:var(--red-dim);border-radius:var(--r)">⚠️ ${err.message}${keyMsg}</div>`;
+    btn.textContent = '✨ Tentar novamente';
+    btn.disabled = false;
   }
+}
 
 function renderIAText(text){
   // Convert markdown headings and lists to styled HTML
