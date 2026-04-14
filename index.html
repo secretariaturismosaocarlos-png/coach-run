@@ -282,12 +282,14 @@ select option{background:var(--bg3)}
 @keyframes sdp{0%,100%{opacity:1}50%{opacity:.2}}
 
 /* ══ RESPONSIVE ══ */
-@media(max-width:480px){
+@media(max-width:600px){
   .g3{grid-template-columns:1fr 1fr}
   .metrics{grid-template-columns:1fr 1fr}
   .obj-grid{grid-template-columns:1fr}
   .evo-grid{grid-template-columns:1fr 1fr}
   .admin-actions{flex-direction:column}
+  /* Race calendar stacks on mobile */
+  .race-cal-grid{grid-template-columns:1fr !important}
 }
 
 /* ══ PLAN SPREADSHEET ══ */
@@ -1677,6 +1679,28 @@ function renderPlano(){
 }
 
 // ─── Render plan from AI JSON ───────────────────────────────────
+function estimateWorkoutTime(descricao, zona){
+  // Rough time estimate in minutes based on description
+  if(!descricao || zona==='OFF') return 0;
+  let mins = 0;
+  // Parse km mentions
+  const kmMatches = descricao.matchAll(/(\d+(?:\.\d+)?)km/g);
+  for(const m of kmMatches) {
+    const km = parseFloat(m[1]);
+    const paceSec = zona==='Z3'?380 : zona==='Z2'?420 : 480;
+    mins += (km * paceSec) / 60;
+  }
+  // Parse repetition patterns like 10×200m
+  const repMatches = descricao.matchAll(/(\d+)[×x](\d+)m/g);
+  for(const m of repMatches) {
+    const reps = parseInt(m[1]), dist = parseInt(m[2]);
+    const km = (reps * dist) / 1000;
+    const restMins = reps * 1.5; // avg rest
+    mins += (km * 350/60) + restMins;
+  }
+  return mins > 0 ? Math.round(mins) : 0;
+}
+
 function parsePaceRange(paceStr, zona, segDesc){
   // Strides / tiros em subida / sprints curtos — mostrar esforço, não pace
   // (pace de 60m ou 200m em min/km seria absurdo)
@@ -1802,16 +1826,29 @@ function renderPlanSheet(plan, a){
   const zoneColor={Z1:'var(--neon)',Z2:'var(--orange)',Z3:'var(--red)',LONGAO:'var(--teal)',LONG:'var(--teal)',FORT:'var(--purple)',OFF:'var(--tx3)'};
   const viewMode = window._planDayView||'table';
 
+  const metricMode = window._planMetric||'dist'; // 'dist' or 'time'
   // View toggle
-  let html = `<div style="display:flex;gap:6px;margin-bottom:10px">
-    <button onclick="window._planDayView='table';document.getElementById('plano-output').innerHTML=renderPlanSheet(window._iaPlano||window._defaultPlan,null)" 
-      style="flex:1;padding:8px;border-radius:var(--r);border:2px solid ${viewMode==='table'?'var(--neon)':'var(--bd)'};background:${viewMode==='table'?'rgba(255,92,0,.08)':'var(--bg2)'};color:${viewMode==='table'?'var(--neon)':'var(--tx2)'};font-weight:700;font-size:12px;cursor:pointer;font-family:var(--sans)">
-      📋 Planilha
-    </button>
-    <button onclick="window._planDayView='cards';document.getElementById('plano-output').innerHTML=renderPlanSheet(window._iaPlano||window._defaultPlan,null)"
-      style="flex:1;padding:8px;border-radius:var(--r);border:2px solid ${viewMode==='cards'?'var(--neon)':'var(--bd)'};background:${viewMode==='cards'?'rgba(255,92,0,.08)':'var(--bg2)'};color:${viewMode==='cards'?'var(--neon)':'var(--tx2)'};font-weight:700;font-size:12px;cursor:pointer;font-family:var(--sans)">
-      📆 Por dia
-    </button>
+  let html = `<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
+    <div style="display:flex;gap:6px;flex:1">
+      <button onclick="window._planDayView='table';document.getElementById('plano-output').innerHTML=renderPlanSheet(window._iaPlano||window._defaultPlan,null)" 
+        style="flex:1;padding:8px;border-radius:var(--r);border:2px solid ${viewMode==='table'?'var(--neon)':'var(--bd)'};background:${viewMode==='table'?'rgba(255,92,0,.08)':'var(--bg2)'};color:${viewMode==='table'?'var(--neon)':'var(--tx2)'};font-weight:700;font-size:12px;cursor:pointer;font-family:var(--sans)">
+        📋 Planilha
+      </button>
+      <button onclick="window._planDayView='cards';document.getElementById('plano-output').innerHTML=renderPlanSheet(window._iaPlano||window._defaultPlan,null)"
+        style="flex:1;padding:8px;border-radius:var(--r);border:2px solid ${viewMode==='cards'?'var(--neon)':'var(--bd)'};background:${viewMode==='cards'?'rgba(255,92,0,.08)':'var(--bg2)'};color:${viewMode==='cards'?'var(--neon)':'var(--tx2)'};font-weight:700;font-size:12px;cursor:pointer;font-family:var(--sans)">
+        📆 Por dia
+      </button>
+    </div>
+    <div style="display:flex;gap:4px;background:var(--bg3);border-radius:var(--r);padding:3px">
+      <button onclick="window._planMetric='dist';document.getElementById('plano-output').innerHTML=renderPlanSheet(window._iaPlano||window._defaultPlan,null)"
+        style="padding:5px 10px;border-radius:8px;border:none;background:${metricMode==='dist'?'#fff':'transparent'};color:${metricMode==='dist'?'var(--neon)':'var(--tx3)'};font-weight:700;font-size:11px;cursor:pointer;font-family:var(--sans);box-shadow:${metricMode==='dist'?'0 1px 4px rgba(0,0,0,.1)':'none'}">
+        📏 km
+      </button>
+      <button onclick="window._planMetric='time';document.getElementById('plano-output').innerHTML=renderPlanSheet(window._iaPlano||window._defaultPlan,null)"
+        style="padding:5px 10px;border-radius:8px;border:none;background:${metricMode==='time'?'#fff':'transparent'};color:${metricMode==='time'?'var(--neon)':'var(--tx3)'};font-weight:700;font-size:11px;cursor:pointer;font-family:var(--sans);box-shadow:${metricMode==='time'?'0 1px 4px rgba(0,0,0,.1)':'none'}">
+        ⏱ min
+      </button>
+    </div>
   </div>`;
 
   if(viewMode==='table'){
@@ -1873,7 +1910,10 @@ function renderPlanSheet(plan, a){
                 <div style="font-size:10px;font-weight:700;color:var(--tx3);width:32px">${dayMeta[d]?.slice(0,3)?.toUpperCase()}</div>
                 <div style="font-size:14px;font-weight:700;color:var(--tx)">${t.tipo||zona}</div>
               </div>
-              <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${zborder};color:${ztopColor}">${zona}</span>
+              <div style="display:flex;align-items:center;gap:6px">
+                ${(()=>{const mins=estimateWorkoutTime(t.descricao,zona);return mins>0?`<span style="font-size:10px;color:var(--tx3)">~${mins} min</span>`:''})()}
+                <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${zborder};color:${ztopColor}">${zona}</span>
+              </div>
             </div>
             <div style="padding:8px 14px">
               ${blocks.map(b=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(0,0,0,0.04);${b.isRest||b.isNonRunning?'opacity:.6':''}">
@@ -1915,10 +1955,13 @@ function openDayModal(cell){
     modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:flex-end;justify-content:center;padding:0';
     modal.innerHTML=`<div style="background:#fff;border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:720px;max-height:80vh;overflow-y:auto;box-shadow:0 -8px 32px rgba(0,0,0,.15)">
       <div style="width:40px;height:4px;background:var(--bd2);border-radius:2px;margin:0 auto 16px"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
         <div>
           <div style="font-size:18px;font-weight:800;color:var(--tx)">${t.tipo||zona}</div>
-          <div style="font-size:12px;color:${ztopColor};font-weight:600;margin-top:2px">${zona} · Detalhes do treino</div>
+          <div style="display:flex;align-items:center;gap:8px;margin-top:3px">
+            <span style="font-size:12px;color:${ztopColor};font-weight:600">${zona}</span>
+            ${(()=>{const m=estimateWorkoutTime(t.descricao,zona);return m>0?`<span style="font-size:11px;color:var(--tx3)">~${m} min</span>`:''})()}
+          </div>
         </div>
         <button onclick="this.closest('[style*=fixed]').remove()" style="background:var(--bg3);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px">✕</button>
       </div>
@@ -1952,67 +1995,67 @@ function renderDefaultPlanSheet(a, dias){
   const longDist=Math.round(Math.max(maxDist, 8)*1.1*10)/10;
 
   // Build 4 weeks
-  const plan={semanas:[
-    {
-      foco:'Adaptação e base aeróbica',nota:'Foco em ritmo constante e confortável',
-      treinos:{
-        seg:{tipo:'BASE',descricao:`2km aquec ${pAq} + 3km ritmo ${pBase} + 1km leve + alongamento`,zona:'Z1',pace:pBase},
-        ter:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
-        qua:{tipo:'STRIDES',descricao:`2km aquec ${pAq} + 10×60m veloc. máxima subida, 1:30 caminhando de volta + 1km leve`,zona:'Z3',pace:'veloc. máxima'},
-        qui:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
-        sex:{tipo:'INTERVALADO',descricao:`2km aquec ${pAq} + 10×200m ritmo ${pForte}, 1min caminhando + 1km leve`,zona:'Z3',pace:pForte},
-        sab:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
-        dom:{tipo:'LONGÃO',descricao:`1km aquec + ${Math.round(longDist*0.8*10)/10}km ritmo ${sp(Math.round(bp*1.08))} + 1km leve`,zona:'LONGAO',pace:sp(Math.round(bp*1.08))}
-      }
-    },
-    {
-      foco:'Volume + velocidade',nota:'Aumentar distâncias e incluir ritmo de prova',
-      treinos:{
-        seg:{tipo:'BASE',descricao:`5km ritmo ${pBase} + alongamento`,zona:'Z1',pace:pBase},
-        ter:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
-        qua:{tipo:'TEMPO',descricao:`2km aquec ${pAq} + 4km ritmo ${pTempo>0?sp(tp):pTempo} + 1km leve`,zona:'Z2',pace:pTempo>0?sp(tp):pTempo},
-        qui:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
-        sex:{tipo:'INTERVALADO',descricao:`2km aquec + 8×400m ritmo ${pForte}, 1:30 caminhando + 1km leve`,zona:'Z3',pace:pForte},
-        sab:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
-        dom:{tipo:'LONGÃO',descricao:`1km aquec + ${Math.round(longDist*0.9*10)/10}km ritmo ${sp(Math.round(bp*1.06))} + 1km leve`,zona:'LONGAO',pace:sp(Math.round(bp*1.06))}
-      }
-    },
-    {
-      foco:'Qualidade e especificidade',nota:'Treinos mais próximos do ritmo objetivo',
-      treinos:{
-        seg:{tipo:'STRIDES',descricao:`2km aquec + 12×80m veloc. máxima subida, 1:30 caminhando + 1km leve`,zona:'Z3',pace:'veloc. máxima'},
-        ter:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
-        qua:{tipo:'INTERVALADO',descricao:`2km aquec + 5×1000m ritmo ${pForte}, 2:30 trotando + 1km leve`,zona:'Z3',pace:pForte},
-        qui:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
-        sex:{tipo:'TEMPO',descricao:`2km aquec + 6km ritmo ${pTempo>0?sp(tp):pBase} + 1km leve`,zona:'Z2',pace:pTempo>0?sp(tp):pBase},
-        sab:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
-        dom:{tipo:'LONGÃO',descricao:`1km aquec + ${longDist}km ritmo ${sp(Math.round(bp*1.05))} + 1km leve`,zona:'LONGAO',pace:sp(Math.round(bp*1.05))}
-      }
-    },
-    {
-      foco:'Consolidação e progressão',nota:'Aumentar repetições e distâncias de qualidade',
-      treinos:{
-        seg:{tipo:'BASE',descricao:`7km ritmo ${pBase} + alongamento`,zona:'Z1',pace:pBase},
-        ter:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
-        qua:{tipo:'TEMPO',descricao:`2km aquec + 6km ritmo ${pTempo>0?sp(tp):pBase} + 1km leve`,zona:'Z2',pace:pTempo>0?sp(tp):pBase},
-        qui:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
-        sex:{tipo:'INTERVALADO',descricao:`2km aquec + 15×200m ritmo ${pForte}, 1min caminhando + 1km leve`,zona:'Z3',pace:pForte},
-        sab:{tipo:'OFF',descricao:'Descanso',zona:'OFF'},
-        dom:{tipo:'LONGÃO',descricao:`1km aquec + ${Math.round(longDist*1.1*10)/10}km ritmo ${sp(Math.round(bp*1.04))} + 1km leve`,zona:'LONGAO',pace:sp(Math.round(bp*1.04))}
-      }
-    }
-  ]};
+    // Get user's training days
+  const userTrainDays = (USER_GOAL?.dias_selecionados && USER_GOAL.dias_selecionados.length>0)
+    ? USER_GOAL.dias_selecionados
+    : (['ter','qui','dom'].slice(0, USER_GOAL?.dias_semana||3));
 
-  // Adapt based on dias/week
-  if(dias<=3){
-    plan.semanas.forEach(s=>{
-      s.treinos.ter={tipo:'OFF',descricao:'Descanso',zona:'OFF'};
-      s.treinos.qui={tipo:'OFF',descricao:'Descanso',zona:'OFF'};
-      s.treinos.sab={tipo:'OFF',descricao:'Descanso',zona:'OFF'};
-    });
+  // Last day is always longão, first day base, middle days quality
+  const lastDay = userTrainDays[userTrainDays.length-1];
+  const firstDay = userTrainDays[0];
+  const middleDays = userTrainDays.slice(1,-1);
+
+  // Tempo por treino from user settings
+  const tempoMin = USER_GOAL?.tempo_treino || 45;
+  // Adjust km based on tempo and pace
+  const kmBase = tempoMin<=30 ? 4 : tempoMin<=45 ? 6 : tempoMin<=60 ? 8 : 10;
+  const kmLong1 = Math.max(maxDist, 8);
+  const kmLong2 = Math.round(kmLong1 * 1.1 * 10)/10;
+  const kmLong3 = Math.round(kmLong1 * 1.2 * 10)/10;
+  const kmLong4 = Math.round(kmLong1 * 1.3 * 10)/10;
+
+  function buildDayTraino(type, semIdx) {
+    const nLong = [kmLong1, kmLong2, kmLong3, kmLong4][semIdx] || kmLong1;
+    const pLongao = sp(Math.round(bp * (1.04 + semIdx*0.01)));
+    const nInter = tempoMin<=30 ? 4 : tempoMin<=45 ? 6 : 8;
+    const nBase = tempoMin<=30 ? 3 : tempoMin<=45 ? 4 : 6;
+    const descs = {
+      'BASE':    {tipo:'BASE',    zona:'Z1', pace:pBase,   descricao:`2km aquec ${pAq} + ${nBase}km ritmo ${pBase} + 1km leve + alongamento`},
+      'STRIDES': {tipo:'STRIDES', zona:'Z3', pace:'veloc. máxima', descricao:`2km aquec ${pAq} + ${10+semIdx*2}×60m veloc. máxima subida, 1:30 caminhando de volta + 1km leve`},
+      'INTERVALADO': {tipo:'INTERVALADO', zona:'Z3', pace:pForte, descricao:`2km aquec ${pAq} + ${nInter}×200m ritmo ${pForte}, 1min caminhando + 1km leve`},
+      'INTERVALO_LONGO': {tipo:'INTERVALADO LONGO', zona:'Z3', pace:pForte, descricao:`2km aquec ${pAq} + ${tempoMin<=45?4:5}×1000m ritmo ${pForte}, 2:30 trotando + 1km leve`},
+      'TEMPO':   {tipo:'TEMPO',   zona:'Z2', pace:pTempo>0?sp(tp):pBase, descricao:`2km aquec ${pAq} + ${nBase}km ritmo ${pTempo>0?sp(tp):pBase} + 1km leve`},
+      'LONGAO':  {tipo:'LONGÃO',  zona:'LONGAO', pace:pLongao, descricao:`1km aquec ${pAq} + ${nLong}km ritmo ${pLongao} + 1km leve`},
+      'OFF':     {tipo:'OFF',     zona:'OFF', descricao:'Descanso', pace:''},
+    };
+    return descs[type] || descs['OFF'];
   }
 
-  window._defaultPlan=plan;
+  // Build quality sequence for middle days
+  const qualSeq = [['STRIDES','INTERVALADO'],['INTERVALADO','TEMPO'],['INTERVALO_LONGO','STRIDES'],['INTERVALADO','TEMPO']];
+
+  const plan = {semanas: [0,1,2,3].map(si => {
+    const treinos = {};
+    // All days OFF by default
+    ['seg','ter','qua','qui','sex','sab','dom'].forEach(d => { treinos[d] = buildDayTraino('OFF', si); });
+    // First day: BASE
+    treinos[firstDay] = buildDayTraino('BASE', si);
+    // Middle days: quality alternating
+    middleDays.forEach((d, mi) => {
+      const qtype = qualSeq[si][mi % 2];
+      treinos[d] = buildDayTraino(qtype, si);
+    });
+    // Last day: LONGÃO always
+    treinos[lastDay] = buildDayTraino('LONGAO', si);
+    return {
+      semana: si+1,
+      foco: ['Base aeróbica e adaptação','Volume + velocidade','Qualidade e especificidade','Consolidação e progressão'][si],
+      nota: ['Foco em ritmo constante e confortável','Aumentar distâncias e incluir ritmo de prova','Treinos mais próximos do ritmo objetivo','Aumentar repetições e distâncias de qualidade'][si],
+      treinos
+    };
+  })};
+
+    window._defaultPlan=plan;
   return renderPlanSheet(plan, a);
 }
 
@@ -2058,11 +2101,13 @@ DADOS DO ATLETA:
 HISTÓRICO (últimos ${Math.min(HIST.length,10)} treinos):
 ${histLines||'Nenhum treino anterior'}
 
-DIAS DE TREINO DESTE ATLETA: ${(USER_GOAL?.dias_selecionados||['seg','qua','dom']).join(', ')}
-REGRAS: distribua os treinos APENAS nos dias acima. Dias não selecionados = OFF.
-- 1º treino ativo da semana: base ou strides em subida
-- Treinos intermediários: qualidade (intervalado, tempo run, velocidade)
-- Último treino da semana (domingo ou o último dia): longão progressivo
+DIAS DE TREINO DESTE ATLETA: ${(USER_GOAL?.dias_selecionados||['ter','qui','dom']).join(', ')}
+REGRAS OBRIGATÓRIAS:
+- Distribua treinos APENAS nos dias acima. Todos os outros dias = OFF
+- 1º dia ativo: treino de BASE (Z1 leve)
+- Dias intermediários: qualidade — STRIDES, INTERVALADO ou TEMPO RUN
+- ÚLTIMO dia ativo da semana (${(USER_GOAL?.dias_selecionados||['ter','qui','dom']).slice(-1)[0]}): SEMPRE LONGÃO — sem limite de tempo, aumentar +10% da distância máxima anterior
+- NUNCA omita o longão — ele é o treino mais importante da semana
 
 TIPOS DE TREINO PERMITIDOS — formatos exatos:
 - BASE: "Xkm aquecimento ${z.e?sp(z.e.max):'—'} + Ykm ritmo ${z.e?sp(z.e.min):'—'} + 1km leve + alongamento"
@@ -3063,29 +3108,51 @@ function renderCorridas(){
   </div>` : '';
 
   el.innerHTML=`<div style="padding-top:8px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
+    <!-- Header -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
       <div>
-        <div style="font-size:22px;font-weight:800;color:var(--tx)">🏅 Calendário de Corridas</div>
-        <div style="font-size:12px;color:var(--tx2);margin-top:2px">Provas inscritas e agenda de corridas</div>
+        <div style="font-size:22px;font-weight:800;color:var(--tx)">🏅 Minhas Corridas</div>
+        <div style="font-size:12px;color:var(--tx2);margin-top:2px">${RACES.length} prova${RACES.length!==1?'s':''} inscrita${RACES.length!==1?'s':''}</div>
       </div>
       <button class="btn btn-neon btn-sm" style="width:auto;padding:8px 16px" onclick="openAddRaceModal()">+ Adicionar prova</button>
     </div>
 
     ${upcomingHtml}
 
-    <div class="card">
-      <!-- Month navigation -->
-      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px">
-        <button onclick="changeRaceMonth(-1)" style="background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:6px 12px;cursor:pointer;font-size:16px">‹</button>
-        <div style="font-size:16px;font-weight:700;color:var(--tx)">${monthNames[month]} ${year}</div>
-        <button onclick="changeRaceMonth(1)" style="background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);padding:6px 12px;cursor:pointer;font-size:16px">›</button>
-      </div>
-      <!-- Calendar grid -->
-      <div class="race-month-grid">${calHtml}</div>
-    </div>
+    <!-- Side by side layout: calendar + list -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
 
-    <!-- Race list for month -->
-    <div style="margin-top:4px">${raceListHtml}</div>
+      <!-- LEFT: Calendar -->
+      <div class="card" style="padding:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <button onclick="changeRaceMonth(-1)" style="background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">‹</button>
+          <div style="font-size:14px;font-weight:700;color:var(--tx)">${monthNames[month]} ${year}</div>
+          <button onclick="changeRaceMonth(1)" style="background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">›</button>
+        </div>
+        <div class="race-month-grid">${calHtml}</div>
+      </div>
+
+      <!-- RIGHT: Race list for selected month -->
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">${monthNames[month]}</div>
+        ${monthRaces.length===0
+          ? `<div style="text-align:center;padding:32px 16px;color:var(--tx3)"><div style="font-size:28px;margin-bottom:8px">🏃</div><div style="font-size:13px">Nenhuma prova em ${monthNames[month]}</div></div>`
+          : monthRaces.map(r=>`<div class="race-list-item" id="race-${r.data?.replace(/\//g,'-')}" style="margin-bottom:8px">
+              <div style="min-width:40px;text-align:center">
+                <div style="font-size:22px;font-weight:800;color:var(--neon);line-height:1">${r.data?.slice(0,2)||'—'}</div>
+                <div style="font-size:9px;color:var(--tx3);text-transform:uppercase">${monthNames[month].slice(0,3)}</div>
+              </div>
+              <div style="flex:1;min-width:0">
+                <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.nome}</div>
+                ${r.local?`<div style="font-size:11px;color:var(--tx2)">📍 ${r.local}</div>`:''}
+                ${r.distancia?`<span class="race-dist-badge" style="margin-top:4px;display:inline-block;background:${distColor(r.distancia)}22;color:${distColor(r.distancia)}">${r.distancia}</span>`:''}
+              </div>
+              <button onclick="doDeleteRace('${r.id}')" style="background:none;border:none;cursor:pointer;color:var(--tx3);font-size:14px;padding:2px 4px;flex-shrink:0">✕</button>
+            </div>`).join('')
+        }
+      </div>
+
+    </div>
   </div>`;
 }
 
