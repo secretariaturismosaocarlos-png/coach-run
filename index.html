@@ -1655,9 +1655,6 @@ async function gerarAnaliseIA(){
   </div>`;
 
   // Build historico string
-  const histLines = HIST.slice(-10).map((t,i)=>
-    `Treino ${i+1}: ${t.data} | ${t.dist}km | Pace: ${t.pace}/km${t.fcmed?' | FC med: '+t.fcmed+' bpm':''}${t.fcmax?' | FC max: '+t.fcmax+' bpm':''}${t.cad?' | Cadência: '+t.cad+' spm':''}${t.splits&&t.splits.length?' | Splits: '+t.splits.join(', '):''}${t.pse?' | PSE: '+t.pse+'/10':''}`
-  ).join('\n');
 
   const last=a.last;
   const obj=a.obj;
@@ -1684,7 +1681,6 @@ async function gerarAnaliseIA(){
   }).join('\n');
 
   // Evolution metrics
-  const a = computeAnalise();
   const evoInfo = a ? `
 - Pace atual (mediana): ${sp(a.basePace)}/km
 - Evolução: ${a.evoDetails||a.evoSt}
