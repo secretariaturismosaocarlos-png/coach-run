@@ -1050,22 +1050,18 @@ function renderHome(){
         <button class="btn btn-neon" onclick="goTab('plano')">🤖 Gerar Plano IA</button>
       </div>`;
     }
-  } else {
-    // Last workout summary
+  }
+
+  // Last workout summary (always show if has workouts)
+  if(n>0){
     const last=HIST[n-1];
     html+=`<div class="card" style="margin-bottom:10px">
-      <div class="clabel">Último treino</div>
+      <div class="clabel">Último treino · ${last.data}</div>
       <div class="metrics" style="margin-bottom:0">
         <div class="metric metric-neon"><div class="mlabel">Pace</div><div class="mval" style="color:var(--neon)">${last.pace}</div><div class="msub">min/km</div></div>
         <div class="metric metric-orange"><div class="mlabel">Distância</div><div class="mval" style="color:var(--orange)">${last.dist}</div><div class="msub">km</div></div>
-        <div class="metric metric-teal"><div class="mlabel">Duração</div><div class="mval" style="font-size:${(last.tempo||'—').length>5?13:16}px;color:var(--teal)">${last.tempo||'—'}</div><div class="msub">${last.data}</div></div>
+        <div class="metric metric-teal"><div class="mlabel">Duração</div><div class="mval" style="font-size:${(last.tempo||'—').length>5?13:16}px;color:var(--teal)">${last.tempo||'—'}</div><div class="msub">${n} treino${n>1?'s':''}</div></div>
       </div>
-    </div>`;
-    html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-      <button class="btn btn-neon" onclick="goTab('treino')">➕ Novo treino</button>
-      <button class="btn btn-ghost" onclick="goTab('analise')">📊 Ver análise</button>
-      <button class="btn btn-ghost" onclick="goTab('plano')">📅 Plano semanal</button>
-      <button class="btn btn-ghost" onclick="goTab('evolucao')">📈 Evolução</button>
     </div>`;
   }
   el.innerHTML=html;
