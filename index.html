@@ -3716,52 +3716,94 @@ function renderCorridas(){
   </div>` : '';
 
   el.innerHTML=`<div style="padding-top:8px">
-    <!-- Header -->
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;flex-wrap:wrap;gap:8px">
+
+    <!-- HEADER -->
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;flex-wrap:wrap;gap:8px">
       <div>
         <div style="font-size:22px;font-weight:800;color:var(--tx)">🏅 Minhas Corridas</div>
         <div style="font-size:12px;color:var(--tx2);margin-top:2px">${RACES.length} prova${RACES.length!==1?'s':''} inscrita${RACES.length!==1?'s':''}</div>
       </div>
-      <button class="btn btn-neon btn-sm" style="width:auto;padding:8px 16px" onclick="openAddRaceModal()">+ Adicionar prova</button>
+      <button class="btn btn-neon" style="width:auto;padding:8px 18px;font-size:13px" onclick="openAddRaceModal()">+ Adicionar prova</button>
     </div>
 
-    <!-- TOP ROW: Calendário (esquerda) + Corridas do mês (direita) -->
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start;margin-bottom:12px">
+    <!-- TOPO: Corridas do mês em destaque -->
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--neon);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px;display:flex;align-items:center;gap:6px">
+        <span style="width:3px;height:14px;background:var(--neon);border-radius:2px;display:inline-block"></span>
+        ${monthNames[month]} ${year}
+      </div>
+      ${monthRaces.length===0
+        ? `<div style="text-align:center;padding:20px;color:var(--tx3);background:var(--bg2);border-radius:var(--rl);border:1.5px dashed var(--bd)">
+            <div style="font-size:28px;margin-bottom:6px">📭</div>
+            <div style="font-size:13px;font-weight:600">Nenhuma prova em ${monthNames[month]}</div>
+            <div style="font-size:11px;margin-top:3px">Use os meses ‹ › no calendário para navegar</div>
+           </div>`
+        : `<div style="display:flex;flex-direction:column;gap:8px">
+            ${monthRaces.map(r=>`
+              <div style="display:flex;align-items:center;gap:14px;padding:14px 16px;background:#fff;border-radius:var(--rl);border:1.5px solid var(--bd);box-shadow:0 2px 8px rgba(0,0,0,0.05)">
+                <div style="min-width:44px;text-align:center;background:rgba(255,92,0,.08);border-radius:10px;padding:6px 4px">
+                  <div style="font-size:22px;font-weight:900;color:var(--neon);line-height:1">${r.data?.slice(0,2)||'—'}</div>
+                  <div style="font-size:9px;font-weight:700;color:var(--neon);text-transform:uppercase;letter-spacing:.5px">${monthNames[month].slice(0,3)}</div>
+                </div>
+                <div style="flex:1;min-width:0">
+                  <div style="font-size:14px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.nome}</div>
+                  ${r.local?`<div style="font-size:12px;color:var(--tx2);margin-top:2px">📍 ${r.local}</div>`:''}
+                  <div style="display:flex;gap:6px;margin-top:5px;flex-wrap:wrap">
+                    ${r.distancia?`<span style="font-size:11px;font-weight:700;padding:2px 10px;border-radius:20px;background:${distColor(r.distancia)}18;color:${distColor(r.distancia)}">${r.distancia}</span>`:''}
+                    ${r.obs?`<span style="font-size:11px;color:var(--tx3)">${r.obs}</span>`:''}
+                  </div>
+                </div>
+                <button onclick="doDeleteRace('${r.id}')" style="background:var(--bg3);border:1px solid var(--bd);border-radius:8px;cursor:pointer;color:var(--tx3);font-size:12px;padding:4px 8px;flex-shrink:0;transition:all .15s" onmouseover="this.style.background='var(--red-dim)';this.style.color='var(--red)'" onmouseout="this.style.background='var(--bg3)';this.style.color='var(--tx3)'">✕</button>
+              </div>`).join('')}
+           </div>`
+      }
+    </div>
+
+    <!-- MEIO: Calendário (esquerda) + Todas as corridas inscritas (direita) -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:start">
 
       <!-- Calendário -->
       <div class="card" style="padding:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <button onclick="changeRaceMonth(-1)" style="background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">‹</button>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
+          <button onclick="changeRaceMonth(-1)" style="background:var(--bg3);border:1.5px solid var(--bd);border-radius:10px;width:34px;height:34px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--tx2)">‹</button>
           <div style="font-size:14px;font-weight:700;color:var(--tx)">${monthNames[month]} ${year}</div>
-          <button onclick="changeRaceMonth(1)" style="background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">›</button>
+          <button onclick="changeRaceMonth(1)" style="background:var(--bg3);border:1.5px solid var(--bd);border-radius:10px;width:34px;height:34px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;color:var(--tx2)">›</button>
         </div>
         <div class="race-month-grid">${calHtml}</div>
       </div>
 
-      <!-- Corridas do mês selecionado -->
+      <!-- Todas as corridas inscritas -->
       <div>
-        <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:8px">${monthNames[month]}</div>
-        ${monthRaces.length===0
-          ? `<div style="text-align:center;padding:24px 12px;color:var(--tx3);background:var(--bg2);border-radius:var(--rl);border:1px solid var(--bd)"><div style="font-size:24px;margin-bottom:6px">🏃</div><div style="font-size:12px">Sem provas em ${monthNames[month]}</div></div>`
-          : monthRaces.map(r=>`<div class="race-list-item" id="race-${r.data?.replace(/\//g,'-')}" style="margin-bottom:8px">
-              <div style="min-width:38px;text-align:center">
-                <div style="font-size:20px;font-weight:800;color:var(--neon);line-height:1">${r.data?.slice(0,2)||'—'}</div>
-                <div style="font-size:9px;color:var(--tx3);text-transform:uppercase">${monthNames[month].slice(0,3)}</div>
-              </div>
-              <div style="flex:1;min-width:0">
-                <div style="font-size:13px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.nome}</div>
-                ${r.local?`<div style="font-size:11px;color:var(--tx2)">📍 ${r.local}</div>`:''}
-                ${r.distancia?`<span class="race-dist-badge" style="margin-top:3px;display:inline-block;background:${distColor(r.distancia)}22;color:${distColor(r.distancia)}">${r.distancia}</span>`:''}
-              </div>
-              <button onclick="doDeleteRace('${r.id}')" style="background:none;border:none;cursor:pointer;color:var(--tx3);font-size:14px;padding:2px 4px">✕</button>
-            </div>`).join('')
+        <div style="font-size:11px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px">Próximas corridas</div>
+        ${RACES.length===0
+          ? `<div style="text-align:center;padding:24px 12px;color:var(--tx3)"><div style="font-size:22px;margin-bottom:6px">📋</div><div style="font-size:12px">Sem provas cadastradas</div></div>`
+          : (() => {
+              const today = new Date();
+              const sorted = [...RACES].sort((a,b)=>{
+                const parse=s=>{const[dd,mm,yyyy]=s.split('/');return new Date(yyyy,mm-1,dd);};
+                return parse(a.data)-parse(b.data);
+              });
+              return sorted.map(r=>{
+                const [dd,mm,yyyy]=r.data.split('/');
+                const rDate=new Date(yyyy,mm-1,dd);
+                const diff=Math.ceil((rDate-today)/86400000);
+                const isPast=diff<0;
+                const dColor=isPast?'var(--tx3)':'var(--neon)';
+                return `<div style="display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:var(--r);background:${isPast?'var(--bg3)':'#fff'};border:1px solid var(--bd);margin-bottom:6px;opacity:${isPast?0.5:1}">
+                  <div style="min-width:36px;text-align:center">
+                    <div style="font-size:13px;font-weight:800;color:${dColor};line-height:1">${isPast?'✓':diff+'d'}</div>
+                  </div>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-size:12px;font-weight:700;color:var(--tx);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.nome}</div>
+                    <div style="font-size:10px;color:var(--tx3);margin-top:1px">${r.data}${r.distancia?' · '+r.distancia:''}${r.local?' · '+r.local:''}</div>
+                  </div>
+                </div>`;
+              }).join('');
+            })()
         }
       </div>
 
     </div>
-
-    <!-- BOTTOM: Próximas corridas (90 dias) -->
-    ${upcomingHtml}
 
   </div>`;
 }
