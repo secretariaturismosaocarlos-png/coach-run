@@ -1810,179 +1810,120 @@ async function gerarAnaliseIA(){
   const dias=USER_GOAL?.dias_semana||3;
 
   const testData = USER_GOAL;
-  const vamZones = testData?.test_time ? calcZonesFromTest(testData.test_time, testData.test_fcmax||0) : null;
-  const vamInfo = vamZones ? `
-- VAM (Velocidade Aeróbica Máxima): ${vamZones._vam.kmh} km/h (pace ${sp(vamZones._vam.pace)}/km)
-- Pace de referência calibrado: ${sp(vamZones._vam.refPace)}/km
-- Z1 Base (treinos leves): ${sp(vamZones.e.min)}–${sp(vamZones.e.max)}/km
-- Z2 Limiar: ${sp(vamZones.t.min)}–${sp(vamZones.t.max)}/km
-- Z3 VO2max: ${sp(vamZones.i.min)}–${sp(vamZones.i.max)}/km
-- FC máxima no teste: ${testData.test_fcmax||'não informada'} bpm` : '- Teste não realizado — zonas estimadas pelo pace atual';
+  const isTestWorkout = HIST.length <= 1 && testData?.test_time;
 
-  // Build complete workout history for context
-  const histLines = HIST.map((t,i)=>{
-    const zoneLabel = vamZones ? (
-      t.paceSec <= vamZones.i.max ? 'Z3' :
-      t.paceSec <= vamZones.t.max ? 'Z2' : 'Z1'
-    ) : '';
-    return `T${i+1}(${t.data}): ${t.dist}km pace ${t.pace}/km${t.tempo?' dur:'+t.tempo:''}${t.fcmed?' FC:'+t.fcmed:''}${t.fcmax?' FCmax:'+t.fcmax:''}${t.cad?' cad:'+t.cad:''}${t.pse?' PSE:'+t.pse+'/10':''}${t.elev?' elev:'+t.elev+'m':''}${t.splits&&t.splits.length?' splits:['+t.splits.join(',')+']':''}${zoneLabel?' zona:'+zoneLabel:''}`;
-  }).join('\n');
+  // ── BUILD PROMPT based on context ──
+  let prompt;
 
-  // Evolution metrics
-  const evoInfo = a ? `
-- Pace atual (mediana): ${sp(a.basePace)}/km
-- Evolução: ${a.evoDetails||a.evoSt}
-- Consistência de treinos: ${a.consistency||'—'}%
-- Drift cardíaco: ${a.driftAlert?.msg||'normal'}
-- Estimativa de tempo na prova (${obj.dist}km): ${a.raceEst||'—'}
-- Progresso rumo ao objetivo: ${a.progPct||0}%
-- ETA para objetivo: ${a.weeksETA} semanas` : '';
+  if(isTestWorkout){
+    // ══ TESTE DE CALIBRAÇÃO: análise específica do teste ══
+    const vz = calcZonesFromTest(testData.test_time, testData.test_fcmax||0);
+    const vam = vz?._vam || {};
+    const testPaceSec = vam.pace || last.paceSec;
+    const raceEstSec = testPaceSec ? Math.round(testPaceSec * Math.pow(obj.dist/3, 1.06)) : 0;
 
-  const prompt=`Você é um coach de corrida especialista em fisiologia do exercício e treinamento polarizado. Analise TODOS os dados abaixo com precisão científica. Nunca seja genérico — use os números reais.
+    prompt = `Você é coach de corrida especialista. Analise o teste de calibração abaixo e responda em português, de forma direta e prática.
 
-═══ CALIBRAÇÃO INICIAL (TESTE DE CORRIDA) ═══
-- Data do teste: ${testData?.created_at?.slice(0,10)||'não informada'}
-- Distância do teste: ${testData?.test_dist||3}km
-- Tempo no teste: ${testData?.test_time||'não informado'}
-- FC máxima no teste: ${testData?.test_fcmax||'não informada'} bpm
-- FC média no teste: ${testData?.test_fcmed||'não informada'} bpm
-- Splits do teste: ${testData?.test_splits?.join(', ')||'não informados'}
-- Elevação no teste: ${testData?.test_elev||0}m
-${vamInfo}
+TESTE: ${testData.test_dist||3}km em ${testData.test_time}
+FC máx: ${testData.test_fcmax||'não inf.'} bpm | FC média: ${testData.test_fcmed||last.fcmed||'não inf.'} bpm
+Splits: ${testData.test_splits?.join(', ')||last.splits?.join(', ')||'não informados'}
+Cadência: ${testData.test_cad||last.cad||'não inf.'} passos/min
+Elevação: ${testData.test_elev||last.elev||0}m
 
-═══ PERFIL DO ATLETA ═══
-- Nome implícito: atleta
-- Objetivo: ${obj.t} (${obj.dist}km)
-- Pace alvo: ${tp>0?sp(tp)+'/km':'não definido'}
-- Nível declarado: ${nivel}
-- Dias por semana: ${dias}
-- Tempo por treino (semana): ${USER_GOAL?.tempo_treino||45}min
-- Longão: ${USER_GOAL?.tempo_longao>0?USER_GOAL.tempo_longao+'min':'livre'}
+VAM calculada: ${vam.kmh||'—'} km/h (${vam.pace?sp(vam.pace)+'/km':'—'})
+Z1 Base: ${vz?.e?sp(vz.e.min)+'–'+sp(vz.e.max)+'/km':'—'}
+Z2 Limiar: ${vz?.t?sp(vz.t.min)+'–'+sp(vz.t.max)+'/km':'—'}
+Z3 VO2max: ${vz?.i?sp(vz.i.min)+'–'+sp(vz.i.max)+'/km':'—'}
 
-═══ HISTÓRICO COMPLETO DE TREINOS (${HIST.length} treinos) ═══
-${histLines||'Nenhum treino registrado ainda.'}
+Objetivo: ${obj.t} | Pace alvo: ${tp>0?sp(tp)+'/km':'não definido'}
+Estimativa de tempo no ${obj.dist}km (Riegel): ${raceEstSec>0?s2t(raceEstSec):'—'}
 
-═══ MÉTRICAS DE EVOLUÇÃO ═══
-${evoInfo}
+RESPONDA EXATAMENTE neste formato:
 
-═══ TREINO MAIS RECENTE (analisar em detalhe) ═══
-- Data: ${last.data}
-- Distância: ${last.dist}km
-- Duração: ${last.tempo||'não informado'}
-- Pace médio: ${last.pace}/km
-- FC média: ${last.fcmed||'não informada'} bpm
-- FC máxima: ${last.fcmax||'não informada'} bpm
-- Cadência: ${last.cad||'não informada'} spm
-- PSE: ${last.pse||'não informado'}/10
-- Splits: ${last.splits&&last.splits.length?last.splits.join(', '):'não informados'}
-- Elevação: ${last.elev||0}m
+## 📊 Resultado do teste
+[2 frases: como foi o esforço e o ritmo]
 
-═══════════════════════════════════════════════
+## 🏃 Suas zonas de treino
+Z1 Base (80% dos treinos): ${vz?.e?sp(vz.e.min)+'–'+sp(vz.e.max)+'/km — converse normalmente':'—'}
+Z2 Limiar (10%): ${vz?.t?sp(vz.t.min)+'–'+sp(vz.t.max)+'/km — difícil, sustentável':'—'}
+Z3 Forte (10%): ${vz?.i?sp(vz.i.min)+'–'+sp(vz.i.max)+'/km — muito difícil, intervalados':'—'}
 
-Análise direta e objetiva em português. Use APENAS os dados fornecidos. Seja conciso.
+## 🎯 Estimativa de prova
+[Tempo estimado no ${obj.dist}km hoje + quando pode atingir ${tp>0?sp(tp)+'/km':'o objetivo'} em quantas semanas]
 
-═══ PLANO PRESCRITO (compare com o treino realizado) ═══
-${(()=>{
-  const plan = window._iaPlano || window._defaultPlan;
-  if(!plan || !plan.semanas) return 'Nenhum plano gerado ainda.';
-  const workoutDate = new Date(last.data.split('/').reverse().join('-'));
-  const dayMap = ['dom','seg','ter','qua','qui','sex','sab'];
-  const dayKey = dayMap[workoutDate.getDay()];
-  const semIdx = Math.min(Math.floor(HIST.length/Math.max(1,USER_GOAL?.dias_semana||3)), plan.semanas.length-1);
-  const sem = plan.semanas[semIdx];
-  const prescribed = sem?.treinos?.[dayKey];
-  if(!prescribed || prescribed.zona==='OFF'){
-    // Try to find by type match (user may train on different day)
-    let found = null;
-    Object.values(sem?.treinos||{}).forEach(t=>{ if(t.zona!=='OFF') found=found||t; });
-    if(!found) return 'Dia de descanso ou treino não mapeado para '+dayKey;
-    prescribed = found;
+## 📋 Primeiro treino recomendado
+[Treino específico para amanhã ou próximo dia de treino: tipo, distância, pace exato das zonas acima, duração ~${tempoMin}min]
+
+## ⚠️ Pontos de atenção
+[Máximo 2 pontos baseados nos dados reais do teste — cadência, FC, splits]`;
+
+  } else {
+    // ══ TREINO NORMAL: compara com plano ══
+    const vamZones = testData?.test_time ? calcZonesFromTest(testData.test_time, testData.test_fcmax||0) : null;
+    const vamInfo = vamZones ? `Z1:${sp(vamZones.e.min)}–${sp(vamZones.e.max)} Z2:${sp(vamZones.t.min)}–${sp(vamZones.t.max)} Z3:${sp(vamZones.i.min)}–${sp(vamZones.i.max)}` : 'zonas não calibradas';
+
+    const histLines = HIST.map((t,i)=>{
+      const zoneLabel = vamZones ? (
+        t.paceSec <= vamZones.i.max ? 'Z3' :
+        t.paceSec <= vamZones.t.max ? 'Z2' : 'Z1'
+      ) : '';
+      return `T${i+1}(${t.data}): ${t.dist}km ${t.pace}/km${t.fcmed?' FC'+t.fcmed:''}${t.pse?' PSE'+t.pse:''}${zoneLabel?' ['+zoneLabel+']':''}${t.splits?.length?' splits:['+t.splits.join(',')+']':''}`;
+    }).join('\n');
+
+    // Find prescribed workout for this day
+    const plan = window._iaPlano || window._defaultPlan;
+    let prescribed = null;
+    if(plan?.semanas){
+      const workoutDate = new Date(last.data.split('/').reverse().join('-'));
+      const dayMap = ['dom','seg','ter','qua','qui','sex','sab'];
+      const dayKey = dayMap[workoutDate.getDay()];
+      const semIdx = Math.min(Math.floor((HIST.length-1)/Math.max(1,USER_GOAL?.dias_semana||3)), plan.semanas.length-1);
+      const sem = plan.semanas[semIdx];
+      prescribed = sem?.treinos?.[dayKey];
+      // If that day is OFF, find any non-OFF workout in that week
+      if(!prescribed || prescribed.zona==='OFF'){
+        const t = Object.values(sem?.treinos||{}).find(t=>t.zona!=='OFF');
+        if(t) prescribed = t;
+      }
+    }
+
+    const prescInfo = prescribed && prescribed.zona!=='OFF' ? `
+PRESCRITO: ${prescribed.tipo} | Zona: ${prescribed.zona} | ${prescribed.descricao} | Pace: ${prescribed.pace}
+REALIZADO: ${last.dist}km em ${last.tempo||'?'} | Pace: ${last.pace}/km | FC: ${last.fcmed||'?'}/${last.fcmax||'?'} bpm | PSE: ${last.pse||'?'}/10` : 'Nenhum plano ativo';
+
+    const evoInfo = `Pace atual: ${sp(a.basePace)}/km | Evolução: ${a.evoDetails||a.evoSt} | Consistência: ${a.consistency||'—'}%`;
+
+    prompt = `Coach de corrida especialista. Análise direta e precisa em português.
+
+CALIBRAÇÃO: Teste ${testData?.test_dist||3}km em ${testData?.test_time||'não feito'} | FCmax: ${testData?.test_fcmax||'?'} bpm
+ZONAS: ${vamInfo}
+OBJETIVO: ${obj.t} | Pace alvo: ${tp>0?sp(tp)+'/km':'não definido'}
+EVOLUÇÃO: ${evoInfo}
+
+HISTÓRICO (${HIST.length} treinos):
+${histLines}
+
+${prescInfo}
+
+RESPONDA em formato markdown direto:
+
+## ✅ Conformidade com o plano
+[Seguiu o plano? O que divergiu em pace/distância/zona? Seja específico com números]
+
+## 📊 Análise técnica
+[FC, eficiência, pacing pelos splits. Máx 3 pontos com dados reais]
+
+## 📈 Evolução
+[Comparação com treinos anteriores. Está no caminho para ${tp>0?sp(tp)+'/km':'o objetivo'}?]
+
+## 🔧 Próximo treino
+[Treino para o próximo dia ativo baseado no plano + correções necessárias. Tipo, distância exata, pace das zonas calibradas, duração ~${tempoMin}min]
+
+## ⚠️ Alerta (só se necessário)
+[Fadiga, saiu muito da zona, risco de lesão — baseado nos dados reais]`;
   }
-  const prescPaceRange = prescribed.pace||'—';
-  const realPace = last.pace;
-  const realPaceSec = ps(realPace);
-  const prescPaceSec = prescribed.pace && prescribed.pace!=='veloc. máxima' ? ps(prescribed.pace.split('–')[0]) : 0;
-  let paceDeviation = '';
-  if(prescPaceSec>0 && realPaceSec>0){
-    const diff = realPaceSec - prescPaceSec;
-    if(diff > 30) paceDeviation = `⚠️ MAIS LENTO que o prescrito em ${sp(diff)} — verificar se estava na zona correta`;
-    else if(diff < -20) paceDeviation = `⚠️ MAIS RÁPIDO que o prescrito em ${sp(Math.abs(diff))} — possível saída de zona`;
-    else paceDeviation = `✅ Pace dentro da faixa prescrita`;
+
   }
-  return `Semana ${semIdx+1} do plano — ${sem.foco||''}
-Tipo prescrito: ${prescribed.tipo}
-Zona prescrita: ${prescribed.zona}
-Descrição prescrita: ${prescribed.descricao}
-Pace prescrito: ${prescPaceRange}
-Pace realizado: ${realPace}
-Conformidade de pace: ${paceDeviation}
-Distância prescrita: ${prescribed.descricao.match(/(\d+\.?\d*)km/g)?.join(', ')||'ver descrição'}
-Distância realizada: ${last.dist}km
-Tempo estimado do treino: ${prescribed.tempo_estimado||'—'} min
-Tempo realizado: ${last.tempo||'—'}`;
-})()}
-
-═══════════════════════════════════════════════
-
-# 🧠 ETAPA 1 — RESUMO E CONFORMIDADE COM O PLANO
-Compare o treino realizado com o prescrito:
-- O atleta seguiu o plano? Se não, o que divergiu?
-- Pace estava na zona correta?
-- Distância/duração compatível com o prescrito?
-
-# ✅ ETAPA 2 — PONTOS FORTES
-Baseado nos dados reais e na comparação com o plano.
-
-# ⚠️ ETAPA 3 — DESVIOS DO PLANO E CORREÇÕES
-Se o treino divergiu do prescrito:
-- O que ficou diferente (pace, distância, zona)?
-- Por que isso importa para o objetivo?
-- Como corrigir no próximo treino?
-Se seguiu o plano: confirmar e parabenizar.
-
-# 🔍 ETAPA 4 — ANÁLISE TÉCNICA FISIOLÓGICA
-- Eficiência: pace vs FC (estava na zona certa?)
-- Drift cardíaco (FC aumentou ao longo do treino?)
-- Cadência e pacing (splits consistentes?)
-- Sinais de fadiga ou overtraining
-
-# 📈 ETAPA 5 — EVOLUÇÃO EM RELAÇÃO AO OBJETIVO
-Compare com o histórico e o teste de calibração:
-- Está no ritmo para atingir ${obj.t}?
-- Pace atual (${sp(a.basePace)}/km) vs pace alvo (${tp>0?sp(tp)+'/km':'não definido'})
-- ETA atualizado baseado na evolução real
-
-# 🚨 ETAPA 6 — ALERTAS
-Gerar alertas SE necessário (não invente problemas):
-- Pace muito acima/abaixo do prescrito
-- Risco de fadiga ou lesão
-- Falta de estímulo na zona correta
-
-# 🎯 ETAPA 7 — PRÓXIMO TREINO (formato relógio)
-Com base no plano e na evolução:
-- Tipo, objetivo, distância, duração estimada
-- Aquecimento: X min a Y:YY/km
-- Bloco principal: estrutura detalhada com pace em faixa
-- Desaquecimento: X min a Y:YY/km
-⚠️ Paces DEVEM usar as zonas calibradas pelo teste
-
-# 📊 ETAPA 8 — SCORE DO TREINO
-Nota 0–100 considerando: execução do plano (40%), zona correta (30%), consistência (30%)
-Classificação: 90+ excelente / 70–89 bom / 50–69 atenção / <50 revisar`;
-
-  try {
-    const text = await callClaudeAPI([{role:'user', content: prompt}], 1500, 'fast');
-    out.innerHTML = renderIAText(text);
-    btn.textContent = '🔄 Gerar nova análise';
-    btn.disabled = false;
-  } catch(err) {
-    const keyMsg = err.message.includes('indisponível') ? 
-      '<br><small>Tente novamente em alguns segundos.</small>' : '';
-    out.innerHTML=`<div style="color:var(--red);font-size:13px;padding:12px;background:var(--red-dim);border-radius:var(--r);border-left:3px solid var(--red)">⚠️ ${err.message}${keyMsg}</div>`;
-    btn.textContent = '✨ Tentar novamente';
-    btn.disabled = false;
-  }
-}
 
 function renderIAText(text){
   // Convert markdown headings and lists to styled HTML
