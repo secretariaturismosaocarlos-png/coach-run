@@ -847,7 +847,17 @@ function playNotif(){
 // ═══════════════════════════════════════════════════
 async function loadData(){
   const {data:workouts} = await db.from('workouts').select('*').eq('user_id', CU.id).order('created_at');
-  HIST = (workouts||[]).map(w=>({...w, paceSec:ps(w.pace)}));
+  // Deduplicate: remove workouts with same date+dist+pace (keep latest)
+  const seen = new Map();
+  (workouts||[]).forEach(w => {
+    const key = `${w.data}_${Math.round((w.dist||0)*10)}_${w.pace}`;
+    if(!seen.has(key) || w.created_at > seen.get(key).created_at){
+      seen.set(key, w);
+    }
+  });
+  HIST = Array.from(seen.values())
+    .sort((a,b) => new Date(a.created_at) - new Date(b.created_at))
+    .map(w=>({...w, paceSec:ps(w.pace)}));
   const {data:prof} = await db.from('user_goals').select('*').eq('user_id', CU.id).single();
   await loadRaces();
   // Load previously generated plan
@@ -857,12 +867,21 @@ async function loadData(){
   }catch(e){}
   if(prof){
     USER_GOAL = prof;
-    // Restore selected days for onboarding
-    if(prof.tempo_treino) OB_TEMPO_TREINO=prof.tempo_treino;
-    if(prof.tempo_longao!==undefined) OB_TEMPO_LONGAO=prof.tempo_longao;
-    if(prof.dias_selecionados && prof.dias_selecionados.length>0){
-      OB_DIAS_SELECIONADOS=prof.dias_selecionados;
-      OB_DIAS=prof.dias_selecionados.length;
+    // Restore ALL onboarding state from saved goal
+    if(prof.obj_id){
+      OB_OBJ = OBJS.find(o=>o.id===prof.obj_id) || OB_OBJ;
+      if(OB_OBJ) window._obSelCat = OB_OBJ.cat;
+    }
+    if(prof.nivel) OB_NIVEL = prof.nivel;
+    if(prof.nivel_label) OB_NIVEL_LABEL = prof.nivel_label;
+    if(prof.target_pace_sec > 0) OB_TARGET_PACE = sp(prof.target_pace_sec);
+    if(prof.test_time) OB_TEST_TIME = prof.test_time;
+    if(prof.test_fcmax) OB_TEST_FCMAX = prof.test_fcmax;
+    if(prof.tempo_treino) OB_TEMPO_TREINO = prof.tempo_treino;
+    if(prof.tempo_longao !== undefined) OB_TEMPO_LONGAO = prof.tempo_longao;
+    if(prof.dias_semana) OB_DIAS = prof.dias_semana;
+    if(prof.dias_selecionados && prof.dias_selecionados.length > 0){
+      OB_DIAS_SELECIONADOS = prof.dias_selecionados;
     }
   }
 }
@@ -894,8 +913,10 @@ async function saveWorkout(t){
 }
 
 async function deleteWorkout(id){
+  if(!id){ console.warn('deleteWorkout: no id'); return; }
   await db.from('workouts').delete().eq('id',id).eq('user_id',CU.id);
   HIST = HIST.filter(t=>t.id!==id);
+  renderEvolucao(); // refresh immediately
 }
 
 // ═══════════════════════════════════════════════════
@@ -981,9 +1002,9 @@ function goTab(n){
 function renderHome(){
   const el=document.getElementById('pn-home');
   if(!USER_GOAL||!USER_GOAL.onboard_done){ renderOnboarding(el); return; }
-  const obj = OBJS.find(o=>o.id===USER_GOAL.obj_id)||OBJS[0];
+  const obj = (USER_GOAL.obj_id ? OBJS.find(o=>o.id===USER_GOAL.obj_id) : null) || OB_OBJ || OBJS[0];
   const n = HIST.length;
-  const name = (PROFILE?.name||'').split(' ')[0];
+  const name = (PROFILE?.name||CU?.email?.split('@')[0]||'Atleta').split(' ')[0];
 
   const dayName=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'][new Date().getDay()];
   let html=`<div style="padding-top:8px;margin-bottom:16px">
