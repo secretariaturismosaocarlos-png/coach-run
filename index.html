@@ -875,7 +875,17 @@ async function saveGoal(g){
 }
 
 async function saveWorkout(t){
-  const {data} = await db.from('workouts').insert({
+  // Prevent duplicates: check if same date+dist+pace already in HIST
+  const existing = HIST.find(h =>
+    h.data===t.data &&
+    Math.abs((h.dist||0)-(t.dist||0)) < 0.2 &&
+    h.pace===t.pace
+  );
+  if(existing){
+    showAlert('⚠️ Treino similar já registrado nessa data. Verifique o histórico.','warning');
+    return;
+  }
+  const {data,error} = await db.from('workouts').insert({
     user_id:CU.id, data:t.data, dist:t.dist, tempo:t.tempo,
     pace:t.pace, fcmed:t.fcmed||null, fcmax:t.fcmax||null,
     cad:t.cad||null, splits:t.splits||null, elev:t.elev||null, pse:t.pse||null
@@ -999,13 +1009,47 @@ function renderHome(){
     </div>
   </div>`;
 
-  if(n<3){
-    const miss=3-n;
-    html+=`<div class="card card-orange">
-      <div style="font-size:14px;font-weight:700;color:var(--orange);margin-bottom:6px">📋 Insira ${miss} treino${miss>1?'s':''} para ativar a análise completa</div>
-      <div style="font-size:12px;color:var(--tx2);line-height:1.6;margin-bottom:12px">Para uma assessoria realmente personalizada preciso dos seus <strong>3 treinos mais recentes</strong>. Com eles calculo seu pace real, tendência e monto o plano específico para você.</div>
-      <button class="btn btn-orange" onclick="goTab('treino')">➕ Inserir treino (${n}/3)</button>
-    </div>`;
+  {
+    // Smart CTA based on app state
+    const hasPlan = !!(window._iaPlano || window._defaultPlan);
+    if(n===0){
+      html+=`<div class="card card-teal" style="margin-bottom:12px">
+        <div class="clabel">🚀 Próximo passo</div>
+        <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:6px">Faça o teste de 3km para calibrar suas zonas</div>
+        <div style="font-size:12px;color:var(--tx2);margin-bottom:12px">Corra 3km no máximo esforço, salve o arquivo do relógio e insira aqui. O app define suas zonas Z1, Z2, Z3 com precisão.</div>
+        <button class="btn btn-neon" onclick="goTab('treino')">📂 Inserir teste de 3km</button>
+      </div>`;
+    } else if(n===1 && USER_GOAL?.test_time){
+      html+=`<div class="card card-accent" style="margin-bottom:12px">
+        <div class="clabel" style="color:var(--teal)">✅ Teste registrado · Zonas calibradas</div>
+        <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:4px">Zonas calculadas pela VAM do seu teste!</div>
+        <div style="font-size:12px;color:var(--tx2);margin-bottom:12px">Veja a análise do teste e gere seu plano personalizado de 4 semanas.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-neon" style="flex:1" onclick="goTab('analise')">📊 Ver análise do teste</button>
+          <button class="btn" style="flex:1;background:var(--orange);color:#fff" onclick="goTab('plano')">📅 Gerar meu plano →</button>
+        </div>
+      </div>`;
+    } else if(hasPlan){
+      const planDays = USER_GOAL?.dias_selecionados||['ter','qui','dom'];
+      const todayKey = ['dom','seg','ter','qua','qui','sex','sab'][new Date().getDay()];
+      const isTrainDay = planDays.includes(todayKey);
+      const dayName = {seg:'Segunda',ter:'Terça',qua:'Quarta',qui:'Quinta',sex:'Sexta',sab:'Sábado',dom:'Domingo'}[todayKey]||'';
+      html+=`<div class="card ${isTrainDay?'card-accent':'card-teal'}" style="margin-bottom:12px">
+        <div class="clabel">${isTrainDay?`🏃 ${dayName} — dia de treino!`:'📋 Plano ativo'}</div>
+        <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:4px">${isTrainDay?'Corra, depois insira o treino aqui para análise':'Execute o próximo treino do plano e insira aqui'}</div>
+        <div style="font-size:12px;color:var(--tx2);margin-bottom:12px">O coach analisa o que foi feito vs o que foi prescrito e ajusta o próximo treino.</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-neon" style="flex:1" onclick="goTab('treino')">📂 Inserir treino realizado</button>
+          <button class="btn btn-ghost" style="flex:1" onclick="goTab('plano')">📅 Ver plano</button>
+        </div>
+      </div>`;
+    } else if(n>0 && !hasPlan){
+      html+=`<div class="card card-orange" style="margin-bottom:12px">
+        <div class="clabel">📅 Gere seu plano de treino</div>
+        <div style="font-size:13px;color:var(--tx2);margin-bottom:12px">Com base nos seus treinos, o coach monta um plano de 4 semanas personalizado.</div>
+        <button class="btn btn-neon" onclick="goTab('plano')">🤖 Gerar Plano IA</button>
+      </div>`;
+    }
   } else {
     // Last workout summary
     const last=HIST[n-1];
@@ -1806,8 +1850,10 @@ async function gerarAnaliseIA(){
 
   const last=a.last;
   const obj=a.obj;
+  const tp=a.tp||0;
   const nivel=USER_GOAL?.nivel_label||USER_GOAL?.nivel||'não informado';
   const dias=USER_GOAL?.dias_semana||3;
+  const tempoMin=USER_GOAL?.tempo_treino||45;
 
   const testData = USER_GOAL;
   const isTestWorkout = HIST.length <= 1 && testData?.test_time;
@@ -3577,7 +3623,8 @@ async function obFinish(){
     test_elev:td.elevGain||0,
     test_splits:td.splits||[]
   });
-  renderHome();
+  // Auto-navigate to analysis after test
+  setTimeout(()=>{ goTab('analise'); }, 300);
 }
 
 function resetGoal(){
