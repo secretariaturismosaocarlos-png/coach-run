@@ -1158,8 +1158,8 @@ function renderOnboarding(el){
         ${sel.length>0?'· '+sel.map(d=>diasSem.find(x=>x.id===d)?.full||d).join(', '):''}
       </div>
       <div style="margin-bottom:16px">
-        <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:4px">Tempo por treino (dias de semana)?</div>
-        <div style="font-size:11px;color:var(--tx2);margin-bottom:8px">Segunda, terça, quinta — treinos dentro desse tempo</div>
+        <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:4px">Tempo disponível por treino?</div>
+        <div style="font-size:11px;color:var(--tx2);margin-bottom:8px">Todos os treinos de qualidade (base, intervalado, strides) devem caber nesse tempo</div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">
           ${[30,45,60,90].map(t=>`<div onclick="OB_TEMPO_TREINO=${t};renderHome()" style="text-align:center;padding:12px 4px;border-radius:12px;cursor:pointer;border:2px solid ${OB_TEMPO_TREINO===t?'var(--neon)':'var(--bd)'};background:${OB_TEMPO_TREINO===t?'rgba(255,92,0,.08)':'var(--bg2)'};transition:all .2s">
             <div style="font-size:16px;font-weight:700;color:${OB_TEMPO_TREINO===t?'var(--neon)':'var(--tx2)'}">${t}</div>
@@ -1838,6 +1838,7 @@ async function gerarAnaliseIA(){
 - Progresso rumo ao objetivo: ${a.progPct||0}%
 - ETA para objetivo: ${a.weeksETA} semanas` : '';
 
+  const vam_pace_str = USER_GOAL?.vam_pace ? sp(USER_GOAL.vam_pace)+'/km' : (z._vam?.pace?sp(z._vam.pace)+'/km':'não calculada');
   const prompt=`Você é um coach de corrida especialista em fisiologia do exercício e treinamento polarizado. Analise TODOS os dados abaixo com precisão científica. Nunca seja genérico — use os números reais.
 
 ═══ CALIBRAÇÃO INICIAL (TESTE DE CORRIDA) ═══
@@ -1884,20 +1885,42 @@ Agora gere a análise COMPLETA e PERSONALIZADA. Use os dados reais acima — nun
 ═══ PLANO PRESCRITO (compare com o treino realizado) ═══
 ${(()=>{
   const plan = window._iaPlano || window._defaultPlan;
-  if(!plan || !plan.semanas) return 'Nenhum plano gerado ainda — esta é a primeira análise';
-  // Find what was prescribed for the day of this workout
+  if(!plan || !plan.semanas) return 'Nenhum plano gerado ainda.';
   const workoutDate = new Date(last.data.split('/').reverse().join('-'));
   const dayMap = ['dom','seg','ter','qua','qui','sex','sab'];
   const dayKey = dayMap[workoutDate.getDay()];
-  // Find the most recent week's prescription for this day type
-  const sem = plan.semanas[Math.min(Math.floor(HIST.length/3), plan.semanas.length-1)];
+  const semIdx = Math.min(Math.floor(HIST.length/Math.max(1,USER_GOAL?.dias_semana||3)), plan.semanas.length-1);
+  const sem = plan.semanas[semIdx];
   const prescribed = sem?.treinos?.[dayKey];
-  if(!prescribed || prescribed.zona==='OFF') return 'Dia de descanso prescrito para ' + dayKey;
-  return `Treino prescrito para este dia (${dayKey}):
-- Tipo: ${prescribed.tipo}
-- Zona: ${prescribed.zona}
-- Descrição: ${prescribed.descricao}
-- Pace prescrito: ${prescribed.pace}`;
+  if(!prescribed || prescribed.zona==='OFF'){
+    // Try to find by type match (user may train on different day)
+    let found = null;
+    Object.values(sem?.treinos||{}).forEach(t=>{ if(t.zona!=='OFF') found=found||t; });
+    if(!found) return 'Dia de descanso ou treino não mapeado para '+dayKey;
+    prescribed = found;
+  }
+  const prescPaceRange = prescribed.pace||'—';
+  const realPace = last.pace;
+  const realPaceSec = ps(realPace);
+  const prescPaceSec = prescribed.pace && prescribed.pace!=='veloc. máxima' ? ps(prescribed.pace.split('–')[0]) : 0;
+  let paceDeviation = '';
+  if(prescPaceSec>0 && realPaceSec>0){
+    const diff = realPaceSec - prescPaceSec;
+    if(diff > 30) paceDeviation = `⚠️ MAIS LENTO que o prescrito em ${sp(diff)} — verificar se estava na zona correta`;
+    else if(diff < -20) paceDeviation = `⚠️ MAIS RÁPIDO que o prescrito em ${sp(Math.abs(diff))} — possível saída de zona`;
+    else paceDeviation = `✅ Pace dentro da faixa prescrita`;
+  }
+  return `Semana ${semIdx+1} do plano — ${sem.foco||''}
+Tipo prescrito: ${prescribed.tipo}
+Zona prescrita: ${prescribed.zona}
+Descrição prescrita: ${prescribed.descricao}
+Pace prescrito: ${prescPaceRange}
+Pace realizado: ${realPace}
+Conformidade de pace: ${paceDeviation}
+Distância prescrita: ${prescribed.descricao.match(/(\d+\.?\d*)km/g)?.join(', ')||'ver descrição'}
+Distância realizada: ${last.dist}km
+Tempo estimado do treino: ${prescribed.tempo_estimado||'—'} min
+Tempo realizado: ${last.tempo||'—'}`;
 })()}
 
 ═══════════════════════════════════════════════
@@ -2342,13 +2365,18 @@ function renderPlanSheet(plan, a){
     html+=`</div>`;
   }
 
-  // Week focus cards
-  html+=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px">`;
+  // Week focus cards with corrections
+  html+=`<div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">`;
   plan.semanas.forEach((sem,si)=>{
     html+=`<div class="card" style="padding:12px 14px">
-      <div style="font-size:10px;font-weight:700;color:var(--tx3);text-transform:uppercase;margin-bottom:4px">Semana ${si+1}</div>
-      <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:3px">${sem.foco||'—'}</div>
-      ${sem.nota?`<div style="font-size:11px;color:var(--tx2)">${sem.nota}</div>`:''}
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
+        <span style="font-size:10px;font-weight:700;color:var(--neon);background:rgba(255,92,0,.1);padding:2px 8px;border-radius:10px">SEM ${si+1}</span>
+        <div style="font-size:13px;font-weight:700;color:var(--tx)">${sem.foco||'—'}</div>
+      </div>
+      ${sem.nota?`<div style="font-size:12px;color:var(--tx2);margin-bottom:${sem.correcoes?'8px':'0'}">${sem.nota}</div>`:''}
+      ${sem.correcoes&&sem.correcoes!=='Primeiro plano'?`<div style="font-size:11px;padding:6px 10px;background:rgba(0,184,148,.06);border-radius:var(--r);border-left:3px solid var(--teal);color:var(--teal)">
+        🔧 <strong>Ajuste:</strong> ${sem.correcoes}
+      </div>`:''}
     </div>`;
   });
   html+=`</div>`;
@@ -2396,81 +2424,123 @@ function renderDefaultPlanSheet(a, dias){
   const z=a.z;
   const bp=a.basePace;
   const tp=a.tp||bp;
-
-  // Calculate paces from zones
-  const pAq=z.e?sp(z.e.max):'—';       // aquecimento
-  const pBase=z.e?sp(z.e.min):'—';     // base
-  const pTempo=z.t?sp(z.t.min):'—';    // tempo
-  const pForte=z.i?sp(z.i.max):'—';    // forte/interval
-  const pSprint=z.r?sp(z.r.min):'—';   // sprint/strides
-
-  const maxDist=a.h.length?Math.max(...a.h.map(w=>w.dist)):5;
-  const longDist=Math.round(Math.max(maxDist, 8)*1.1*10)/10;
-
-  // Build 4 weeks
-    // Get user's training days
-  const userTrainDays = (USER_GOAL?.dias_selecionados && USER_GOAL.dias_selecionados.length>0)
-    ? USER_GOAL.dias_selecionados
-    : (['ter','qui','dom'].slice(0, USER_GOAL?.dias_semana||3));
-
-  // Last day is always longão, first day base, middle days quality
-  const lastDay = userTrainDays[userTrainDays.length-1];
-  const firstDay = userTrainDays[0];
-  const middleDays = userTrainDays.slice(1,-1);
-
-  // Tempo por treino from user settings
   const tempoMin = USER_GOAL?.tempo_treino || 45;
-  // Adjust km based on tempo and pace
-  const kmBase = tempoMin<=30 ? 4 : tempoMin<=45 ? 6 : tempoMin<=60 ? 8 : 10;
-  const kmLong1 = Math.max(maxDist, 8);
-  const kmLong2 = Math.round(kmLong1 * 1.1 * 10)/10;
-  const kmLong3 = Math.round(kmLong1 * 1.2 * 10)/10;
-  const kmLong4 = Math.round(kmLong1 * 1.3 * 10)/10;
+  const tempoLongao = USER_GOAL?.tempo_longao || 0; // 0 = livre
 
-  function buildDayTraino(type, semIdx) {
-    const nLong = [kmLong1, kmLong2, kmLong3, kmLong4][semIdx] || kmLong1;
-    const pLongao = sp(Math.round(bp * (1.04 + semIdx*0.01)));
-    const nInter = tempoMin<=30 ? 4 : tempoMin<=45 ? 6 : 8;
-    const nBase = tempoMin<=30 ? 3 : tempoMin<=45 ? 4 : 6;
-    const descs = {
-      'BASE':    {tipo:'BASE',    zona:'Z1', pace:pBase,   descricao:`2km aquec ${pAq} + ${nBase}km ritmo ${pBase} + 1km leve + alongamento`},
-      'STRIDES': {tipo:'STRIDES', zona:'Z3', pace:'veloc. máxima', descricao:`2km aquec ${pAq} + ${10+semIdx*2}×60m veloc. máxima subida, 1:30 caminhando de volta + 1km leve`},
-      'INTERVALADO': {tipo:'INTERVALADO', zona:'Z3', pace:pForte, descricao:`2km aquec ${pAq} + ${nInter}×200m ritmo ${pForte}, 1min caminhando + 1km leve`},
-      'INTERVALO_LONGO': {tipo:'INTERVALADO LONGO', zona:'Z3', pace:pForte, descricao:`2km aquec ${pAq} + ${tempoMin<=45?4:5}×1000m ritmo ${pForte}, 2:30 trotando + 1km leve`},
-      'TEMPO':   {tipo:'TEMPO',   zona:'Z2', pace:pTempo>0?sp(tp):pBase, descricao:`2km aquec ${pAq} + ${nBase}km ritmo ${pTempo>0?sp(tp):pBase} + 1km leve`},
-      'LONGAO':  {tipo:'LONGÃO',  zona:'LONGAO', pace:pLongao, descricao:`1km aquec ${pAq} + ${nLong}km ritmo ${pLongao} + 1km leve`},
-      'OFF':     {tipo:'OFF',     zona:'OFF', descricao:'Descanso', pace:''},
+  // ── PACE ZONES ──
+  const pAq   = z.e ? sp(z.e.max) : sp(Math.round(bp*1.28));
+  const pBase = z.e ? sp(z.e.min) : sp(Math.round(bp*1.12));
+  const pTempo= z.t ? sp(z.t.min) : sp(Math.round(bp*0.94));
+  const pForte= z.i ? sp(z.i.min) : sp(Math.round(bp*0.86));
+  const pSprint= z.r ? sp(z.r.min): sp(Math.round(bp*0.78));
+
+  // ── VOLUME CALCULATION based on pace and available time ──
+  // sec/km * km = total seconds, must fit in tempoMin*60
+  const paceZ1sec = z.e ? (z.e.min+z.e.max)/2 : bp*1.18;
+  const paceZ2sec = z.t ? (z.t.min+z.t.max)/2 : bp*0.98;
+  const paceZ3sec = z.i ? (z.i.min+z.i.max)/2 : bp*0.89;
+
+  // Overhead: warmup 2km + cooldown 1km at Z1 pace
+  const overheadSec = (2+1) * paceZ1sec;
+  const availForWork = tempoMin*60 - overheadSec;
+
+  // Base: how many km can fit in available time at Z1?
+  const baseKm = Math.max(2, Math.round(availForWork/paceZ1sec * 10)/10);
+  // Tempo run: km at Z2 pace that fit
+  const tempoKm = Math.max(2, Math.round(availForWork/paceZ2sec * 10)/10);
+  // Intervals: how many reps fit? (each rep 400m Z3 + 90s rest)
+  const secPerRep400 = (0.4 * paceZ3sec) + 90;
+  const reps400 = Math.max(4, Math.min(10, Math.floor(availForWork / secPerRep400)));
+  const reps1000 = Math.max(3, Math.min(6, Math.floor(availForWork / (1*paceZ3sec + 150))));
+  const reps200 = Math.max(6, Math.min(14, Math.floor(availForWork / (0.2*paceZ3sec + 75))));
+  const repsStrides = Math.max(6, Math.min(12, Math.floor(availForWork / (0.06*paceZ3sec*0.5 + 90))));
+
+  // Longão: based on actual max distance done, +10% progression, NO time limit
+  const maxDistDone = a.h.length ? Math.max(...a.h.map(w=>w.dist)) : (a.obj?.dist||5)*0.5;
+  // Cap longão increase: max +10% per week, never more than obj dist
+  const longaoBase = Math.max(maxDistDone, 4);
+
+  // ── USER'S SELECTED DAYS ──
+  const allDays = ['seg','ter','qua','qui','sex','sab','dom'];
+  const userDays = (USER_GOAL?.dias_selecionados && USER_GOAL.dias_selecionados.length>0)
+    ? USER_GOAL.dias_selecionados
+    : ['ter','qui','dom'].slice(0, USER_GOAL?.dias_semana||3);
+
+  const lastDay = userDays[userDays.length-1];   // longão
+  const firstDay = userDays[0];                   // base
+  const middleDays = userDays.slice(1,-1);        // quality
+
+  const qualTypes = ['STRIDES','INTERVALADO','INTERVALO_LONGO','INTERVALADO'];
+
+  function buildTreino(type, semIdx){
+    const longaoKm = Math.round(longaoBase * Math.pow(1.1, semIdx) * 10)/10;
+    const longaoCapped = Math.min(longaoKm, a.obj?.dist||10); // never exceed target dist
+    const pLongao = sp(Math.round(bp * (1.06 + semIdx*0.01)));
+
+    const map = {
+      'BASE': {
+        tipo:'BASE', zona:'Z1', pace:pBase,
+        descricao:`2km aquec ${pAq} + ${baseKm}km ritmo ${pBase} + 1km leve`,
+        note:`${tempoMin}min · Z1 base aeróbica`
+      },
+      'STRIDES': {
+        tipo:'STRIDES', zona:'Z3', pace:'veloc. máxima',
+        descricao:`2km aquec ${pAq} + ${repsStrides}×60m veloc. máxima subida, 1:30 caminhando de volta + 1km leve`,
+        note:`${tempoMin}min · Força neuromuscular`
+      },
+      'INTERVALADO': {
+        tipo:'INTERVALADO', zona:'Z3', pace:pForte,
+        descricao:`2km aquec ${pAq} + ${reps400}×400m ritmo ${pForte}, 1:30 caminhando + 1km leve`,
+        note:`${tempoMin}min · VO2max`
+      },
+      'INTERVALO_LONGO': {
+        tipo:'INTERVALADO LONGO', zona:'Z3', pace:pForte,
+        descricao:`2km aquec ${pAq} + ${reps1000}×1000m ritmo ${pForte}, 2:30 trotando + 1km leve`,
+        note:`${tempoMin}min · Limiar`
+      },
+      'TEMPO': {
+        tipo:'TEMPO RUN', zona:'Z2', pace:pTempo,
+        descricao:`2km aquec ${pAq} + ${tempoKm}km ritmo ${pTempo} + 1km leve`,
+        note:`${tempoMin}min · Limiar láctico`
+      },
+      'LONGAO': {
+        tipo:'LONGÃO', zona:'LONGAO', pace:pLongao,
+        descricao:`1km aquec + ${longaoCapped}km ritmo ${pLongao} + 1km leve`,
+        note:`Sem limite de tempo · +10% por semana`
+      },
+      'OFF': {tipo:'OFF', zona:'OFF', descricao:'Descanso', pace:''},
     };
-    return descs[type] || descs['OFF'];
+    return map[type] || map['OFF'];
   }
 
-  // Build quality sequence for middle days
-  const qualSeq = [['STRIDES','INTERVALADO'],['INTERVALADO','TEMPO'],['INTERVALO_LONGO','STRIDES'],['INTERVALADO','TEMPO']];
+  const focos = [
+    'Adaptação ao treino polarizado',
+    'Introdução aos intervalados Z3',
+    'Qualidade e especificidade',
+    'Consolidação e progressão'
+  ];
+  const notas = [
+    `Base aeróbica. Todos os treinos dentro de ${tempoMin}min. Longão sem limite.`,
+    `Intervalados introduzidos com cuidado. Pace Z3 fiel às zonas do teste.`,
+    `Aumento de repetições. Longão progressivo +10%.`,
+    `Semana de consolidação. Avalie evolução e gere plano IA para próximas 4 semanas.`
+  ];
 
   const plan = {semanas: [0,1,2,3].map(si => {
     const treinos = {};
-    // All days OFF by default
-    ['seg','ter','qua','qui','sex','sab','dom'].forEach(d => { treinos[d] = buildDayTraino('OFF', si); });
-    // First day: BASE
-    treinos[firstDay] = buildDayTraino('BASE', si);
-    // Middle days: quality alternating
-    middleDays.forEach((d, mi) => {
-      const qtype = qualSeq[si][mi % 2];
-      treinos[d] = buildDayTraino(qtype, si);
+    allDays.forEach(d => { treinos[d] = buildTreino('OFF', si); });
+    treinos[firstDay] = buildTreino('BASE', si);
+    middleDays.forEach((d,mi) => {
+      treinos[d] = buildTreino(qualTypes[si % qualTypes.length], si);
     });
-    // Last day: LONGÃO always
-    treinos[lastDay] = buildDayTraino('LONGAO', si);
-    return {
-      semana: si+1,
-      foco: ['Base aeróbica e adaptação','Volume + velocidade','Qualidade e especificidade','Consolidação e progressão'][si],
-      nota: ['Foco em ritmo constante e confortável','Aumentar distâncias e incluir ritmo de prova','Treinos mais próximos do ritmo objetivo','Aumentar repetições e distâncias de qualidade'][si],
-      treinos
-    };
+    treinos[lastDay] = buildTreino('LONGAO', si);
+    return { semana:si+1, foco:focos[si], nota:notas[si], treinos };
   })};
 
-    window._defaultPlan=plan;
+  window._defaultPlan = plan;
   return renderPlanSheet(plan, a);
 }
+
 
 // ─── Generate plan via AI ────────────────────────────────────────
 async function gerarPlanoIA(){
@@ -2496,84 +2566,88 @@ async function gerarPlanoIA(){
   const tp=a.tp;
   const obj=a.obj;
 
-  const prompt=`Você é um coach de corrida especialista no método treinamento polarizado. Gere um plano de 4 semanas personalizado.
+  const tempoMin = USER_GOAL?.tempo_treino || 45;
+  const tempoLongao = USER_GOAL?.tempo_longao || 0;
+  const maxDistDone = a.h.length ? Math.max(...a.h.map(w=>w.dist)) : 0;
+  const avgDistDone = a.h.length ? Math.round(a.h.reduce((s,w)=>s+w.dist,0)/a.h.length*10)/10 : 0;
 
-DADOS DO ATLETA:
-- Objetivo: ${obj.t}
-- Nível: ${USER_GOAL?.nivel_label||'não informado'}
-- Dias/semana disponíveis: ${USER_GOAL?.dias_semana||3}
-- Tempo máximo por treino (dias de semana): ${USER_GOAL?.tempo_treino||45} minutos
-- Tempo do longão (fim de semana): ${USER_GOAL?.tempo_longao>0?(USER_GOAL.tempo_longao+' minutos'):'sem limite — pode ser mais longo'} 
-- Pace atual (média últimos treinos): ${sp(bp)}/km
-- Pace alvo (objetivo): ${tp>0?sp(tp)+'/km':'não definido'}
-- Z1 Base: ${z.e?sp(z.e.min)+'–'+sp(z.e.max)+'/km':'—'} ${z.e?.pct?'('+z.e.pct+')':''}
-- Z2 Limiar: ${z.t?sp(z.t.min)+'–'+sp(z.t.max)+'/km':'—'} ${z.t?.pct?'('+z.t.pct+')':''}
-- Z3 VO2max: ${z.i?sp(z.i.min)+'–'+sp(z.i.max)+'/km':'—'} ${z.i?.pct?'('+z.i.pct+')':''}
-- VAM (velocidade máx aeróbica): ${USER_GOAL?.vam_pace?sp(USER_GOAL.vam_pace)+'/km':'estimada'}
-- Pace atual do atleta: ${sp(a.basePace)}/km
-- Evolução recente: ${a.evoDetails||a.evoSt}
-- Máximo longão já feito: ${a.h.length?Math.max(...a.h.map(w=>w.dist)):0}km
+  // Previous plan corrections
+  const prevPlan = window._iaPlano || window._defaultPlan;
+  const prevPlanSummary = prevPlan ? `Plano anterior existia com ${prevPlan.semanas?.length||0} semanas` : 'Primeiro plano gerado';
 
-HISTÓRICO (últimos ${Math.min(HIST.length,10)} treinos):
-${histLines||'Nenhum treino anterior'}
+  const prompt=`Você é um coach de corrida especialista em treinamento polarizado e fisiologia do exercício. Você vai gerar um plano RIGOROSO baseado nos dados reais do atleta. NUNCA invente dados ou subestime limitações.
 
-DIAS DE TREINO DESTE ATLETA: ${(USER_GOAL?.dias_selecionados||['ter','qui','dom']).join(', ')}
-REGRAS OBRIGATÓRIAS:
-- Distribua treinos APENAS nos dias acima. Todos os outros dias = OFF
-- 1º dia ativo: treino de BASE (Z1 leve)
-- Dias intermediários: qualidade — STRIDES, INTERVALADO ou TEMPO RUN
-- ÚLTIMO dia ativo da semana (${(USER_GOAL?.dias_selecionados||['ter','qui','dom']).slice(-1)[0]}): SEMPRE LONGÃO — sem limite de tempo, aumentar +10% da distância máxima anterior
-- NUNCA omita o longão — ele é o treino mais importante da semana
+═══ CALIBRAÇÃO (TESTE ${USER_GOAL?.test_dist||3}km) ═══
+- Tempo no teste: ${USER_GOAL?.test_time||'não informado'}
+- FC máxima: ${USER_GOAL?.test_fcmax||'não informada'} bpm
+- VAM calculada: ${vam_pace_str} 
+- Z1 Base (80% treinos): ${z.e?sp(z.e.min)+'–'+sp(z.e.max)+'/km':'estimada'}
+- Z2 Limiar: ${z.t?sp(z.t.min)+'–'+sp(z.t.max)+'/km':'estimada'}
+- Z3 VO2max: ${z.i?sp(z.i.min)+'–'+sp(z.i.max)+'/km':'estimada'}
 
-TIPOS DE TREINO PERMITIDOS — formatos exatos:
-- BASE: "Xkm aquecimento ${z.e?sp(z.e.max):'—'} + Ykm ritmo ${z.e?sp(z.e.min):'—'} + 1km leve + alongamento"
-- STRIDES: "2km aquecimento ${z.e?sp(z.e.max):'—'} + Nx60m velocidade máxima subida, 1:30 caminhando + 1km leve" — pace do campo = "veloc. máxima" SEMPRE
-- INTERVALADO CURTO: "2km aquecimento ${z.e?sp(z.e.max):'—'} + Nx200m ritmo ${z.i?sp(z.i.min):'—'}, 1min caminhando + 1km leve"
-- INTERVALADO LONGO: "2km aquecimento ${z.e?sp(z.e.max):'—'} + Nx1000m ritmo ${z.i?sp(z.i.min):'—'}, 2:30 trotando + 1km leve"
-- TEMPO: "2km aquecimento ${z.e?sp(z.e.max):'—'} + Xkm ritmo ${z.t?sp(z.t.min):'—'} + 1km leve"
-- LONGÃO: "1km aquecimento + Xkm ritmo ${z.m?sp(z.m.min):'—'} + 1km leve"
-- OFF: descanso
+═══ PERFIL E RESTRIÇÕES ═══
+- Objetivo: ${obj.t} (${obj.dist}km)
+- Pace alvo: ${tp>0?sp(tp)+'/km':'não definido'}
+- Nível: ${nivel}
+- Dias de treino: ${(USER_GOAL?.dias_selecionados||['ter','qui','dom']).join(', ')}
+- ⏱️ TEMPO MÁXIMO POR TREINO (dias semana): ${tempoMin} minutos — LIMITE ABSOLUTO
+- 🔵 LONGÃO (${(USER_GOAL?.dias_selecionados||['dom']).slice(-1)[0]}): ${tempoLongao>0?'máximo '+tempoLongao+' min':'SEM limite de tempo'}
+- Distância máxima já feita: ${maxDistDone}km
+- Distância média dos treinos: ${avgDistDone}km
 
-REGRAS DE PACE — CRÍTICO:
-- Use APENAS os paces das zonas calculadas acima
-- STRIDES e tiros curtos (60m/80m): campo pace = "veloc. máxima" (nunca número impossível)
-- Aquecimento/desaquecimento: limite superior Z1 = ${z.e?sp(z.e.max):'—'}
-- Corrida leve Z1: ${z.e?sp(z.e.min)+' – '+sp(z.e.max):'—'}
-- Tempo run Z2: ${z.t?sp(z.t.min)+' – '+sp(z.t.max):'—'}
-- Intervalado Z3: ${z.i?sp(z.i.min)+' – '+sp(z.i.max):'—'}
+═══ HISTÓRICO COMPLETO ═══
+${histLines}
 
-TEMPO POR TREINO — CRÍTICO:
-- Treinos de semana (base, intervalado, tempo run, strides): máximo ${USER_GOAL?.tempo_treino||45} minutos
-- Longão (fim de semana/domingo): ${USER_GOAL?.tempo_longao>0?'máximo '+USER_GOAL.tempo_longao+' minutos':'SEM limite de tempo — aumente distância livremente'}
-- Ajuste volumes (km e repetições) para que cada treino caiba no seu tempo
-- Para 30 min: 4-5km total, menos repetições
-- Para 45 min: 6-7km total, volumes médios
-- Para 60 min: 8-9km total, volumes normais
-- Longão livre: aumente +10% do máximo anterior sem restrição de tempo
+═══ EVOLUÇÃO ═══
+- Pace atual: ${sp(a.basePace)}/km
+- Tendência: ${a.evoDetails||a.evoSt}
+- Consistência: ${a.consistency||'—'}%
+- ${prevPlanSummary}
 
-PROGRESSÃO (semana a semana): aumente volume ou intensidade progressivamente, semana 4 pode ter pico ou recuo.
+═══ REGRAS DO PLANO ═══
 
-RETORNE APENAS JSON VÁLIDO (sem texto antes ou depois), no formato:
+TEMPO — CRÍTICO:
+- Treinos de semana: máximo ${tempoMin} min incluindo aquecimento e desaquecimento
+- Para calcular: (dist_aquec + dist_trabalho + dist_resfriamento) × pace_médio ≤ ${tempoMin} min
+- Para ${tempoMin} min a ~Z1 (~${sp(Math.round((z.e?(z.e.min+z.e.max)/2:a.basePace*1.18)))}): máximo ~${Math.round(tempoMin*60/(z.e?(z.e.min+z.e.max)/2:a.basePace*1.18)*10)/10}km total
+- Nunca prescreva mais km ou reps do que cabe no tempo disponível
+
+PROGRESSÃO — CRÍTICO:
+- Distância máxima feita: ${maxDistDone}km → Longão semana 1: máximo ${Math.round(maxDistDone*1.1*10)/10}km (+10%)
+- NUNCA aumente mais de 10% de distância por semana (regra de ouro para evitar lesão)
+- Intervalados: comece conservador (menos reps) e aumente gradualmente
+
+DIAS E ESTRUTURA:
+- APENAS nos dias: ${(USER_GOAL?.dias_selecionados||['ter','qui','dom']).join(', ')}
+- Todos os outros dias = OFF
+- Primeiro dia ativo = BASE Z1
+- Dias intermediários = qualidade (STRIDES ou INTERVALADO)
+- Último dia = LONGÃO progressivo (${tempoLongao>0?'max '+tempoLongao+'min':'sem limite de tempo'})
+
+PACES:
+- Aquecimento/leve: ${z.e?sp(z.e.max):'—'}/km (limite superior Z1)
+- Base Z1: ${z.e?sp(z.e.min)+'–'+sp(z.e.max)+'/km':'—'}
+- Longão Z1+: ${z.m?sp(z.m.min)+'–'+sp(z.m.max)+'/km':sp(Math.round(a.basePace*1.07))+'–'+sp(Math.round(a.basePace*1.12))+'/km'}
+- Tempo Z2: ${z.t?sp(z.t.min)+'–'+sp(z.t.max)+'/km':'—'}
+- Intervalado Z3: ${z.i?sp(z.i.min)+'–'+sp(z.i.max)+'/km':'—'}
+- Strides: "veloc. máxima" (nunca coloque número de pace)
+
+FORMATO DO RETORNO — JSON APENAS:
 {
   "semanas": [
     {
       "semana": 1,
-      "foco": "título curto do foco da semana",
-      "nota": "dica importante para esta semana",
+      "foco": "título curto",
+      "nota": "dica + justificativa do volume escolhido",
+      "correcoes": "ajustes feitos em relação ao plano anterior e por quê (ou 'Primeiro plano')",
       "treinos": {
-        "seg": {"tipo": "BASE", "descricao": "descrição completa", "zona": "Z1", "pace": "X:XX/km"},
-        "ter": {"tipo": "OFF", "descricao": "Descanso", "zona": "OFF"},
-        "qua": {"tipo": "STRIDES", "descricao": "descrição completa", "zona": "Z3", "pace": "veloc. máxima"},
-        "qui": {"tipo": "OFF", "descricao": "Descanso", "zona": "OFF"},
-        "sex": {"tipo": "INTERVALADO", "descricao": "descrição completa", "zona": "Z3", "pace": "X:XX/km"},
-        "sab": {"tipo": "OFF", "descricao": "Descanso", "zona": "OFF"},
-        "dom": {"tipo": "LONGÃO", "descricao": "descrição completa", "zona": "LONGAO", "pace": "X:XX/km"}
+        "ter": {"tipo":"BASE","descricao":"2km aquec ${z.e?sp(z.e.max):'8:00'} + Xkm ritmo ${z.e?sp(z.e.min):'7:30'} + 1km leve","zona":"Z1","pace":"${z.e?sp(z.e.min):'7:30'}–${z.e?sp(z.e.max):'8:00'}","tempo_estimado":"XX min"},
+        "qui": {"tipo":"STRIDES","descricao":"2km aquec + Nx60m veloc. máxima subida, 1:30 caminhando + 1km leve","zona":"Z3","pace":"veloc. máxima","tempo_estimado":"XX min"},
+        "dom": {"tipo":"LONGÃO","descricao":"1km aquec + ${Math.round(maxDistDone*1.1*10)/10}km ritmo PACE_LONGAO + 1km leve","zona":"LONGAO","pace":"PACE_LONGAO","tempo_estimado":"XX min"}
       }
     }
   ]
-}
-
-Adapte o número de dias ativos conforme os dias disponíveis (${USER_GOAL?.dias_semana||3} dias). Se poucos dias, concentre os treinos nos dias mais importantes.`;
+}`;
 
   try {
     let text=await callClaudeAPI([{role:'user',content:prompt}],2000);
@@ -3654,24 +3728,14 @@ function renderCorridas(){
 
     ${upcomingHtml}
 
-    <!-- Side by side layout: calendar + list -->
+    <!-- Side by side layout: races on LEFT, calendar on RIGHT -->
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;align-items:start">
 
-      <!-- LEFT: Calendar -->
-      <div class="card" style="padding:14px">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
-          <button onclick="changeRaceMonth(-1)" style="background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">‹</button>
-          <div style="font-size:14px;font-weight:700;color:var(--tx)">${monthNames[month]} ${year}</div>
-          <button onclick="changeRaceMonth(1)" style="background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">›</button>
-        </div>
-        <div class="race-month-grid">${calHtml}</div>
-      </div>
-
-      <!-- RIGHT: Race list for selected month -->
+      <!-- LEFT: Race list for selected month -->
       <div>
         <div style="font-size:12px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.6px;margin-bottom:10px">${monthNames[month]}</div>
         ${monthRaces.length===0
-          ? `<div style="text-align:center;padding:32px 16px;color:var(--tx3)"><div style="font-size:28px;margin-bottom:8px">🏃</div><div style="font-size:13px">Nenhuma prova em ${monthNames[month]}</div></div>`
+          ? `<div style="text-align:center;padding:32px 16px;color:var(--tx3);background:var(--bg2);border-radius:var(--rl);border:1px solid var(--bd)"><div style="font-size:28px;margin-bottom:8px">🏃</div><div style="font-size:13px">Nenhuma prova em ${monthNames[month]}</div></div>`
           : monthRaces.map(r=>`<div class="race-list-item" id="race-${r.data?.replace(/\//g,'-')}" style="margin-bottom:8px">
               <div style="min-width:40px;text-align:center">
                 <div style="font-size:22px;font-weight:800;color:var(--neon);line-height:1">${r.data?.slice(0,2)||'—'}</div>
@@ -3686,6 +3750,17 @@ function renderCorridas(){
             </div>`).join('')
         }
       </div>
+
+      <!-- RIGHT: Calendar -->
+      <div class="card" style="padding:14px">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px">
+          <button onclick="changeRaceMonth(-1)" style="background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">‹</button>
+          <div style="font-size:14px;font-weight:700;color:var(--tx)">${monthNames[month]} ${year}</div>
+          <button onclick="changeRaceMonth(1)" style="background:var(--bg3);border:1px solid var(--bd);border-radius:var(--r);width:32px;height:32px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center">›</button>
+        </div>
+        <div class="race-month-grid">${calHtml}</div>
+      </div>
+
 
     </div>
   </div>`;
