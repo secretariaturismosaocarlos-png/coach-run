@@ -610,12 +610,12 @@ let OB_NIVEL_LABEL = '';
 const PROXY_URL = 'https://coach-run-api.secretaria-turismo-saocarlos.workers.dev';
 // ↑ Troque pelo endereço do seu Worker após o deploy
 
-async function callClaudeAPI(messages, maxTokens=1500){
+async function callClaudeAPI(messages, maxTokens=1500, mode='fast'){
   try {
     const resp=await fetch(PROXY_URL,{
       method:'POST',
       headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({messages, max_tokens:maxTokens})
+      body:JSON.stringify({messages, max_tokens:maxTokens, fast: mode==='fast'})
     });
     if(!resp.ok){
       const e=await resp.json().catch(()=>({}));
@@ -878,7 +878,7 @@ async function saveWorkout(t){
   const {data} = await db.from('workouts').insert({
     user_id:CU.id, data:t.data, dist:t.dist, tempo:t.tempo,
     pace:t.pace, fcmed:t.fcmed||null, fcmax:t.fcmax||null,
-    cad:t.cad||null, splits:t.splits||null
+    cad:t.cad||null, splits:t.splits||null, elev:t.elev||null, pse:t.pse||null
   }).select().single();
   if(data){ t.id=data.id; t.created_at=data.created_at; HIST.push({...t, paceSec:ps(t.pace)}); }
 }
@@ -1838,7 +1838,6 @@ async function gerarAnaliseIA(){
 - Progresso rumo ao objetivo: ${a.progPct||0}%
 - ETA para objetivo: ${a.weeksETA} semanas` : '';
 
-  const vam_pace_str = USER_GOAL?.vam_pace ? sp(USER_GOAL.vam_pace)+'/km' : (z._vam?.pace?sp(z._vam.pace)+'/km':'não calculada');
   const prompt=`Você é um coach de corrida especialista em fisiologia do exercício e treinamento polarizado. Analise TODOS os dados abaixo com precisão científica. Nunca seja genérico — use os números reais.
 
 ═══ CALIBRAÇÃO INICIAL (TESTE DE CORRIDA) ═══
@@ -1880,7 +1879,7 @@ ${evoInfo}
 
 ═══════════════════════════════════════════════
 
-Agora gere a análise COMPLETA e PERSONALIZADA. Use os dados reais acima — nunca seja genérico.
+Análise direta e objetiva em português. Use APENAS os dados fornecidos. Seja conciso.
 
 ═══ PLANO PRESCRITO (compare com o treino realizado) ═══
 ${(()=>{
@@ -1972,7 +1971,7 @@ Nota 0–100 considerando: execução do plano (40%), zona correta (30%), consis
 Classificação: 90+ excelente / 70–89 bom / 50–69 atenção / <50 revisar`;
 
   try {
-    const text = await callClaudeAPI([{role:'user', content: prompt}], 2500);
+    const text = await callClaudeAPI([{role:'user', content: prompt}], 1500, 'fast');
     out.innerHTML = renderIAText(text);
     btn.textContent = '🔄 Gerar nova análise';
     btn.disabled = false;
@@ -2425,7 +2424,8 @@ function renderDefaultPlanSheet(a, dias){
   const bp=a.basePace;
   const tp=a.tp||bp;
   const tempoMin = USER_GOAL?.tempo_treino || 45;
-  const tempoLongao = USER_GOAL?.tempo_longao || 0; // 0 = livre
+  const tempoLongao = USER_GOAL?.tempo_longao || 0;
+  const vam_pace_str = USER_GOAL?.vam_pace ? sp(USER_GOAL.vam_pace)+'/km' : (z._vam?.pace?sp(z._vam.pace)+'/km':'não calculada'); // 0 = livre
 
   // ── PACE ZONES ──
   const pAq   = z.e ? sp(z.e.max) : sp(Math.round(bp*1.28));
@@ -2545,6 +2545,7 @@ function renderDefaultPlanSheet(a, dias){
 // ─── Generate plan via AI ────────────────────────────────────────
 async function gerarPlanoIA(){
   const a=computeAnalise();
+  const vam_pace_str = USER_GOAL?.vam_pace ? sp(USER_GOAL.vam_pace)+'/km' : (a?.z?._vam?.pace?sp(a.z._vam.pace)+'/km':'não calculada');
   if(!a) return;
 
   const el=document.getElementById('plano-output');
@@ -2650,7 +2651,7 @@ FORMATO DO RETORNO — JSON APENAS:
 }`;
 
   try {
-    let text=await callClaudeAPI([{role:'user',content:prompt}],2000);
+    let text=await callClaudeAPI([{role:'user',content:prompt}],1800,'fast');
 
     // Extract JSON
     const jsonMatch=text.match(/\{[\s\S]*\}/);
@@ -3256,7 +3257,8 @@ function handleTestFileUpload(input){
 function handleFileUpload(input){const f=input.files[0];if(f)processFile(f);}
 
 function processFile(file){
-  showUploadStatus('Lendo arquivo...','');
+  // Show file name immediately
+  showUploadStatus(`📂 Lendo: ${file.name}...`,'');
   const reader=new FileReader();
   reader.onload=e=>{
     try{
@@ -3267,8 +3269,20 @@ function processFile(file){
       else if(name.endsWith('.json')) r=parseJSON(e.target.result);
       else if(name.endsWith('.csv'))  r=parseCSV(e.target.result);
       else{showUploadStatus('Formato não suportado.','err');return;}
-      if(r){fillFormFromFile(r);showUploadStatus('✓ Arquivo lido! Confira os dados e salve.','ok');}
-      else showUploadStatus('Não foi possível ler o arquivo. Insira manualmente.','err');
+      if(r){
+        fillFormFromFile(r);
+        const summary = [
+          r.dist>0?`📏 ${r.dist}km`:'',
+          r.durSec>0?`⏱ ${s2t(Math.round(r.durSec))}`:'',
+          r.dist>0&&r.durSec>0?`🏃 ${sp(Math.round(r.durSec/r.dist))}/km`:'',
+          r.fcmed>0?`❤️ FC ${r.fcmed}bpm`:'',
+          r.fcmax>0?`FCmax ${r.fcmax}bpm`:'',
+          r.splits&&r.splits.length>0?`⚡ ${r.splits.length} splits`:'',
+          r.elevGain>0?`⛰️ ${r.elevGain}m`:'',
+        ].filter(Boolean).join(' · ');
+        showUploadStatus('✓ '+summary,'ok');
+      }
+      else showUploadStatus('Não foi possível ler. Insira manualmente.','err');
     }catch(err){showUploadStatus('Erro: '+err.message,'err');}
   };
   reader.readAsText(file);
@@ -3381,28 +3395,60 @@ function parseGPX(xml){
     }
   }
 
-  // ── Fallback 1: check <distance> or <totalDistance> tag ──
+  // ── Fallback 1: check common distance tags ──
   if(dist<0.1){
-    const distEl=doc.querySelector('distance,Distance,totalDistance,TotalDistanceMeters');
-    if(distEl){
-      const v=parseFloat(distEl.textContent);
-      if(v>0) dist=v>1000?Math.round(v/10)/100:Math.round(v*100)/100;
+    const distSelectors = [
+      'distance','Distance','totalDistance','TotalDistanceMeters',
+      'DistanceMeters','totalDistanceMeters','ns3\:DistanceMeters'
+    ];
+    for(const sel of distSelectors){
+      try{
+        const el = doc.querySelector(sel);
+        if(el){
+          const v=parseFloat(el.textContent);
+          if(v>0){ dist=v>1000?Math.round(v/10)/100:Math.round(v*100)/100; break; }
+        }
+      }catch(e){}
     }
   }
 
-  // ── Fallback 2: estimate from splits if GPS coords failed ──
+  // ── Fallback 2: parse from <Track> distance attributes ──
+  if(dist<0.1){
+    const trackPoints = doc.querySelectorAll('Trackpoint,trkpt,rtept');
+    if(trackPoints.length>1){
+      // Get first and last distance values if present
+      const dists = [];
+      trackPoints.forEach(tp=>{
+        const d=tp.querySelector('DistanceMeters,distance');
+        if(d){ const v=parseFloat(d.textContent); if(v>0) dists.push(v); }
+      });
+      if(dists.length>0){
+        const maxDist=Math.max(...dists);
+        if(maxDist>0) dist=maxDist>1000?Math.round(maxDist/10)/100:Math.round(maxDist*100)/100;
+      }
+    }
+  }
+
+  // ── Fallback 3: estimate from pace+time if we have both ──
+  if(dist<0.1&&durSec>60&&paceArr.length>0){
+    const avgPace=paceArr.reduce((a,b)=>a+b,0)/paceArr.length;
+    if(avgPace>60&&avgPace<900){
+      dist=Math.round(durSec/avgPace*100)/100;
+    }
+  }
+
+  // ── Fallback 4: estimate from splits ──
   if(dist<0.1&&splits.length>0&&durSec>0){
     const splitSecs=splits.map(s=>t2s(s)).filter(v=>v>0);
     if(splitSecs.length>0){
-      const totalSplitSec=splitSecs.reduce((a,b)=>a+b,0);
-      const avgPaceSec=totalSplitSec/splitSecs.length;
-      const remainingSec=Math.max(0,durSec-totalSplitSec);
+      const avgPaceSec=splitSecs.reduce((a,b)=>a+b,0)/splitSecs.length;
+      const remainingSec=Math.max(0,durSec-splitSecs.reduce((a,b)=>a+b,0));
       const remainingKm=avgPaceSec>0?remainingSec/avgPaceSec:0;
       dist=Math.round((splitSecs.length+remainingKm)*100)/100;
     }
   }
 
-  // ── Fallback 3: if we have cumDist from the splits loop, use it ──
+  // ── Fallback 5: cumulative distance from GPS loop ──
   if(dist<0.1&&cumDist>0.1){
     dist=Math.round(cumDist*100)/100;
   }
@@ -3497,7 +3543,17 @@ function fillFormFromFile(r){
 
   setV('t-data',dateStr);
 
-  if(r.dist>0) setV('t-dist',r.dist);
+  // Always set distance — calculate if not directly in file
+  if(r.dist>0){
+    setV('t-dist',r.dist);
+  } else if(r.durSec>0 && r.splits && r.splits.length>0){
+    // Estimate from splits
+    const avgSplitSec = r.splits.map(s=>t2s(s)).reduce((a,b)=>a+b,0)/r.splits.length;
+    if(avgSplitSec>0){
+      const estDist = Math.round((r.durSec/avgSplitSec)*10)/10;
+      if(estDist>0) setV('t-dist',estDist);
+    }
+  }
 
   if(r.durSec>0){
     setV('t-tempo',s2t(Math.round(r.durSec)));
