@@ -586,6 +586,7 @@ let OB_NIVEL = null;
 let OB_DIAS = 3;
 let OB_DIAS_SELECIONADOS = [];
 let OB_TEMPO_TREINO = 45;
+let OB_TEMPO_LONGAO = 0; // 0 = sem limite
 let OB_TARGET_PACE = '';
 let OB_TARGET_DATE = '';
 let OB_TEST_TIME = '';
@@ -596,7 +597,7 @@ let OB_NIVEL_LABEL = '';
 // ═══════════════════════════════════════════════════
 //  PROXY CONFIG — aponte para seu Cloudflare Worker
 // ═══════════════════════════════════════════════════
-const PROXY_URL = 'https://coach-run-api.SEU_USUARIO.workers.dev';
+const PROXY_URL = 'https://coach-run-api.secretaria-turismo-saocarlos.workers.dev';
 // ↑ Troque pelo endereço do seu Worker após o deploy
 
 async function callClaudeAPI(messages, maxTokens=1500){
@@ -796,6 +797,7 @@ async function loadData(){
     USER_GOAL = prof;
     // Restore selected days for onboarding
     if(prof.tempo_treino) OB_TEMPO_TREINO=prof.tempo_treino;
+    if(prof.tempo_longao!==undefined) OB_TEMPO_LONGAO=prof.tempo_longao;
     if(prof.dias_selecionados && prof.dias_selecionados.length>0){
       OB_DIAS_SELECIONADOS=prof.dias_selecionados;
       OB_DIAS=prof.dias_selecionados.length;
@@ -1025,14 +1027,21 @@ function renderOnboarding(el){
         ${sel.length>0?'· '+sel.map(d=>diasSem.find(x=>x.id===d)?.full||d).join(', '):''}
       </div>
       <div style="margin-bottom:16px">
-        <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:8px">Quanto tempo você tem por treino?</div>
-        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+        <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:4px">Tempo por treino (dias de semana)?</div>
+        <div style="font-size:11px;color:var(--tx2);margin-bottom:8px">Segunda, terça, quinta — treinos dentro desse tempo</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:12px">
           ${[30,45,60,90].map(t=>`<div onclick="OB_TEMPO_TREINO=${t};renderHome()" style="text-align:center;padding:12px 4px;border-radius:12px;cursor:pointer;border:2px solid ${OB_TEMPO_TREINO===t?'var(--neon)':'var(--bd)'};background:${OB_TEMPO_TREINO===t?'rgba(255,92,0,.08)':'var(--bg2)'};transition:all .2s">
             <div style="font-size:16px;font-weight:700;color:${OB_TEMPO_TREINO===t?'var(--neon)':'var(--tx2)'}">${t}</div>
             <div style="font-size:10px;color:var(--tx3)">min</div>
           </div>`).join('')}
         </div>
-        <div style="font-size:11px;color:var(--tx2);margin-top:8px;text-align:center">Os treinos serão ajustados para caber no seu tempo disponível</div>
+        <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:4px">Tempo para o longão (fim de semana)?</div>
+        <div style="font-size:11px;color:var(--tx2);margin-bottom:8px">Geralmente domingo — você pode estender mais</div>
+        <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px">
+          ${[[0,'Livre'],[60,'60min'],[90,'90min'],[120,'2h']].map(([t,l])=>`<div onclick="OB_TEMPO_LONGAO=${t};renderHome()" style="text-align:center;padding:12px 4px;border-radius:12px;cursor:pointer;border:2px solid ${OB_TEMPO_LONGAO===t?'var(--teal)':'var(--bd)'};background:${OB_TEMPO_LONGAO===t?'rgba(0,184,148,.08)':'var(--bg2)'};transition:all .2s">
+            <div style="font-size:14px;font-weight:700;color:${OB_TEMPO_LONGAO===t?'var(--teal)':'var(--tx2)'}">${l}</div>
+          </div>`).join('')}
+        </div>
       </div>
       <button class="btn btn-neon" onclick="obNext(3)" ${sel.length>=2?'':'disabled style="opacity:.4;cursor:not-allowed"'}>Próximo →</button>
       <button class="btn btn-ghost" style="margin-top:8px" onclick="OB_STEP=2;renderHome()">← Voltar</button>`;
@@ -1784,8 +1793,11 @@ function renderWorkoutCell(t, col, cls){
 function renderPlanSheet(plan, a){
   const allDays=['seg','ter','qua','qui','sex','sab','dom'];
   const allLabels=['SEG','TER','QUA','QUI','SEX','SÁB','DOM'];
+  // Use selected days; fallback to first N days based on dias_semana count
+  const diasCount = USER_GOAL?.dias_semana || 3;
+  const defaultDays = ['ter','qui','dom'].slice(0,diasCount); // sensible default
   const userDays = (USER_GOAL?.dias_selecionados && USER_GOAL.dias_selecionados.length>0)
-    ? USER_GOAL.dias_selecionados : allDays;
+    ? USER_GOAL.dias_selecionados : defaultDays;
 
   const zoneColor={Z1:'var(--neon)',Z2:'var(--orange)',Z3:'var(--red)',LONGAO:'var(--teal)',LONG:'var(--teal)',FORT:'var(--purple)',OFF:'var(--tx3)'};
   const viewMode = window._planDayView||'table';
@@ -2034,7 +2046,8 @@ DADOS DO ATLETA:
 - Objetivo: ${obj.t}
 - Nível: ${USER_GOAL?.nivel_label||'não informado'}
 - Dias/semana disponíveis: ${USER_GOAL?.dias_semana||3}
-- Tempo máximo por treino: ${USER_GOAL?.tempo_treino||45} minutos (CRÍTICO: todos os treinos devem caber neste tempo)
+- Tempo máximo por treino (dias de semana): ${USER_GOAL?.tempo_treino||45} minutos
+- Tempo do longão (fim de semana): ${USER_GOAL?.tempo_longao>0?(USER_GOAL.tempo_longao+' minutos'):'sem limite — pode ser mais longo'} 
 - Pace atual (média últimos treinos): ${sp(bp)}/km
 - Pace alvo (objetivo): ${tp>0?sp(tp)+'/km':'não definido'}
 - Z1 Base: ${z.e?sp(z.e.min)+'–'+sp(z.e.max)+'/km':'—'}
@@ -2069,12 +2082,13 @@ REGRAS DE PACE — CRÍTICO:
 - Intervalado Z3: ${z.i?sp(z.i.min)+' – '+sp(z.i.max):'—'}
 
 TEMPO POR TREINO — CRÍTICO:
-- Tempo máximo disponível: ${USER_GOAL?.tempo_treino||45} minutos
-- Ajuste volumes (km e repetições) para que o treino caiba nesse tempo
-- Para 30 min: treinos mais curtos, menos repetições
-- Para 45 min: volumes médios conforme as zonas
-- Para 60 min: volumes normais
-- Para 90 min: volumes maiores, longão mais longo
+- Treinos de semana (base, intervalado, tempo run, strides): máximo ${USER_GOAL?.tempo_treino||45} minutos
+- Longão (fim de semana/domingo): ${USER_GOAL?.tempo_longao>0?'máximo '+USER_GOAL.tempo_longao+' minutos':'SEM limite de tempo — aumente distância livremente'}
+- Ajuste volumes (km e repetições) para que cada treino caiba no seu tempo
+- Para 30 min: 4-5km total, menos repetições
+- Para 45 min: 6-7km total, volumes médios
+- Para 60 min: 8-9km total, volumes normais
+- Longão livre: aumente +10% do máximo anterior sem restrição de tempo
 
 PROGRESSÃO (semana a semana): aumente volume ou intensidade progressivamente, semana 4 pode ter pico ou recuo.
 
@@ -2899,7 +2913,7 @@ async function obFinish(){
   const td=window._obTestData||{};
   await saveGoal({
     obj_id:OB_OBJ.id,nivel:OB_NIVEL,nivel_label:OB_NIVEL_LABEL||OB_NIVEL,
-    dias_semana:OB_DIAS||3,tempo_treino:OB_TEMPO_TREINO||45,dias_selecionados:OB_DIAS_SELECIONADOS.length>0?OB_DIAS_SELECIONADOS:null,target_pace_sec:OB_TARGET_PACE?ps(OB_TARGET_PACE):0,
+    dias_semana:OB_DIAS||3,tempo_treino:OB_TEMPO_TREINO||45,tempo_longao:OB_TEMPO_LONGAO||0,dias_selecionados:OB_DIAS_SELECIONADOS.length>0?OB_DIAS_SELECIONADOS:null,target_pace_sec:OB_TARGET_PACE?ps(OB_TARGET_PACE):0,
     target_date:OB_TARGET_DATE||null,onboard_done:true,
     test_time:OB_TEST_TIME,test_fcmax:OB_TEST_FCMAX||0,
     vam_pace:vam._vam?vam._vam.pace:0,
