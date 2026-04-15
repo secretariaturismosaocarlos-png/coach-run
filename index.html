@@ -827,6 +827,19 @@ async function checkPendingUsers(){
     setTimeout(checkPendingUsers,30000);
   }catch(e){}
 }
+function showAlert(msg, type='ok'){
+  // Simple toast notification
+  const el = document.createElement('div');
+  const bg = type==='ok'?'var(--teal)':type==='warning'?'var(--orange)':'var(--red)';
+  el.style.cssText = `position:fixed;top:16px;left:50%;transform:translateX(-50%);
+    background:${bg};color:#fff;padding:10px 20px;border-radius:20px;
+    font-size:13px;font-weight:600;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.2);
+    max-width:90vw;text-align:center;font-family:var(--sans)`;
+  el.textContent = msg;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 3000);
+}
+
 function playNotif(){
   try{
     const ctx=new(window.AudioContext||window.webkitAudioContext)();
@@ -890,7 +903,29 @@ let USER_GOAL = null; // {obj_id, nivel, dias_semana, target_pace_sec, target_da
 
 async function saveGoal(g){
   USER_GOAL = g;
-  await db.from('user_goals').upsert({user_id:CU.id, ...g});
+  try {
+    const {error} = await db.from('user_goals').upsert({user_id:CU.id, ...g});
+    if(error){
+      // Try with only the base columns that definitely exist
+      const base = {
+        user_id:CU.id,
+        obj_id:g.obj_id, nivel:g.nivel, nivel_label:g.nivel_label,
+        dias_semana:g.dias_semana, target_pace_sec:g.target_pace_sec,
+        target_date:g.target_date, onboard_done:g.onboard_done,
+        test_time:g.test_time, test_fcmax:g.test_fcmax,
+        test_dist:g.test_dist, test_fcmed:g.test_fcmed,
+        test_splits:g.test_splits, test_cad:g.test_cad,
+        test_elev:g.test_elev, vam_pace:g.vam_pace,
+      };
+      // Add optional newer columns one at a time
+      if(g.dias_selecionados !== undefined) base.dias_selecionados = g.dias_selecionados;
+      if(g.tempo_treino !== undefined) base.tempo_treino = g.tempo_treino;
+      if(g.tempo_longao !== undefined) base.tempo_longao = g.tempo_longao;
+      await db.from('user_goals').upsert(base);
+    }
+  } catch(e) {
+    console.warn('saveGoal error:', e);
+  }
 }
 
 async function saveWorkout(t){
@@ -901,7 +936,14 @@ async function saveWorkout(t){
     h.pace===t.pace
   );
   if(existing){
-    showAlert('⚠️ Treino similar já registrado nessa data. Verifique o histórico.','warning');
+    // Show warning inline in form
+    const warnEl = document.getElementById('treino-msg') || document.createElement('div');
+    warnEl.id = 'treino-msg';
+    warnEl.style.cssText = 'color:var(--orange);font-size:12px;padding:8px;background:var(--orange-dim);border-radius:var(--r);margin-bottom:8px';
+    warnEl.textContent = '⚠️ Treino similar já registrado nessa data. Verifique o histórico.';
+    const form = document.querySelector('#pn-treino .card');
+    if(form) form.prepend(warnEl);
+    setTimeout(()=>warnEl?.remove(), 4000);
     return;
   }
   const {data,error} = await db.from('workouts').insert({
@@ -1885,7 +1927,7 @@ async function gerarAnaliseIA(){
     const testPaceSec = vam.pace || last.paceSec;
     const raceEstSec = testPaceSec ? Math.round(testPaceSec * Math.pow(obj.dist/3, 1.06)) : 0;
 
-    prompt = `Você é coach de corrida especialista. Analise o teste de calibração abaixo e responda em português, de forma direta e prática.
+    prompt = `Coach de corrida. Analise este teste de 3km. Responda em português, seja direto e use os dados reais abaixo.
 
 TESTE: ${testData.test_dist||3}km em ${testData.test_time}
 FC máx: ${testData.test_fcmax||'não inf.'} bpm | FC média: ${testData.test_fcmed||last.fcmed||'não inf.'} bpm
@@ -2594,7 +2636,7 @@ async function gerarPlanoIA(){
   const prevPlan = window._iaPlano || window._defaultPlan;
   const prevPlanSummary = prevPlan ? `Plano anterior existia com ${prevPlan.semanas?.length||0} semanas` : 'Primeiro plano gerado';
 
-  const prompt=`Você é um coach de corrida especialista em treinamento polarizado e fisiologia do exercício. Você vai gerar um plano RIGOROSO baseado nos dados reais do atleta. NUNCA invente dados ou subestime limitações.
+  const prompt=`Coach de corrida, treinamento polarizado. Gere um plano semanal RIGOROSO baseado nos dados reais abaixo. Use apenas dados fornecidos.
 
 ═══ CALIBRAÇÃO (TESTE ${USER_GOAL?.test_dist||3}km) ═══
 - Tempo no teste: ${USER_GOAL?.test_time||'não informado'}
@@ -3094,7 +3136,7 @@ function showSaveMsg(msg,type){
   el.style.background=type==='ok'?'var(--teal-dim)':'var(--red-dim)';
   el.style.color=type==='ok'?'var(--teal)':'var(--red)';
   el.style.borderColor=type==='ok'?'var(--teal)':'var(--red)';
-  el.textContent=msg;
+  el.innerHTML=msg;
 }
 
 // ═══════════════════════════════════════════════════
@@ -3289,18 +3331,24 @@ function processFile(file){
       else{showUploadStatus('Formato não suportado.','err');return;}
       if(r){
         fillFormFromFile(r);
-        const summary = [
-          r.dist>0?`📏 ${r.dist}km`:'',
-          r.durSec>0?`⏱ ${s2t(Math.round(r.durSec))}`:'',
-          r.dist>0&&r.durSec>0?`🏃 ${sp(Math.round(r.durSec/r.dist))}/km`:'',
-          r.fcmed>0?`❤️ FC ${r.fcmed}bpm`:'',
-          r.fcmax>0?`FCmax ${r.fcmax}bpm`:'',
-          r.splits&&r.splits.length>0?`⚡ ${r.splits.length} splits`:'',
-          r.elevGain>0?`⛰️ ${r.elevGain}m`:'',
-        ].filter(Boolean).join(' · ');
-        showUploadStatus('✓ '+summary,'ok');
+        const dist = r.dist>0?r.dist:0;
+        const pace = dist>0&&r.durSec>0?sp(Math.round(r.durSec/dist)):(r.avgPaceSec>0?sp(r.avgPaceSec):'');
+        // Build rich summary
+        const lines = [
+          `<strong>✅ Arquivo lido com sucesso!</strong>`,
+          dist>0?`📏 Distância: <strong>${dist}km</strong>`:'',
+          r.durSec>0?`⏱ Duração: <strong>${s2t(Math.round(r.durSec))}</strong>`:'',
+          pace?`🏃 Pace médio: <strong>${pace}/km</strong>`:'',
+          r.fcmed>0?`❤️ FC média: <strong>${r.fcmed} bpm</strong>  FC máx: <strong>${r.fcmax||'—'} bpm</strong>`:'',
+          r.cad>0?`👣 Cadência: <strong>${r.cad} spm</strong>`:'',
+          r.elevGain>0?`⛰️ Elevação: <strong>${r.elevGain}m</strong>`:'',
+          r.splits&&r.splits.length>0?`⚡ Splits: ${r.splits.join(' · ')}`:'',
+          r.paceFastest?`🔥 Mais rápido: ${r.paceFastest}  🐢 Mais lento: ${r.paceSlowest}`:'',
+          r.pauseCount>0?`⏸ Pausas: ${r.pauseCount}`:'',
+        ].filter(Boolean).join('<br>');
+        showUploadStatus(lines,'ok');
       }
-      else showUploadStatus('Não foi possível ler. Insira manualmente.','err');
+      else showUploadStatus('Não foi possível ler. Tente outro formato ou insira manualmente.','err');
     }catch(err){showUploadStatus('Erro: '+err.message,'err');}
   };
   reader.readAsText(file);
@@ -3322,219 +3370,224 @@ function haversine(lat1,lon1,lat2,lon2){
 }
 
 function parseGPX(xml){
-  const doc=new DOMParser().parseFromString(xml,'text/xml');
-  const pts=[...doc.querySelectorAll('trkpt,rtept')];
+  const doc = new DOMParser().parseFromString(xml, 'text/xml');
+  const pts = [...doc.querySelectorAll('trkpt,rtept')];
   if(!pts.length) return null;
 
   // ── Timestamps ──
-  const times=pts.map(p=>{
-    const t=p.querySelector('time');
-    const d=t?new Date(t.textContent.trim()):null;
-    return d&&!isNaN(+d)?d:null;
+  const times = pts.map(p => {
+    const t = p.querySelector('time');
+    const d = t ? new Date(t.textContent.trim()) : null;
+    return d && !isNaN(+d) ? d : null;
   });
 
-  // ── Coordinates — robust parsing ──
-  const lats=pts.map(p=>{
-    const v=parseFloat(String(p.getAttribute('lat')||'').replace(',','.'));
-    return (isNaN(v)||v<-90||v>90)?NaN:v;
-  });
-  const lons=pts.map(p=>{
-    const v=parseFloat(String(p.getAttribute('lon')||'').replace(',','.'));
-    return (isNaN(v)||v<-180||v>180)?NaN:v;
-  });
+  // ── Coordinates ──
+  const lats = pts.map(p => { const v = parseFloat(p.getAttribute('lat')||''); return isNaN(v)?NaN:v; });
+  const lons = pts.map(p => { const v = parseFloat(p.getAttribute('lon')||''); return isNaN(v)?NaN:v; });
 
-  // ── HR — multiple namespace variants ──
-  const hrs=[];
-  pts.forEach(p=>{
-    // Try all common HR tag names
-    const candidates=['hr','HeartRateBpm','Value'];
-    let val=0;
-    for(const tag of candidates){
-      const el=p.querySelector(tag)||
-               p.getElementsByTagNameNS('http://www.garmin.com/xmlschemas/TrackPointExtension/v1',tag)[0]||
-               p.getElementsByTagNameNS('http://www.garmin.com/xmlschemas/TrackPointExtension/v2',tag)[0];
-      if(el){val=parseInt(el.textContent);break;}
+  // ── HR ──
+  const hrs = [];
+  pts.forEach(p => {
+    const tags = ['hr','HeartRateBpm','Value','heartrate'];
+    let val = 0;
+    for(const tag of tags){
+      const el = p.querySelector(tag) ||
+        p.getElementsByTagNameNS('http://www.garmin.com/xmlschemas/TrackPointExtension/v1', tag)[0] ||
+        p.getElementsByTagNameNS('http://www.garmin.com/xmlschemas/TrackPointExtension/v2', tag)[0];
+      if(el){ val = parseInt(el.textContent); break; }
     }
-    if(val>40&&val<230) hrs.push(val);
+    if(val > 40 && val < 230) hrs.push(val);
   });
 
   // ── Cadence ──
-  const cads=[];
-  pts.forEach(p=>{
-    const candidates=['cad','RunCadence','Cadence'];
-    let val=0;
-    for(const tag of candidates){
-      const el=p.querySelector(tag)||
-               p.getElementsByTagNameNS('http://www.garmin.com/xmlschemas/TrackPointExtension/v1',tag)[0]||
-               p.getElementsByTagNameNS('http://www.garmin.com/xmlschemas/TrackPointExtension/v2',tag)[0];
-      if(el){val=parseInt(el.textContent);break;}
+  const cads = [];
+  pts.forEach(p => {
+    const tags = ['cad','RunCadence','Cadence'];
+    let val = 0;
+    for(const tag of tags){
+      const el = p.querySelector(tag) ||
+        p.getElementsByTagNameNS('http://www.garmin.com/xmlschemas/TrackPointExtension/v1', tag)[0] ||
+        p.getElementsByTagNameNS('http://www.garmin.com/xmlschemas/TrackPointExtension/v2', tag)[0];
+      if(el){ val = parseInt(el.textContent); break; }
     }
-    // GPX cad is one-foot steps/min, multiply by 2 for both feet
-    if(val>50&&val<120) val=val*2;
-    if(val>100&&val<240) cads.push(val);
+    if(val > 30 && val < 120) val = val * 2; // single-foot to both feet
+    if(val > 100 && val < 240) cads.push(val);
   });
 
   // ── Elevation ──
-  let elevGain=0;
-  const elevs=pts.map(p=>{
-    const el=p.querySelector('ele');
-    return el?parseFloat(el.textContent):NaN;
-  });
-  for(let i=1;i<elevs.length;i++){
-    if(!isNaN(elevs[i])&&!isNaN(elevs[i-1])&&elevs[i]-elevs[i-1]>0.5)
-      elevGain+=elevs[i]-elevs[i-1];
+  let elevGain = 0;
+  const elevs = pts.map(p => { const el = p.querySelector('ele'); return el ? parseFloat(el.textContent) : NaN; });
+  for(let i = 1; i < elevs.length; i++){
+    if(!isNaN(elevs[i]) && !isNaN(elevs[i-1]) && elevs[i] - elevs[i-1] > 0.5)
+      elevGain += elevs[i] - elevs[i-1];
   }
 
   // ── Distance via haversine ──
-  let dist=0;
-  let validCoords=0;
-  for(let i=1;i<lats.length;i++){
-    if(!isNaN(lats[i])&&!isNaN(lons[i])&&!isNaN(lats[i-1])&&!isNaN(lons[i-1])){
-      dist+=haversine(lats[i-1],lons[i-1],lats[i],lons[i]);
-      validCoords++;
+  let dist = 0, cumDist = 0;
+  for(let i = 1; i < lats.length; i++){
+    if(!isNaN(lats[i]) && !isNaN(lons[i]) && !isNaN(lats[i-1]) && !isNaN(lons[i-1])){
+      const d = haversine(lats[i-1], lons[i-1], lats[i], lons[i]);
+      dist += d; cumDist += d;
     }
   }
-  dist=Math.round(dist*100)/100;
+  dist = Math.round(dist * 100) / 100;
 
   // ── Duration ──
-  const validTimes=times.filter(Boolean);
-  const durSec=validTimes.length>=2?(+validTimes[validTimes.length-1]-+validTimes[0])/1000:0;
+  const validTimes = times.filter(Boolean);
+  const durSec = validTimes.length >= 2 ? (+validTimes[validTimes.length-1] - +validTimes[0]) / 1000 : 0;
 
-  // ── Splits per km ──
-  const splits=[];
-  let cumDist=0,lastKm=0,lastT=validTimes[0]; // cumDist also used as dist fallback
-  for(let i=1;i<pts.length;i++){
-    if(isNaN(lats[i])||isNaN(lons[i])) continue;
-    cumDist+=haversine(lats[i-1],lons[i-1],lats[i],lons[i]);
-    if(cumDist>=lastKm+1&&times[i]&&lastT){
-      const sec=(+times[i]-+lastT)/1000;
-      if(sec>0)splits.push(sp(Math.round(sec)));
-      lastT=times[i];lastKm=Math.floor(cumDist);
-    }
+  // ── Moving time (exclude stops > 30s) ──
+  let movingTime = 0, pauseCount = 0;
+  for(let i = 1; i < validTimes.length; i++){
+    const gap = (+validTimes[i] - +validTimes[i-1]) / 1000;
+    if(gap > 30) pauseCount++;
+    else movingTime += gap;
   }
 
-  // ── Fallback 1: check common distance tags ──
-  if(dist<0.1){
-    const distSelectors = [
-      'distance','Distance','totalDistance','TotalDistanceMeters',
-      'DistanceMeters','totalDistanceMeters','ns3\:DistanceMeters'
-    ];
-    for(const sel of distSelectors){
-      try{
-        const el = doc.querySelector(sel);
-        if(el){
-          const v=parseFloat(el.textContent);
-          if(v>0){ dist=v>1000?Math.round(v/10)/100:Math.round(v*100)/100; break; }
-        }
-      }catch(e){}
-    }
-  }
-
-  // ── Fallback 2: parse from <Track> distance attributes ──
-  if(dist<0.1){
-    const trackPoints = doc.querySelectorAll('Trackpoint,trkpt,rtept');
-    if(trackPoints.length>1){
-      // Get first and last distance values if present
-      const dists = [];
-      trackPoints.forEach(tp=>{
-        const d=tp.querySelector('DistanceMeters,distance');
-        if(d){ const v=parseFloat(d.textContent); if(v>0) dists.push(v); }
-      });
-      if(dists.length>0){
-        const maxDist=Math.max(...dists);
-        if(maxDist>0) dist=maxDist>1000?Math.round(maxDist/10)/100:Math.round(maxDist*100)/100;
+  // ── Pace per km (splits) ──
+  const splits = [], splitPaces = [];
+  let lastKm = 0, lastT = validTimes[0], splitCumDist = 0;
+  for(let i = 1; i < pts.length; i++){
+    if(isNaN(lats[i]) || isNaN(lons[i])) continue;
+    splitCumDist += haversine(lats[i-1], lons[i-1], lats[i], lons[i]);
+    if(splitCumDist >= lastKm + 1 && times[i] && lastT){
+      const sec = (+times[i] - +lastT) / 1000;
+      if(sec > 30 && sec < 1800){
+        const paceSec = Math.round(sec);
+        splits.push(sp(paceSec));
+        splitPaces.push(paceSec);
       }
+      lastT = times[i]; lastKm = Math.floor(splitCumDist);
     }
   }
 
-  // ── Fallback 3: estimate from pace+time if we have both ──
-  if(dist<0.1&&durSec>60&&paceArr.length>0){
-    const avgPace=paceArr.reduce((a,b)=>a+b,0)/paceArr.length;
-    if(avgPace>60&&avgPace<900){
-      dist=Math.round(durSec/avgPace*100)/100;
+  // ── Pace stats from splits ──
+  const paceFastest = splitPaces.length ? sp(Math.min(...splitPaces)) : '';
+  const paceSlowest = splitPaces.length ? sp(Math.max(...splitPaces)) : '';
+  const paceOscillation = splitPaces.length > 1 ? Math.max(...splitPaces) - Math.min(...splitPaces) : 0;
+  // Pacing trend: first half vs second half
+  let pacingTrend = 'constante';
+  if(splitPaces.length >= 2){
+    const half = Math.floor(splitPaces.length / 2);
+    const avgFirst = splitPaces.slice(0, half).reduce((a,b)=>a+b,0)/half;
+    const avgLast = splitPaces.slice(half).reduce((a,b)=>a+b,0)/(splitPaces.length-half);
+    const diff = avgLast - avgFirst;
+    if(diff > 30) pacingTrend = 'negativo'; // getting slower = positive split
+    else if(diff < -20) pacingTrend = 'negativo_split'; // getting faster = negative split
+    else if(diff < -5) pacingTrend = 'progressivo';
+  }
+
+  // ── Fallbacks for distance ──
+  if(dist < 0.1){
+    const selectors = ['distance','Distance','totalDistance','TotalDistanceMeters','DistanceMeters'];
+    for(const sel of selectors){
+      try{ const el = doc.querySelector(sel); if(el){ const v = parseFloat(el.textContent); if(v > 0){ dist = v > 1000 ? Math.round(v/10)/100 : v; break; } } }catch(e){}
     }
   }
-
-  // ── Fallback 4: estimate from splits ──
-  if(dist<0.1&&splits.length>0&&durSec>0){
-    const splitSecs=splits.map(s=>t2s(s)).filter(v=>v>0);
-    if(splitSecs.length>0){
-      const avgPaceSec=splitSecs.reduce((a,b)=>a+b,0)/splitSecs.length;
-      const remainingSec=Math.max(0,durSec-splitSecs.reduce((a,b)=>a+b,0));
-      const remainingKm=avgPaceSec>0?remainingSec/avgPaceSec:0;
-      dist=Math.round((splitSecs.length+remainingKm)*100)/100;
-    }
+  if(dist < 0.1 && splitPaces.length > 0 && durSec > 0){
+    const avgP = splitPaces.reduce((a,b)=>a+b,0)/splitPaces.length;
+    if(avgP > 0) dist = Math.round(durSec/avgP*10)/10;
   }
+  if(dist < 0.1 && cumDist > 0.1) dist = Math.round(cumDist*100)/100;
 
-  // ── Fallback 5: cumulative distance from GPS loop ──
-  if(dist<0.1&&cumDist>0.1){
-    dist=Math.round(cumDist*100)/100;
-  }
-
-  const fcmed=hrs.length?Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length):0;
-  const fcmax=hrs.length?Math.max(...hrs):0;
-  const cadAvg=cads.length?Math.round(cads.reduce((a,b)=>a+b,0)/cads.length):0;
+  const fcmed = hrs.length ? Math.round(hrs.reduce((a,b)=>a+b,0)/hrs.length) : 0;
+  const fcmax = hrs.length ? Math.max(...hrs) : 0;
+  const cadAvg = cads.length ? Math.round(cads.reduce((a,b)=>a+b,0)/cads.length) : 0;
+  const cadMax = cads.length ? Math.max(...cads) : 0;
+  const avgPaceSec = dist > 0 && durSec > 0 ? Math.round(durSec/dist) : 0;
 
   return {
-    dist,durSec,fcmed,fcmax,
-    cad:cadAvg,
-    elevGain:Math.round(elevGain),
-    splits,
-    date:validTimes[0]||new Date()
+    dist, durSec, movingTime, pauseCount,
+    fcmed, fcmax,
+    cad: cadAvg, cadMax,
+    elevGain: Math.round(elevGain),
+    splits, splitPaces,
+    paceFastest, paceSlowest, paceOscillation, pacingTrend,
+    avgPaceSec,
+    date: validTimes[0] || new Date()
   };
 }
 
 function parseTCX(xml){
-  const doc=new DOMParser().parseFromString(xml,'text/xml');
-  const ns='http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2';
-  const ns2='http://www.garmin.com/xmlschemas/ActivityExtension/v2';
-  const tps=[...doc.getElementsByTagNameNS(ns,'Trackpoint')];
+  const doc = new DOMParser().parseFromString(xml, 'text/xml');
+  const ns = 'http://www.garmin.com/xmlschemas/TrainingCenterDatabase/v2';
+  const ns2 = 'http://www.garmin.com/xmlschemas/ActivityExtension/v2';
+  const tps = [...doc.getElementsByTagNameNS(ns, 'Trackpoint')];
   if(!tps.length) return null;
 
-  let distMax=0,fcSum=0,fcCnt=0,fcmax=0,elevGain=0,prevElev=null;
-  let cadSum=0,cadCnt=0;
-  const times=[];const lats=[];const lons=[];
+  let distMax=0, fcSum=0, fcCnt=0, fcmax=0, elevGain=0, prevElev=null;
+  let cadSum=0, cadCnt=0, cadMax=0, pauseCount=0;
+  const times=[], lats=[], lons=[], hrs=[], splitPaces=[], splits=[];
+  let lastKm=0, lastT=null, cumDist=0;
 
-  tps.forEach(tp=>{
-    const t=tp.getElementsByTagNameNS(ns,'Time')[0]?.textContent;if(t)times.push(new Date(t));
-    const d=parseFloat(tp.getElementsByTagNameNS(ns,'DistanceMeters')[0]?.textContent||0);if(d>distMax)distMax=d;
-    const hr=parseInt(tp.getElementsByTagNameNS(ns,'Value')[0]?.textContent||0);
-    if(hr>40&&hr<230){fcSum+=hr;fcCnt++;if(hr>fcmax)fcmax=hr;}
-    const el=parseFloat(tp.getElementsByTagNameNS(ns,'AltitudeMeters')[0]?.textContent||NaN);
-    if(!isNaN(el)){if(prevElev!==null&&el-prevElev>0)elevGain+=el-prevElev;prevElev=el;}
-    // Cadence via extension
-    const cadEl=tp.getElementsByTagNameNS(ns2,'RunCadence')[0]||tp.getElementsByTagNameNS(ns,'Cadence')[0];
-    const cad=cadEl?parseInt(cadEl.textContent)*2:0;
-    if(cad>100&&cad<240){cadSum+=cad;cadCnt++;}
+  tps.forEach(tp => {
+    const t = tp.getElementsByTagNameNS(ns,'Time')[0]?.textContent;
+    if(t) times.push(new Date(t));
+
+    // Distance
+    const d = parseFloat(tp.getElementsByTagNameNS(ns,'DistanceMeters')[0]?.textContent||0);
+    if(d > distMax) distMax = d;
+
+    // HR
+    const hr = parseInt(tp.getElementsByTagNameNS(ns,'Value')[0]?.textContent||0);
+    if(hr > 40 && hr < 230){ fcSum+=hr; fcCnt++; hrs.push(hr); if(hr>fcmax)fcmax=hr; }
+
+    // Elevation
+    const el = parseFloat(tp.getElementsByTagNameNS(ns,'AltitudeMeters')[0]?.textContent||'NaN');
+    if(!isNaN(el)){ if(prevElev!==null && el-prevElev>0) elevGain+=el-prevElev; prevElev=el; }
+
+    // Cadence
+    const cadEl = tp.getElementsByTagNameNS(ns2,'RunCadence')[0] || tp.getElementsByTagNameNS(ns,'Cadence')[0];
+    const cad = cadEl ? parseInt(cadEl.textContent)*2 : 0;
+    if(cad > 100 && cad < 240){ cadSum+=cad; cadCnt++; if(cad>cadMax)cadMax=cad; }
+
     // Position
-    const latEl=tp.getElementsByTagNameNS(ns,'LatitudeDegrees')[0];
-    const lonEl=tp.getElementsByTagNameNS(ns,'LongitudeDegrees')[0];
-    if(latEl&&lonEl){lats.push(parseFloat(latEl.textContent));lons.push(parseFloat(lonEl.textContent));}
+    const latEl = tp.getElementsByTagNameNS(ns,'LatitudeDegrees')[0];
+    const lonEl = tp.getElementsByTagNameNS(ns,'LongitudeDegrees')[0];
+    if(latEl && lonEl){ lats.push(parseFloat(latEl.textContent)); lons.push(parseFloat(lonEl.textContent)); }
   });
 
-  const dist=distMax>0?Math.round(distMax/10)/100:0;
-  const durSec=times.length>=2?(+times[times.length-1]-+times[0])/1000:0;
-
-  // Splits per km using positions if available
-  const splits=[];
-  if(lats.length>=2&&times.length>=2){
-    let cumDist=0,lastKm=0,lastT=times[0];
-    for(let i=1;i<lats.length;i++){
-      cumDist+=haversine(lats[i-1],lons[i-1],lats[i],lons[i]);
-      if(cumDist>=lastKm+1&&times[i]){
-        const splitSec=(+times[i]-+lastT)/1000;
-        if(splitSec>0)splits.push(sp(Math.round(splitSec)));
-        lastT=times[i];lastKm=Math.floor(cumDist);
+  // Splits from positions
+  if(lats.length >= 2 && times.length >= 2){
+    let lt = times[0];
+    for(let i = 1; i < lats.length; i++){
+      cumDist += haversine(lats[i-1],lons[i-1],lats[i],lons[i]);
+      if(times[i]){
+        const gap = (+times[i] - +times[i-1])/1000;
+        if(gap > 30) pauseCount++;
+      }
+      if(cumDist >= lastKm+1 && times[i] && lt){
+        const sec = (+times[i] - +lt)/1000;
+        if(sec > 30){ splits.push(sp(Math.round(sec))); splitPaces.push(Math.round(sec)); }
+        lt = times[i]; lastKm = Math.floor(cumDist);
       }
     }
   }
 
+  const dist = distMax > 0 ? Math.round(distMax/10)/100 : Math.round(cumDist*100)/100;
+  const durSec = times.length >= 2 ? (+times[times.length-1] - +times[0])/1000 : 0;
+  const paceOscillation = splitPaces.length > 1 ? Math.max(...splitPaces) - Math.min(...splitPaces) : 0;
+  let pacingTrend = 'constante';
+  if(splitPaces.length >= 2){
+    const half = Math.floor(splitPaces.length/2);
+    const avgFirst = splitPaces.slice(0,half).reduce((a,b)=>a+b,0)/half;
+    const avgLast = splitPaces.slice(half).reduce((a,b)=>a+b,0)/(splitPaces.length-half);
+    const diff = avgLast - avgFirst;
+    if(diff > 30) pacingTrend = 'negativo';
+    else if(diff < -5) pacingTrend = 'progressivo';
+  }
+
   return {
-    dist,durSec,
-    fcmed:fcCnt?Math.round(fcSum/fcCnt):0,fcmax,
-    cad:cadCnt?Math.round(cadSum/cadCnt):0,
-    elevGain:Math.round(elevGain),
-    splits,date:times[0]||new Date()
+    dist, durSec, pauseCount,
+    fcmed: fcCnt ? Math.round(fcSum/fcCnt) : 0, fcmax,
+    cad: cadCnt ? Math.round(cadSum/cadCnt) : 0, cadMax,
+    elevGain: Math.round(elevGain),
+    splits, splitPaces,
+    paceFastest: splitPaces.length ? sp(Math.min(...splitPaces)) : '',
+    paceSlowest: splitPaces.length ? sp(Math.max(...splitPaces)) : '',
+    paceOscillation, pacingTrend,
+    avgPaceSec: dist > 0 && durSec > 0 ? Math.round(durSec/dist) : 0,
+    date: times[0] || new Date()
   };
 }
 
@@ -3556,43 +3609,51 @@ function parseCSV(txt){
 }
 
 function fillFormFromFile(r){
-  const dateStr=r.date?r.date.toISOString().split('T')[0]:new Date().toISOString().split('T')[0];
-  const setV=(id,v)=>{const el=document.getElementById(id);if(el&&v!==undefined&&v!==null&&v!=='')el.value=v;};
+  const dateStr = r.date ? r.date.toISOString().split('T')[0] : new Date().toISOString().split('T')[0];
+  const setV = (id,v) => { const el=document.getElementById(id); if(el&&v!==undefined&&v!==null&&String(v)!=='') el.value=v; };
 
-  setV('t-data',dateStr);
+  // DATE
+  setV('t-data', dateStr);
 
-  // Always set distance — calculate if not directly in file
-  if(r.dist>0){
-    setV('t-dist',r.dist);
-  } else if(r.durSec>0 && r.splits && r.splits.length>0){
-    // Estimate from splits
-    const avgSplitSec = r.splits.map(s=>t2s(s)).reduce((a,b)=>a+b,0)/r.splits.length;
-    if(avgSplitSec>0){
-      const estDist = Math.round((r.durSec/avgSplitSec)*10)/10;
-      if(estDist>0) setV('t-dist',estDist);
-    }
+  // DISTANCE — use actual or estimate
+  let finalDist = r.dist > 0 ? r.dist : 0;
+  if(finalDist < 0.1 && r.durSec > 0 && r.splits && r.splits.length > 0){
+    const avgSplitSec = r.splits.map(s=>t2s(s)).filter(v=>v>0).reduce((a,b)=>a+b,0) / r.splits.length;
+    if(avgSplitSec > 0) finalDist = Math.round((r.durSec/avgSplitSec)*10)/10;
+  }
+  if(finalDist > 0) setV('t-dist', finalDist);
+
+  // DURATION
+  if(r.durSec > 0) setV('t-tempo', s2t(Math.round(r.durSec)));
+
+  // PACE — calculate from dist+time (most accurate)
+  if(finalDist > 0 && r.durSec > 0){
+    setV('t-pace', sp(Math.round(r.durSec / finalDist)));
+  } else if(r.avgPaceSec > 0){
+    setV('t-pace', sp(r.avgPaceSec));
+  } else if(r.splits && r.splits.length > 0){
+    const avgSec = r.splits.map(s=>t2s(s)).filter(v=>v>0).reduce((a,b)=>a+b,0) / r.splits.length;
+    if(avgSec > 0) setV('t-pace', sp(Math.round(avgSec)));
   }
 
-  if(r.durSec>0){
-    setV('t-tempo',s2t(Math.round(r.durSec)));
+  // HEART RATE
+  if(r.fcmed > 0) setV('t-fcmed', r.fcmed);
+  if(r.fcmax > 0) setV('t-fcmax', r.fcmax);
+
+  // CADENCE
+  if(r.cad > 0) setV('t-cad', r.cad);
+
+  // ELEVATION
+  if(r.elevGain > 0) setV('t-elev', r.elevGain);
+
+  // SPLITS
+  if(r.splits && r.splits.length > 0){
+    const splitsEl = document.getElementById('t-splits');
+    if(splitsEl) splitsEl.value = r.splits.join(', ');
   }
 
-  // Auto-calculate pace from dist+time, or from splits average
-  if(r.dist>0&&r.durSec>0){
-    setV('t-pace',sp(Math.round(r.durSec/r.dist)));
-  } else if(r.splits&&r.splits.length>0){
-    const avgSec=r.splits.map(s=>t2s(s)).reduce((a,b)=>a+b,0)/r.splits.length;
-    if(avgSec>0) setV('t-pace',sp(Math.round(avgSec)));
-  }
-
-  if(r.fcmed>0) setV('t-fcmed',r.fcmed);
-  if(r.fcmax>0) setV('t-fcmax',r.fcmax);
-  if(r.cad>0)   setV('t-cad',r.cad);
-  if(r.elevGain>0) setV('t-elev',r.elevGain);
-  if(r.splits&&r.splits.length>0) setV('t-splits',r.splits.join(', '));
-
-  // Trigger auto-calc in case some fields are still missing
-  setTimeout(autoCalcPace, 100);
+  // Store extra data for analysis
+  window._lastFileData = r;
 }
 
 // ═══════════════════════════════════════════════════
