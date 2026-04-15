@@ -1167,89 +1167,63 @@ function renderOnboarding(el){
   let body='';
 
   if(OB_STEP===1){
-    // Group objectives by category
+    // Flat horizontal grid — no pace picker, no category tabs
+    // Just pick the objective directly
+    const activeCat = window._obSelCat || '5K';
     const cats = [
-      {id:'5K',  label:'5 km',           emoji:'🏃', color:'var(--teal)'},
-      {id:'10K', label:'10 km',          emoji:'⚡', color:'var(--orange)'},
-      {id:'21K', label:'Meia Maratona',  emoji:'🥈', color:'var(--purple)'},
-      {id:'42K', label:'Maratona',       emoji:'🏅', color:'var(--red)'},
-      {id:'ULTRA',label:'Ultra',         emoji:'🌄', color:'#6B48FF'},
+      {id:'5K',  label:'5km',    emoji:'🏃', color:'var(--teal)'},
+      {id:'10K', label:'10km',   emoji:'⚡', color:'var(--orange)'},
+      {id:'21K', label:'Meia',   emoji:'🥈', color:'var(--purple)'},
+      {id:'42K', label:'Maratona',emoji:'🏅',color:'var(--red)'},
+      {id:'ULTRA',label:'Ultra', emoji:'🌄', color:'#6B48FF'},
     ];
-    const selCat = OB_OBJ ? OBJS.find(o=>o.id===OB_OBJ.id)?.cat : null;
+
+    const catObjs = OBJS.filter(o=>o.cat===activeCat);
 
     body=`<div class="ob-heading">Qual é o seu objetivo?</div>
-      <div class="ob-sub">Selecione a distância e depois o pace que você quer correr.</div>
+      <div class="ob-sub">Selecione a distância e depois a meta de pace.</div>
 
-      <!-- Category tabs -->
-      <div style="display:flex;gap:8px;margin-bottom:14px;overflow-x:auto;padding-bottom:4px;-webkit-overflow-scrolling:touch">
+      <!-- Horizontal distance tabs -->
+      <div style="display:flex;gap:6px;margin-bottom:16px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:2px">
         ${cats.map(c=>{
-          const isActive = selCat===c.id;
-          return `<button onclick="OB_OBJ=null;OB_TARGET_PACE='';window._obSelCat='${c.id}';renderHome()"
-            style="flex-shrink:0;padding:8px 14px;border-radius:20px;border:2px solid ${isActive||window._obSelCat===c.id?c.color:'var(--bd)'};
-            background:${isActive||window._obSelCat===c.id?c.color+'18':'var(--bg2)'};
-            color:${isActive||window._obSelCat===c.id?c.color:'var(--tx2)'};
+          const isSel = activeCat===c.id;
+          return `<button onclick="window._obSelCat='${c.id}';OB_OBJ=null;renderHome()"
+            style="flex-shrink:0;padding:7px 14px;border-radius:20px;
+            border:2px solid ${isSel?c.color:'var(--bd)'};
+            background:${isSel?c.color+'18':'var(--bg2)'};
+            color:${isSel?c.color:'var(--tx2)'};
             font-weight:700;font-size:12px;cursor:pointer;font-family:var(--sans);white-space:nowrap">
             ${c.emoji} ${c.label}
           </button>`;
         }).join('')}
       </div>
 
-      <!-- Objectives for selected category -->
-      ${(()=>{
-        const activeCat = selCat || window._obSelCat || '5K';
-        const catObjs = OBJS.filter(o=>o.cat===activeCat);
-        return `<div style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px">
-          ${catObjs.map(o=>{
-            const isSel = OB_OBJ&&OB_OBJ.id===o.id;
-            return `<div onclick="obPickObj('${o.id}')"
-              style="padding:12px 16px;border-radius:var(--rl);border:2px solid ${isSel?'var(--neon)':'var(--bd)'};
-              background:${isSel?'rgba(255,92,0,.06)':'var(--bg2)'};cursor:pointer;transition:all .2s;
-              display:flex;align-items:center;gap:12px">
-              <div style="font-size:22px;flex-shrink:0">${o.icon}</div>
-              <div style="flex:1">
-                <div style="font-size:14px;font-weight:700;color:${isSel?'var(--neon)':'var(--tx)'}">${o.t}</div>
-                <div style="font-size:11px;color:var(--tx2);margin-top:1px">${o.s}</div>
-              </div>
-              ${isSel?'<div style="color:var(--neon);font-weight:700;font-size:18px">✓</div>':''}
-            </div>`;
-          }).join('')}
-        </div>`;
-      })()}
+      <!-- Objectives for selected category — horizontal wrapping chips -->
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px">
+        ${catObjs.map(o=>{
+          const isSel = OB_OBJ&&OB_OBJ.id===o.id;
+          return `<button onclick="obPickObj('${o.id}')"
+            style="padding:10px 16px;border-radius:20px;
+            border:2px solid ${isSel?'var(--neon)':'var(--bd)'};
+            background:${isSel?'rgba(255,92,0,.08)':'var(--bg2)'};
+            color:${isSel?'var(--neon)':'var(--tx)'};
+            font-weight:${isSel?'700':'500'};font-size:13px;cursor:pointer;
+            font-family:var(--sans);white-space:nowrap;transition:all .15s">
+            ${o.t.replace(o.cat==='5K'?'5km · ':'10km · ','').replace('Abaixo de ','< ').replace(' min/km','/km')}
+          </button>`;
+        }).join('')}
+      </div>
 
-      <!-- Pace picker — inline, only if obj selected and has pace options -->
-      ${OB_OBJ&&OB_OBJ.hasPace?`<div style="background:rgba(255,92,0,.04);border:1px solid rgba(255,92,0,.2);border-radius:var(--rl);padding:14px;margin-bottom:14px">
-        <div style="font-size:12px;font-weight:700;color:var(--neon);margin-bottom:10px">🎯 Qual pace você quer alcançar?</div>
-        ${OB_OBJ.paceOptions?`<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px">
-          ${OB_OBJ.paceOptions.map(p=>`<button onclick="OB_TARGET_PACE='${p}';renderHome()"
-            style="padding:8px 16px;border-radius:20px;border:2px solid ${OB_TARGET_PACE===p?'var(--neon)':'var(--bd)'};
-            background:${OB_TARGET_PACE===p?'rgba(255,92,0,.1)':'var(--bg2)'};
-            color:${OB_TARGET_PACE===p?'var(--neon)':'var(--tx2)'};
-            font-family:var(--mono);font-size:14px;font-weight:700;cursor:pointer">
-            ${p}
-          </button>`).join('')}
-          <button onclick="OB_TARGET_PACE='outro';renderHome()"
-            style="padding:8px 16px;border-radius:20px;border:2px solid ${!OB_OBJ.paceOptions?.includes(OB_TARGET_PACE)&&OB_TARGET_PACE?'var(--neon)':'var(--bd)'};
-            background:${!OB_OBJ.paceOptions?.includes(OB_TARGET_PACE)&&OB_TARGET_PACE?'rgba(255,92,0,.1)':'var(--bg2)'};
-            color:var(--tx2);font-size:13px;cursor:pointer;font-family:var(--sans)">
-            Outro
-          </button>
-        </div>`:''}
-        ${(OB_TARGET_PACE==='outro'||(!OB_OBJ.paceOptions))?`<div class="g2">
-          <div class="field"><label>${OB_OBJ.label}</label>
-            <input type="text" id="ob-tp" value="${OB_TARGET_PACE==='outro'?'':OB_TARGET_PACE}" placeholder="ex: 5:30" oninput="OB_TARGET_PACE=this.value">
-          </div>
-          <div class="field"><label>Data alvo (opcional)</label>
-            <input type="date" id="ob-td" value="${OB_TARGET_DATE}" oninput="OB_TARGET_DATE=this.value">
-          </div>
-        </div>`:`<div class="field"><label>Data alvo (opcional)</label>
-          <input type="date" id="ob-td" value="${OB_TARGET_DATE}" style="max-width:200px" oninput="OB_TARGET_DATE=this.value">
-        </div>`}
+      ${OB_OBJ?`<div style="padding:12px 16px;background:rgba(255,92,0,.06);border-radius:var(--rl);border:1.5px solid var(--neon);margin-bottom:16px;display:flex;align-items:center;gap:10px">
+        <span style="font-size:20px">${OB_OBJ.icon}</span>
+        <div>
+          <div style="font-size:14px;font-weight:700;color:var(--neon)">${OB_OBJ.t}</div>
+          <div style="font-size:11px;color:var(--tx2);margin-top:1px">${OB_OBJ.s}</div>
+        </div>
+        <span style="margin-left:auto;color:var(--neon);font-size:18px">✓</span>
       </div>`:''}
 
-      <button class="btn btn-neon" style="margin-top:4px" onclick="obNext(1)"
-        ${OB_OBJ&&(!OB_OBJ.hasPace||(OB_TARGET_PACE&&OB_TARGET_PACE!=='outro'))?'':'disabled style="opacity:.4;cursor:not-allowed"'}>
-        Próximo →
-      </button>`;
+      <button class="btn btn-neon" onclick="obNext(1)" ${OB_OBJ?'':'disabled style="opacity:.4;cursor:not-allowed"'}>Próximo →</button>`;
   }
   else if(OB_STEP===2){
     const levels=[
@@ -3862,16 +3836,7 @@ function obToggleDay(id){
 }
 
 function obNext(step){
-  if(step===1){
-    if(!OB_OBJ) return;
-    // If has pace options, require selection
-    if(OB_OBJ.hasPace && (!OB_TARGET_PACE || OB_TARGET_PACE==='outro')) return;
-    // Convert pace option to seconds for target
-    if(OB_TARGET_PACE && OB_TARGET_PACE!=='outro'){
-      // keep as string, will be parsed in obFinish
-    }
-    OB_STEP=2;
-  }
+  if(step===1){if(!OB_OBJ)return;OB_STEP=2;}
   else if(step===2){if(!OB_NIVEL)return;OB_STEP=3;}
   else if(step===3){if(OB_DIAS_SELECIONADOS.length<2)return;OB_STEP=4;}
   renderHome();
