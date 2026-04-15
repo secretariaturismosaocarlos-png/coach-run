@@ -2042,6 +2042,7 @@ RESPONDA em formato markdown direto:
 
   // ── CALL CLAUDE API ──
   try {
+    const text = await callClaudeAPI([{role:'user', content: prompt}], 1200);
     // Strip "próximo treino" from main text — show it separately as styled card
     const proximoSplit = text.split(/\n##[^#]*[Pp]róximo[^\n]*/);
     const mainText = proximoSplit[0].trim();
