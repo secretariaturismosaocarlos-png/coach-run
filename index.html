@@ -1204,9 +1204,10 @@ function renderHome(){
     </div>`;
   }
 
-  // Last workout compact
-  if(regularWorkouts.length > 0){
-    const last = regularWorkouts[regularWorkouts.length-1];
+  // Last workout compact — only show if pace is reasonable (not a test/walking session)
+  const realWorkouts = regularWorkouts.filter(w => w.paceSec >= 270 && w.paceSec <= 720); // 4:30-12:00/km
+  if(realWorkouts.length > 0){
+    const last = realWorkouts[realWorkouts.length-1];
     html += `<div class="card" style="margin-bottom:12px">
       <div style="display:flex;justify-content:space-between;align-items:center">
         <div>
@@ -1806,7 +1807,11 @@ function renderTestAnalise(el, a){
 
 function renderAnalise(){
   const a=computeAnalise();const el=document.getElementById('pn-analise');
-  if(!a){el.innerHTML=`<div class="empty"><div class="empty-icon">📊</div><div class="empty-title">Sem dados</div><div class="empty-sub">Adicione treinos para ver a análise.</div></div>`;return;}
+  if(!a){el.innerHTML=`<div class="empty"><div class="empty-icon">📊</div>
+    <div class="empty-title">Sem treinos</div>
+    <div class="empty-sub">Insira o teste de calibração primeiro.</div>
+    <button class="btn btn-neon" style="margin-top:12px;width:auto;padding:10px 20px" onclick="goTab('treino')">📂 Inserir teste</button>
+  </div>`;return;}
 
   // ── SPECIAL: if only 1 workout and test exists, show test analysis first ──
   if(HIST.length===1 && USER_GOAL?.test_time){
@@ -2120,9 +2125,6 @@ RESPONDA em formato markdown direto:
     btn.textContent = '✨ Gerar nova análise';
     btn.disabled = false;
 
-    // After analysis: auto-navigate to home to show next workout
-    setTimeout(()=>{ goTab('home'); }, 1500);
-
     // Find next training day based on current date
     const planDays = USER_GOAL?.dias_selecionados||['ter','qui','dom'];
     const todayKey2 = ['dom','seg','ter','qua','qui','sex','sab'][new Date().getDay()];
@@ -2153,7 +2155,9 @@ RESPONDA em formato markdown direto:
         </div>
         <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:6px">${parsedNext.tipo}</div>
         ${renderIAText(proximoText)}
-        <button onclick="goTab('plano')" style="margin-top:10px;padding:8px 18px;border-radius:20px;background:var(--neon);color:#fff;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:var(--sans)">Ver plano atualizado →</button>
+        <div style="display:flex;gap:8px;margin-top:12px">
+          <button onclick="goTab('home')" style="flex:1;padding:10px;border-radius:20px;background:var(--neon);color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--sans)">🏠 Ver treino na tela inicial</button>
+        </div>
       `;
       out.appendChild(card);
     }
