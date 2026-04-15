@@ -879,7 +879,7 @@ async function loadData(){
   });
   HIST = Array.from(seen.values())
     .sort((a,b) => new Date(a.created_at) - new Date(b.created_at))
-    .map(w=>({...w, paceSec:ps(w.pace)}));
+    .map(w=>({...w, paceSec:ps(w.pace), analise:w.analise||null, proximo_treino:w.proximo_treino||null}));
   const {data:prof} = await db.from('user_goals').select('*').eq('user_id', CU.id).single();
   await loadRaces();
   // Load previously generated plan
@@ -962,7 +962,8 @@ async function saveWorkout(t){
   const {data,error} = await db.from('workouts').insert({
     user_id:CU.id, data:t.data, dist:t.dist, tempo:t.tempo,
     pace:t.pace, fcmed:t.fcmed||null, fcmax:t.fcmax||null,
-    cad:t.cad||null, splits:t.splits||null, elev:t.elev||null, pse:t.pse||null
+    cad:t.cad||null, splits:t.splits||null, elev:t.elev||null, pse:t.pse||null,
+    analise:t.analise||null, proximo_treino:t.proximo_treino||null
   }).select().single();
   if(data){ t.id=data.id; t.created_at=data.created_at; HIST.push({...t, paceSec:ps(t.pace)}); }
 }
@@ -2045,6 +2046,40 @@ RESPONDA em formato markdown direto:
     out.innerHTML = renderIAText(text);
     btn.textContent = '✨ Gerar nova análise';
     btn.disabled = false;
+
+    // Extract "próximo treino" section from analysis
+    const proximoMatch = text.match(/##[^#]*[Pp]róximo[^\n]*\n([\s\S]*?)(?=\n##|$)/);
+    const proximoText = proximoMatch ? proximoMatch[1].trim() : '';
+
+    // Save analysis to the last workout in DB
+    if(HIST.length > 0){
+      const lastW = HIST[HIST.length-1];
+      if(lastW.id){
+        await db.from('workouts').update({
+          analise: text.substring(0,2000),
+          proximo_treino: proximoText.substring(0,500)
+        }).eq('id', lastW.id).eq('user_id', CU.id);
+        lastW.analise = text.substring(0,2000);
+        lastW.proximo_treino = proximoText;
+      }
+
+      // Save next workout suggestion to plan
+      if(proximoText){
+        window._nextWorkoutSuggestion = proximoText;
+        // Find next training day
+        const planDays = USER_GOAL?.dias_selecionados||['ter','qui','dom'];
+        const lastDate = new Date(lastW.data.split('/').reverse().join('-'));
+        const dayMap = ['dom','seg','ter','qua','qui','sex','sab'];
+        const lastDayIdx = planDays.indexOf(dayMap[lastDate.getDay()]);
+        const nextDayKey = planDays[(lastDayIdx+1) % planDays.length];
+        const dayNames = {seg:'Segunda',ter:'Terça',qua:'Quarta',qui:'Quinta',sex:'Sexta',sab:'Sábado',dom:'Domingo'};
+        // Add note below analysis
+        const nextDayNote = document.createElement('div');
+        nextDayNote.style.cssText = 'margin-top:12px;padding:12px 14px;background:rgba(255,92,0,.06);border-radius:var(--rl);border-left:3px solid var(--neon)';
+        nextDayNote.innerHTML = `<div style="font-size:11px;font-weight:700;color:var(--neon);margin-bottom:6px">📅 PRÓXIMO TREINO — ${dayNames[nextDayKey]||nextDayKey.toUpperCase()}</div><div style="font-size:12px;color:var(--tx);line-height:1.7">${renderIAText(proximoText).replace(/<[^>]+>/g,' ').trim()}</div>`;
+        out.appendChild(nextDayNote);
+      }
+    }
   } catch(err) {
     const keyMsg = '';
     out.innerHTML = `<div style="color:var(--red);font-size:13px;padding:10px;background:var(--red-dim);border-radius:var(--r)">⚠️ ${err.message}${keyMsg}</div>`;
@@ -2934,13 +2969,17 @@ function renderEvolucao(){
   const rows=h.slice().reverse().map((t,i)=>{
     const prev=h[n-2-i];let tr='';
     if(prev){const d=prev.paceSec-t.paceSec;tr=d>8?`<span class="tr-up">↑</span>`:d<-8?`<span class="tr-dn">↓</span>`:`<span class="tr-ne">→</span>`;}
+    const hasAnalise = !!t.analise;
     return `<tr>
       <td><span style="font-family:var(--mono);font-size:11px">${t.data}</span></td>
       <td><strong style="font-family:var(--mono);color:var(--neon)">${t.pace}</strong></td>
       <td>${t.dist}km</td>
       <td>${t.fcmed||'—'}</td>
       <td>${tr}</td>
-      <td><button class="del-btn" onclick="doDelete('${t.id}')">✕</button></td>
+      <td style="display:flex;gap:4px;align-items:center">
+        ${hasAnalise?`<button class="del-btn" style="color:var(--orange);border-color:rgba(255,92,0,.3)" onclick="showWorkoutAnalise('${t.id}')">📊</button>`:''}
+        <button class="del-btn" onclick="doDelete('${t.id}')">✕</button>
+      </td>
     </tr>`;
   }).join('');
 
@@ -4199,9 +4238,37 @@ async function doDeleteRace(id){
 //  DELETE WORKOUT
 // ═══════════════════════════════════════════════════
 async function doDelete(id){
-  if(!confirm('Excluir este treino?'))return;
+  if(!confirm('Excluir este treino e toda a análise associada?'))return;
   await deleteWorkout(id);
   renderEvolucao();
+}
+
+function showWorkoutAnalise(id){
+  const w = HIST.find(h=>h.id===id);
+  if(!w||!w.analise) return;
+  const modal = document.createElement('div');
+  modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:flex-end;justify-content:center;padding:0';
+  modal.innerHTML=`<div style="background:#fff;border-radius:24px 24px 0 0;padding:20px;width:100%;max-width:720px;max-height:85vh;overflow-y:auto;box-shadow:0 -8px 32px rgba(0,0,0,.15)">
+    <div style="width:40px;height:4px;background:var(--bd2);border-radius:2px;margin:0 auto 14px"></div>
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px">
+      <div>
+        <div style="font-size:16px;font-weight:800;color:var(--tx)">📊 Análise do treino</div>
+        <div style="font-size:11px;color:var(--tx2);margin-top:2px">${w.data} · ${w.dist}km · ${w.pace}/km</div>
+      </div>
+      <button onclick="this.closest('[style*=fixed]').remove()" style="background:var(--bg3);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px">✕</button>
+    </div>
+    <div style="font-size:13px;line-height:1.8;color:var(--tx)">${renderIAText(w.analise)}</div>
+    ${w.proximo_treino?`<div style="margin-top:12px;padding:12px 14px;background:rgba(255,92,0,.06);border-radius:var(--rl);border-left:3px solid var(--neon)">
+      <div style="font-size:11px;font-weight:700;color:var(--neon);margin-bottom:4px">📅 Próximo treino sugerido</div>
+      <div style="font-size:12px;color:var(--tx)">${renderIAText(w.proximo_treino)}</div>
+    </div>`:''}
+    <div style="margin-top:14px;display:flex;gap:8px">
+      <button onclick="this.closest('[style*=fixed]').remove()" class="btn btn-ghost" style="flex:1">Fechar</button>
+      <button onclick="if(confirm('Excluir este treino e análise?')){doDelete('${w.id}');this.closest('[style*=fixed]').remove();}" class="btn" style="flex:1;background:var(--red-dim);color:var(--red);border:1px solid rgba(232,54,93,.3)">🗑️ Excluir treino</button>
+    </div>
+  </div>`;
+  modal.onclick=e=>{if(e.target===modal)modal.remove();};
+  document.body.appendChild(modal);
 }
 
 </script>
