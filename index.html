@@ -1145,11 +1145,15 @@ function renderHome(){
     }
   }
 
-  // Last workout summary (always show if has workouts)
+  // Last workout summary
   if(n>0){
     const last=HIST[n-1];
+    // Check if this looks like the test workout
+    const testDist = USER_GOAL?.test_dist||3;
+    const isTestEntry = Math.abs((last.dist||0)-testDist)<0.5 && last.paceSec<450;
+    const label = isTestEntry ? 'Teste de calibração · '+last.data : 'Último treino · '+last.data;
     html+=`<div class="card" style="margin-bottom:10px">
-      <div class="clabel">Último treino · ${last.data}</div>
+      <div class="clabel">${label}</div>
       <div class="metrics" style="margin-bottom:0">
         <div class="metric metric-neon"><div class="mlabel">Pace</div><div class="mval" style="color:var(--neon)">${last.pace}</div><div class="msub">min/km</div></div>
         <div class="metric metric-orange"><div class="mlabel">Distância</div><div class="mval" style="color:var(--orange)">${last.dist}</div><div class="msub">km</div></div>
