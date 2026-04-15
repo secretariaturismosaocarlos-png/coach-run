@@ -2504,21 +2504,21 @@ function renderPlanSheet(plan, a){
   // View toggle
   let html = `<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
     <div style="display:flex;gap:6px;flex:1">
-      <button onclick="window._planDayView='table';document.getElementById('plano-output').innerHTML=renderPlanSheet(window._iaPlano||window._defaultPlan,null)" 
+      <button onclick="window._planDayView='table';renderPlano()" 
         style="flex:1;padding:8px;border-radius:var(--r);border:2px solid ${viewMode==='table'?'var(--neon)':'var(--bd)'};background:${viewMode==='table'?'rgba(255,92,0,.08)':'var(--bg2)'};color:${viewMode==='table'?'var(--neon)':'var(--tx2)'};font-weight:700;font-size:12px;cursor:pointer;font-family:var(--sans)">
         📋 Planilha
       </button>
-      <button onclick="window._planDayView='cards';document.getElementById('plano-output').innerHTML=renderPlanSheet(window._iaPlano||window._defaultPlan,null)"
+      <button onclick="window._planDayView='cards';renderPlano()"
         style="flex:1;padding:8px;border-radius:var(--r);border:2px solid ${viewMode==='cards'?'var(--neon)':'var(--bd)'};background:${viewMode==='cards'?'rgba(255,92,0,.08)':'var(--bg2)'};color:${viewMode==='cards'?'var(--neon)':'var(--tx2)'};font-weight:700;font-size:12px;cursor:pointer;font-family:var(--sans)">
         📆 Por dia
       </button>
     </div>
     <div style="display:flex;gap:4px;background:var(--bg3);border-radius:var(--r);padding:3px">
-      <button onclick="window._planMetric='dist';document.getElementById('plano-output').innerHTML=renderPlanSheet(window._iaPlano||window._defaultPlan,null)"
+      <button onclick="window._planMetric='dist';renderPlano()"
         style="padding:5px 10px;border-radius:8px;border:none;background:${metricMode==='dist'?'#fff':'transparent'};color:${metricMode==='dist'?'var(--neon)':'var(--tx3)'};font-weight:700;font-size:11px;cursor:pointer;font-family:var(--sans);box-shadow:${metricMode==='dist'?'0 1px 4px rgba(0,0,0,.1)':'none'}">
         📏 km
       </button>
-      <button onclick="window._planMetric='time';document.getElementById('plano-output').innerHTML=renderPlanSheet(window._iaPlano||window._defaultPlan,null)"
+      <button onclick="window._planMetric='time';renderPlano()"
         style="padding:5px 10px;border-radius:8px;border:none;background:${metricMode==='time'?'#fff':'transparent'};color:${metricMode==='time'?'var(--neon)':'var(--tx3)'};font-weight:700;font-size:11px;cursor:pointer;font-family:var(--sans);box-shadow:${metricMode==='time'?'0 1px 4px rgba(0,0,0,.1)':'none'}">
         ⏱ min
       </button>
@@ -2777,7 +2777,8 @@ function renderDefaultPlanSheet(a, dias){
   })};
 
   window._defaultPlan = plan;
-  return renderPlanSheet(plan, a);
+  window._currentWeekPlan = plan.semanas ? plan.semanas[0] : plan;
+  return renderWeekPlan(window._currentWeekPlan, a, 1);
 }
 
 
@@ -2901,7 +2902,7 @@ RETORNE APENAS JSON válido:
       }));
     }catch(e){}
 
-    el.innerHTML=renderPlanSheet(plan, a);
+    renderPlano();
 
   } catch(err){
     const keyMsg=err.message.includes('indisponível')?`<br><small>Tente novamente em alguns segundos.</small>`:'';
