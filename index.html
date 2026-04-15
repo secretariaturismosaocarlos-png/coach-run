@@ -884,12 +884,8 @@ async function loadData(){
   await loadRaces();
   // Load previously generated plan
   try{
-    const savedPlan = localStorage.getItem('cr_plan_'+CU?.id);
-    if(savedPlan){
-      const p = JSON.parse(savedPlan);
-      if(p.week){ window._currentWeekPlan=p.week; window._currentWeekNum=p.weekNum||1; }
-      if(p.plan){ window._iaPlano=p.plan; window._defaultPlan=p.plan; }
-    }
+    const savedNext = localStorage.getItem('cr_next_'+CU?.id);
+    if(savedNext){ const p=JSON.parse(savedNext); window._nextWorkout=p.workout; }
   }catch(e){}
   if(prof){
     USER_GOAL = prof;
@@ -2061,22 +2057,16 @@ RESPONDA em formato markdown direto:
     const dayNames = {seg:'Segunda',ter:'Terça',qua:'Quarta',qui:'Quinta',sex:'Sexta',sab:'Sábado',dom:'Domingo'};
 
     if(proximoText){
-      // Parse into structured workout
+      // Parse into structured workout and set as next
       const parsedNext = parseNextWorkoutText(proximoText, nextDayKey);
       parsedNext._fromAnalysis = true;
+      parsedNext.dayLabel = (dayNames[nextDayKey]||nextDayKey.toUpperCase()) + ' — próximo treino';
 
-      // Inject into current week plan
-      if(!window._currentWeekPlan){
-        const treinos = {};
-        planDays.forEach(d => { treinos[d] = {tipo:'OFF',zona:'OFF',descricao:'Descanso',pace:''}; });
-        window._currentWeekPlan = {semana:1,foco:'Plano ajustado pela análise',nota:'',treinos};
-        window._currentWeekNum = 1;
-      }
-      window._currentWeekPlan.treinos[nextDayKey] = parsedNext;
-      window._currentWeekPlan._adjustedDay = nextDayKey;
+      // Set as THE next workout (simple, no week structure)
+      window._nextWorkout = parsedNext;
       try{
-        localStorage.setItem('cr_plan_'+CU?.id, JSON.stringify({
-          week:window._currentWeekPlan, weekNum:window._currentWeekNum||1, savedAt:new Date().toISOString()
+        localStorage.setItem('cr_next_'+CU?.id, JSON.stringify({
+          workout: parsedNext, savedAt: new Date().toISOString()
         }));
       }catch(e){}
 
@@ -2170,395 +2160,170 @@ function renderIAText(text){
 //  RENDER PLAN — Planilha semanal IA
 // ═══════════════════════════════════════════════════
 function renderPlano(){
-  const a=computeAnalise();
-  const el=document.getElementById('pn-plano');
-  if(!a){
-    el.innerHTML=`<div class="empty"><div class="empty-icon">📅</div><div class="empty-title">Sem dados</div><div class="empty-sub">Configure objetivo e insira o teste para ativar o plano.</div></div>`;
+  const a = computeAnalise();
+  const el = document.getElementById('pn-plano');
+  if(!a || !USER_GOAL?.onboard_done){
+    el.innerHTML=`<div class="empty"><div class="empty-icon">📅</div>
+      <div class="empty-title">Sem dados</div>
+      <div class="empty-sub">Configure seu objetivo e insira o teste para ativar o plano.</div>
+    </div>`;
     return;
   }
-  const obj=a.obj, dias=USER_GOAL?.dias_semana||3, z=a.z;
-  const z1=z.e?`${sp(z.e.min)}–${sp(z.e.max)}/km`:'—';
-  const z2=z.t?`${sp(z.t.min)}–${sp(z.t.max)}/km`:'—';
-  const z3=z.i?`${sp(z.i.min)}–${sp(z.i.max)}/km`:'—';
-  const zlong=z.m?`${sp(z.m.min)}–${sp(z.m.max)}/km`:'—';
 
-  // Current week plan
-  const currentWeek = window._currentWeekPlan || null;
-  const weekNum = window._currentWeekNum || 1;
+  const z = a.z;
+  const next = window._nextWorkout || null;  // set by analysis
+  const obj = a.obj;
 
-  let html=`<div style="padding-top:8px">
-    <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:14px;flex-wrap:wrap;gap:10px">
-      <div>
-        <div style="font-size:18px;font-weight:700">📅 Plano de Treinamento</div>
-        <div style="font-size:12px;color:var(--tx2);margin-top:2px">${obj.t} · ${dias} dias/semana · Pace atual: ${sp(a.basePace)}/km</div>
-      </div>
-      <button class="btn btn-neon btn-sm" style="width:auto;padding:8px 16px" onclick="gerarPlanoIA()">🤖 ${currentWeek?'Gerar próxima semana':'Gerar Plano IA'}</button>
-    </div>
-
-    <!-- Zone legend -->
-    <div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px">
-      <div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:rgba(255,92,0,.08);border:1px solid rgba(255,92,0,.25)"><div style="width:8px;height:8px;border-radius:2px;background:var(--neon)"></div><span style="font-size:10px;font-weight:700;color:var(--neon)">Z1 BASE</span><span style="font-size:10px;color:var(--tx3)">${z1}</span></div>
-      <div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:rgba(9,132,227,.08);border:1px solid rgba(9,132,227,.2)"><div style="width:8px;height:8px;border-radius:2px;background:var(--orange)"></div><span style="font-size:10px;font-weight:700;color:var(--orange)">Z2 TEMPO</span><span style="font-size:10px;color:var(--tx3)">${z2}</span></div>
-      <div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:rgba(232,54,93,.08);border:1px solid rgba(232,54,93,.2)"><div style="width:8px;height:8px;border-radius:2px;background:var(--red)"></div><span style="font-size:10px;font-weight:700;color:var(--red)">Z3 FORTE</span><span style="font-size:10px;color:var(--tx3)">${z3}</span></div>
-      <div style="display:flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;background:rgba(0,184,148,.08);border:1px solid rgba(0,184,148,.2)"><div style="width:8px;height:8px;border-radius:2px;background:var(--teal)"></div><span style="font-size:10px;font-weight:700;color:var(--teal)">LONGÃO</span><span style="font-size:10px;color:var(--tx3)">${zlong}</span></div>
-    </div>
-
-    <div id="plano-output">`;
-
-  if(currentWeek){
-    html += renderWeekPlan(currentWeek, a, weekNum);
-  } else {
-    html += renderDefaultWeekPlan(a, dias);
-  }
-
-  html+=`</div></div>`;
-  el.innerHTML=html;
-}
-
-// ── Render a single week plan ──────────────────────────
-function renderWeekPlan(week, a, weekNum){
-  const metricMode = window._planMetric||'dist';
-  const userDays = USER_GOAL?.dias_selecionados||['ter','qui','dom'];
-  const dayMeta = {seg:'Segunda',ter:'Terça',qua:'Quarta',qui:'Quinta',sex:'Sexta',sab:'Sábado',dom:'Domingo'};
-  const todayKey = ['dom','seg','ter','qua','qui','sex','sab'][new Date().getDay()];
-
-  let html = `<div style="margin-bottom:10px">
-    <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:rgba(255,92,0,.06);border-radius:var(--r);border-left:3px solid var(--neon)">
-      <div>
-        <div style="font-size:13px;font-weight:700;color:var(--neon)">Semana ${weekNum}</div>
-        <div style="font-size:12px;color:var(--tx2)">${week.foco||''}</div>
-      </div>
-      <div style="display:flex;gap:6px">
-        <button onclick="window._planMetric='dist';renderPlano()" style="padding:4px 10px;border-radius:8px;border:none;background:${metricMode==='dist'?'var(--neon)':'var(--bg3)'};color:${metricMode==='dist'?'#fff':'var(--tx2)'};font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans)">km</button>
-        <button onclick="window._planMetric='time';renderPlano()" style="padding:4px 10px;border-radius:8px;border:none;background:${metricMode==='time'?'var(--neon)':'var(--bg3)'};color:${metricMode==='time'?'#fff':'var(--tx2)'};font-size:11px;font-weight:700;cursor:pointer;font-family:var(--sans)">min</button>
-      </div>
-    </div>
-    ${week.correcoes&&week.correcoes!=='Primeiro plano'?`<div style="font-size:11px;padding:8px 12px;background:rgba(0,184,148,.06);border-left:3px solid var(--teal);color:var(--teal);margin-top:6px;border-radius:0 var(--r) var(--r) 0">🔧 <strong>Ajuste desta semana:</strong> ${week.correcoes}</div>`:''}
+  // Zone chips
+  const zoneChips = `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:16px">
+    ${z.e?`<div style="padding:4px 10px;border-radius:20px;background:rgba(255,92,0,.08);border:1px solid rgba(255,92,0,.25);font-size:10px;font-weight:700;color:var(--neon)">Z1 BASE · ${sp(z.e.min)}–${sp(z.e.max)}/km</div>`:''}
+    ${z.t?`<div style="padding:4px 10px;border-radius:20px;background:rgba(9,132,227,.08);border:1px solid rgba(9,132,227,.2);font-size:10px;font-weight:700;color:var(--orange)">Z2 LIMIAR · ${sp(z.t.min)}–${sp(z.t.max)}/km</div>`:''}
+    ${z.i?`<div style="padding:4px 10px;border-radius:20px;background:rgba(232,54,93,.08);border:1px solid rgba(232,54,93,.2);font-size:10px;font-weight:700;color:var(--red)">Z3 VO2MAX · ${sp(z.i.min)}–${sp(z.i.max)}/km</div>`:''}
+    ${z.m?`<div style="padding:4px 10px;border-radius:20px;background:rgba(0,184,148,.08);border:1px solid rgba(0,184,148,.2);font-size:10px;font-weight:700;color:var(--teal)">LONGÃO · ${sp(z.m.min)}–${sp(z.m.max)}/km</div>`:''}
   </div>`;
 
-  // Show each training day
-  userDays.forEach(dayKey => {
-    const t = week.treinos?.[dayKey];
-    if(!t || t.zona==='OFF') return;
-    const isToday = dayKey===todayKey;
-    const zona = (t.zona||'Z1').toUpperCase().replace('LONGÃO','LONGAO');
-    const ztopColor = {Z1:'var(--neon)',Z2:'var(--orange)',Z3:'var(--red)',LONGAO:'var(--teal)',LONGÃO:'var(--teal)'}[zona]||'var(--neon)';
-    const zbg = {Z1:'rgba(255,92,0,.04)',Z2:'rgba(9,132,227,.04)',Z3:'rgba(232,54,93,.04)',LONGAO:'rgba(0,184,148,.04)'}[zona]||'rgba(255,92,0,.04)';
-    const zborder = {Z1:'rgba(255,92,0,.2)',Z2:'rgba(9,132,227,.2)',Z3:'rgba(232,54,93,.2)',LONGAO:'rgba(0,184,148,.2)'}[zona]||'rgba(255,92,0,.2)';
+  let html = `<div style="padding-top:8px">
+    <div style="margin-bottom:16px">
+      <div style="font-size:20px;font-weight:800;color:var(--tx)">📅 Próximo Treino</div>
+      <div style="font-size:12px;color:var(--tx2);margin-top:2px">${obj.t} · Pace atual: ${sp(a.basePace)}/km</div>
+    </div>
+    ${zoneChips}`;
 
-    // Parse blocks
-    const blocks = parseWorkoutBlocks(t.descricao, t.pace, zona);
-
-    html += `<div style="border-radius:var(--rl);overflow:hidden;border:1.5px solid ${isToday?'var(--neon)':zborder};background:${zbg};margin-bottom:8px;${isToday?'box-shadow:0 0 0 3px rgba(255,92,0,.12)':''}">
-      <div style="padding:10px 14px 8px;border-bottom:1px solid ${zborder};display:flex;justify-content:space-between;align-items:center">
-        <div style="display:flex;align-items:center;gap:8px">
-          ${isToday?`<span style="font-size:9px;background:var(--neon);color:#fff;padding:2px 6px;border-radius:6px;font-weight:700">HOJE</span>`:''}
-          ${t._fromAnalysis?`<span style="font-size:9px;background:rgba(0,184,148,.15);color:var(--teal);padding:2px 6px;border-radius:6px;font-weight:700">🔧 AJUSTADO</span>`:''}
-          <span style="font-size:11px;font-weight:700;color:var(--tx3)">${dayMeta[dayKey]?.toUpperCase()}</span>
-          <span style="font-size:14px;font-weight:800;color:var(--tx)">${t.tipo||zona}</span>
+  if(!next){
+    // No next workout yet — show state based on history
+    if(HIST.length === 0){
+      html += `<div class="card card-accent">
+        <div style="font-size:15px;font-weight:700;margin-bottom:8px">🏃 Comece pelo teste de calibração</div>
+        <div style="font-size:13px;color:var(--tx2);margin-bottom:14px;line-height:1.7">
+          Corra 3km no esforço máximo sustentável e insira o arquivo aqui.<br>
+          O coach calculará suas zonas reais e montará o primeiro treino.
         </div>
-        <div style="display:flex;align-items:center;gap:8px">
-          ${t.tempo_estimado?`<span style="font-size:10px;color:var(--tx3)">~${t.tempo_estimado}min total</span>`:''}
-          ${metricMode==='time'?`<span style="font-size:9px;color:var(--tx3);margin-left:4px">tempo por bloco →</span>`:''}
-          <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${zborder};color:${ztopColor}">${zona}</span>
-        </div>
-      </div>
-      <div style="padding:8px 14px">
-        ${blocks.map(b => {
-          if(b.isRest) return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(0,0,0,.04);opacity:.6"><span style="font-size:12px;color:var(--tx3);font-style:italic">${b.desc}</span></div>`;
-          if(b.isNonRunning) return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(0,0,0,.04)"><span style="font-size:12px;color:var(--tx2)">${b.desc}</span><span style="font-size:11px;color:var(--tx3)">—</span></div>`;
-                    // Build display based on km or time mode
-          let blockDesc = b.desc;
-          let rightCol = '';
-
-          if(metricMode==='time'){
-            // TIME MODE: show duration in minutes instead of km
-            // e.g. "2km aquec" → "16min aquec" | "3km ritmo" → "22min ritmo"
-            const specialPace = b.isRest || b.isNonRunning || 
-              !b.pace || b.pace==='Z1 confortável' || b.pace==='veloc. máxima' || b.pace==='máx. esforço';
-
-            if(!specialPace){
-              const kmMatch = b.desc.match(/^(\d+(?:\.\d+)?)km\s*/);
-              if(kmMatch){
-                const km = parseFloat(kmMatch[1]);
-                // Calculate time from pace range
-                let timeStr = '';
-                if(b.pace.includes('–')){
-                  const paceSegs = b.pace.split('–').map(p => t2s(p.trim())).filter(v=>v>0);
-                  if(paceSegs.length === 2){
-                    const tLo = Math.round(km * paceSegs[0] / 60); // minutes
-                    const tHi = Math.round(km * paceSegs[1] / 60);
-                    timeStr = tLo===tHi ? `${tLo}min` : `${tLo}–${tHi}min`;
-                  }
-                } else {
-                  const paceSec = t2s(b.pace);
-                  if(paceSec>0) timeStr = `${Math.round(km*paceSec/60)}min`;
-                }
-                if(timeStr){
-                  // Replace "Xkm" with "Xmin" in description
-                  blockDesc = b.desc.replace(/^\d+(?:\.\d+)?km\s*/, timeStr + ' ');
-                }
-              }
-            }
-            // Always show pace in time mode (runner programs watch by pace)
-            rightCol = b.pace && !b.isRest && !b.isNonRunning
-              ? `<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${b.color}">${b.pace}</span>`
-              : '';
-          } else {
-            // KM MODE: show as-is with pace
-            rightCol = b.pace && !b.isRest && !b.isNonRunning
-              ? `<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${b.color}">${b.pace}</span>`
-              : '';
-          }
-          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.04)">
-            <span style="font-size:12px;color:${b.isRest||b.isNonRunning?'var(--tx3)':'var(--tx)'}${b.isRest?';font-style:italic':''}">${blockDesc}</span>
-            <div style="text-align:right">
-              ${rightCol}
-              ${rightCol?`<div style="font-size:9px;color:var(--tx3);margin-top:1px">${metricMode==='time'?'pace':'min/km'}</div>`:''}
-            </div>
-          </div>`;
-        }).join('')}
-      </div>
-    </div>`;
-  });
-
-  // REST days
-  const allDays = ['seg','ter','qua','qui','sex','sab','dom'];
-  const restDays = allDays.filter(d => !userDays.includes(d));
-  if(restDays.length > 0){
-    html += `<div style="display:flex;gap:6px;flex-wrap:wrap;margin-bottom:8px">
-      ${restDays.map(d=>`<span style="font-size:11px;padding:4px 10px;border-radius:6px;background:var(--bg3);color:var(--tx3);border:1px solid var(--bd)">${{seg:'Seg',ter:'Ter',qua:'Qua',qui:'Qui',sex:'Sex',sab:'Sáb',dom:'Dom'}[d]} — descanso</span>`).join('')}
-    </div>`;
-  }
-
-  // Week summary
-  if(week.nota){
-    html += `<div style="font-size:12px;color:var(--tx2);padding:10px 14px;background:var(--bg3);border-radius:var(--r);border-left:3px solid var(--bd)">💡 ${week.nota}</div>`;
-  }
-
-  return html;
-}
-
-// ── Default 1-week rule-based plan ────────────────────
-function renderDefaultWeekPlan(a, dias){
-  const z = a.z, bp = a.basePace;
-  const tempoMin = USER_GOAL?.tempo_treino || 45;
-  const pAq = z.e ? sp(z.e.max) : sp(Math.round(bp*1.28));
-  const pBase = z.e ? sp(z.e.min) : sp(Math.round(bp*1.12));
-  const pTempo = z.t ? sp(z.t.min) : sp(Math.round(bp*0.94));
-  const pForte = z.i ? sp(z.i.min) : sp(Math.round(bp*0.86));
-  const paceZ1sec = z.e ? (z.e.min+z.e.max)/2 : bp*1.18;
-  const overheadSec = 3 * paceZ1sec;
-  const availSec = tempoMin*60 - overheadSec;
-  const baseKm = Math.max(2, Math.round(availSec/paceZ1sec*10)/10);
-  const maxDist = a.h.length ? Math.max(...a.h.map(w=>w.dist)) : 4;
-  const longKm = Math.min(Math.round(maxDist*1.1*10)/10, a.obj?.dist||10);
-  const pLongao = z.m ? sp(z.m.min) : sp(Math.round(bp*1.07));
-  const userDays = USER_GOAL?.dias_selecionados||['ter','qui','dom'];
-  const lastDay = userDays[userDays.length-1];
-  const firstDay = userDays[0];
-  const treinos = {};
-  ['seg','ter','qua','qui','sex','sab','dom'].forEach(d => {
-    treinos[d] = {tipo:'OFF',zona:'OFF',descricao:'Descanso',pace:''};
-  });
-  treinos[firstDay] = {tipo:'BASE',zona:'Z1',pace:pBase,tempo_estimado:tempoMin,
-    descricao:`2km aquec ${pAq} + ${baseKm}km ritmo ${pBase} + 1km leve + alongamento`};
-  if(userDays.length > 2){
-    const midDay = userDays[Math.floor(userDays.length/2)];
-    treinos[midDay] = {tipo:'STRIDES',zona:'Z3',pace:'veloc. máxima',tempo_estimado:tempoMin,
-      descricao:`2km aquec ${pAq} + 8×60m veloc. máxima subida, 1:30 caminhando de volta + 1km leve`};
-  }
-  treinos[lastDay] = {tipo:'LONGÃO',zona:'LONGAO',pace:pLongao,tempo_estimado:null,
-    descricao:`1km aquec + ${longKm}km ritmo ${pLongao} + 1km leve`};
-
-  const week = {semana:1, foco:'Semana base · Conheça suas zonas', nota:`Todos os treinos de semana dentro de ${tempoMin}min. Longão sem limite de tempo.`, treinos, correcoes:'Primeiro plano'};
-  window._currentWeekPlan = week;
-  window._currentWeekNum = 1;
-  return renderWeekPlan(week, a, 1);
-}
-
-
-// ─── Render plan from AI JSON ───────────────────────────────────
-function estimateWorkoutTime(descricao, zona){
-  // Rough time estimate in minutes based on description
-  if(!descricao || zona==='OFF') return 0;
-  let mins = 0;
-  // Parse km mentions
-  const kmMatches = descricao.matchAll(/(\d+(?:\.\d+)?)km/g);
-  for(const m of kmMatches) {
-    const km = parseFloat(m[1]);
-    const paceSec = zona==='Z3'?380 : zona==='Z2'?420 : 480;
-    mins += (km * paceSec) / 60;
-  }
-  // Parse repetition patterns like 10×200m
-  const repMatches = descricao.matchAll(/(\d+)[×x](\d+)m/g);
-  for(const m of repMatches) {
-    const reps = parseInt(m[1]), dist = parseInt(m[2]);
-    const km = (reps * dist) / 1000;
-    const restMins = reps * 1.5; // avg rest
-    mins += (km * 350/60) + restMins;
-  }
-  return mins > 0 ? Math.round(mins) : 0;
-}
-
-function parsePaceRange(paceStr, zona, segDesc){
-  // Strides / tiros em subida / sprints curtos — mostrar esforço, não pace
-  // (pace de 60m ou 200m em min/km seria absurdo)
-  const isStride = segDesc && /veloc|strides|subida|sprint|80m|60m/i.test(segDesc);
-  if(isStride) return 'máx. esforço';
-
-  if(!paceStr || paceStr==='—') return '';
-  // If it's already labeled as "veloc. máxima" etc, just show effort
-  if(/veloc|máximo|máx/i.test(paceStr)) return 'máx. esforço';
-
-  // Parse the pace string
-  let cleanPace = paceStr.replace(/[^\d:]/g,'').trim();
-  if(!cleanPace.includes(':')) return '';
-  const sec = t2s(cleanPace);
-  // Sanity check — pace must be between 2:00 and 20:00 min/km
-  if(!sec || sec < 120 || sec > 1200) return '';
-  const pct = zona==='Z3'?0.04 : zona==='Z2'?0.05 : 0.08;
-  const lo = Math.round(sec*(1-pct));
-  const hi = Math.round(sec*(1+pct));
-  return sp(lo)+' – '+sp(hi);
-}
-
-function parseWorkoutBlocks(descricao, paceStr, zona){
-  if(!descricao) return [];
-  const blocks = [];
-  const zoneColor = zona==='Z1'?'var(--teal)':zona==='Z2'?'var(--orange)':zona==='Z3'?'var(--red)':'var(--teal)';
-
-  // Split by + (main separator between workout blocks)
-  const parts = descricao.split(/\s*\+\s*/);
-
-  parts.forEach(part => {
-    part = part.trim();
-    if(!part) return;
-
-    // Split main effort from rest info by comma
-    // e.g. "8x400m ritmo 6:41, 1min caminhando" -> ["8x400m ritmo 6:41","1min caminhando"]
-    const commaParts = part.split(/,\s*/);
-    const mainPart = commaParts[0].trim();
-    const restPart = commaParts.slice(1).join(', ').trim();
-
-    // Extract pace only from mainPart
-    const paceMatch = mainPart.match(/(\d+:\d+)/);
-    let segPace = paceMatch ? paceMatch[1] : '';
-    let segDesc = mainPart.replace(/\d+:\d+/g,'').replace(/\s+/g,' ').trim();
-    segDesc = segDesc.replace(/\/km$/i,'').replace(/min\/km$/i,'').trim();
-
-    // Detect zone
-    let segZona = zona;
-    if(/aquec|warm/i.test(segDesc)) segZona='Z1';
-    else if(/\bleve\b|desaquec/i.test(segDesc)) segZona='Z1';
-    else if(/\britmo\b|tempo run|ritmado/i.test(segDesc) && !/tiro|sprint|veloc/i.test(segDesc)) segZona='Z2';
-    else if(/tiro|veloc|sprint|strides|1000m|400m|200m|80m|60m/i.test(segDesc)) segZona='Z3';
-
-    const segColor = segZona==='Z1'?'var(--teal)':segZona==='Z2'?'var(--orange)':segZona==='Z3'?'var(--red)':'var(--tx2)';
-    let finalPace = segPace ? parsePaceRange(segPace, segZona, segDesc) : '';
-    // Non-running segments — no zone, no pace
-    const isNonRunning = /alongamento|aquecimento muscular|fortalec|mobilidade|flexib|estatic|ativ/i.test(segDesc);
-    if(isNonRunning){
-      blocks.push({desc:segDesc, pace:'', color:'var(--tx3)', zona:'', isNonRunning:true});
-      if(restPart && /caminh|recup|descanso|trote|rest|jog/i.test(restPart)){
-        const restClean = restPart.replace(/\d+:\d+/g,'').replace(/\s+/g,' ').trim();
-        blocks.push({desc:'↩ descanso: '+restClean, pace:'', color:'var(--tx3)', zona:'Z1', isRest:true});
-      }
-      return; // skip normal push below
-    }
-
-    if(!finalPace && segZona==='Z1') finalPace = 'Z1 confortável';
-
-    blocks.push({desc:segDesc, pace:finalPace, color:segColor, zona:segZona});
-
-    // Add rest as a separate dimmed row
-    if(restPart && /caminh|recup|descanso|trote|rest|jog/i.test(restPart)){
-      const restClean = restPart.replace(/\d+:\d+/g,'').replace(/\s+/g,' ').trim();
-      blocks.push({desc:'↩ descanso: '+restClean, pace:'', color:'var(--tx3)', zona:'Z1', isRest:true});
-    }
-  });
-
-  return blocks.length>0 ? blocks : [{desc:descricao, pace:parsePaceRange(paceStr,zona,descricao), color:zoneColor, zona}];
-}
-
-function renderWorkoutCell(t, col, cls){
-  if(!t || (t.zona||'OFF').toUpperCase()==='OFF'){
-    return '<td class="ps-off">OFF</td>';
-  }
-  const zona=(t.zona||'Z1').toUpperCase().replace('LONGÃO','LONGAO');
-  const blocks = parseWorkoutBlocks(t.descricao, t.pace, zona);
-  const zclass = {'Z1':'ps-z1','Z2':'ps-z2','Z3':'ps-z3','LONGAO':'ps-long','LONG':'ps-long','FORT':'ps-fort'}[zona]||'ps-z1';
-  const ztopColor = {'Z1':'var(--neon)','Z2':'var(--orange)','Z3':'var(--red)','LONGAO':'var(--teal)','LONG':'var(--teal)','FORT':'var(--purple)'}[zona]||'var(--neon)';
-
-  let inner = `<div class="ps-type" style="color:${ztopColor}">${t.tipo||zona}</div>`;
-  blocks.forEach(b => {
-    if(b.isRest){
-      inner += `<div class="ps-block" style="opacity:.55">
-        <span class="ps-bdesc" style="color:var(--tx3);font-style:italic">${b.desc}</span>
+        <button class="btn btn-neon" onclick="goTab('treino')">📂 Inserir teste de 3km</button>
       </div>`;
-    } else if(b.isNonRunning){
-      inner += `<div class="ps-block">
-        <span class="ps-bdesc" style="color:var(--tx2)">${b.desc}</span>
-        <span class="ps-bpace" style="color:var(--tx3);font-size:9px">—</span>
+    } else if(HIST.length === 1 && USER_GOAL?.test_time){
+      html += `<div class="card card-accent">
+        <div style="font-size:15px;font-weight:700;margin-bottom:8px">✅ Teste registrado!</div>
+        <div style="font-size:13px;color:var(--tx2);margin-bottom:14px;line-height:1.7">
+          Zonas calculadas. Gere a análise do teste para ver o primeiro treino sugerido.
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-neon" style="flex:1" onclick="goTab('analise')">📊 Analisar teste</button>
+        </div>
       </div>`;
     } else {
-      inner += `<div class="ps-block">
-        <span class="ps-bdesc">${b.desc}</span>
-        ${b.pace?`<span class="ps-bpace" style="color:${b.color}">${b.pace}</span>`:''}
+      html += `<div class="card">
+        <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:8px">Nenhum treino agendado ainda</div>
+        <div style="font-size:13px;color:var(--tx2);margin-bottom:14px">
+          Insira seu treino realizado e gere a análise — o coach montará o próximo treino automaticamente.
+        </div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
+          <button class="btn btn-neon" style="flex:1" onclick="goTab('treino')">📂 Inserir treino</button>
+          <button class="btn btn-ghost" style="flex:1" onclick="goTab('analise')">📊 Ver análise</button>
+        </div>
       </div>`;
     }
-  });
+  } else {
+    // Show next workout
+    const dayNames = {seg:'Segunda',ter:'Terça',qua:'Quarta',qui:'Quinta',sex:'Sexta',sab:'Sábado',dom:'Domingo'};
+    const zona = (next.zona||'Z1').toUpperCase().replace('LONGÃO','LONGAO');
+    const ztopColor = {Z1:'var(--neon)',Z2:'var(--orange)',Z3:'var(--red)',LONGAO:'var(--teal)'}[zona]||'var(--neon)';
+    const zborder = {Z1:'rgba(255,92,0,.2)',Z2:'rgba(9,132,227,.2)',Z3:'rgba(232,54,93,.2)',LONGAO:'rgba(0,184,148,.2)'}[zona]||'rgba(255,92,0,.2)';
+    const zbg = {Z1:'rgba(255,92,0,.03)',Z2:'rgba(9,132,227,.03)',Z3:'rgba(232,54,93,.03)',LONGAO:'rgba(0,184,148,.03)'}[zona]||'rgba(255,92,0,.03)';
 
-  return `<td class="${zclass}" onclick="openDayModal(this)" data-treino='${JSON.stringify(t).replace(/'/g,"\'")}'>
-    ${inner}
-  </td>`;
-}
+    // Toggle km/min
+    const metricMode = window._planMetric||'dist';
 
-function renderPlanSheet(plan, a){
-  if(!plan) return '';
-  const week = plan.semanas ? plan.semanas[0] : (plan.treinos ? plan : null);
-  if(!week) return '';
-  if(!a) a = computeAnalise();
-  if(!a) return '';
-  return renderWeekPlan(week, a, window._currentWeekNum||1);
-}
+    html += `
+    <!-- Metric toggle -->
+    <div style="display:flex;gap:4px;background:var(--bg3);border-radius:var(--r);padding:3px;margin-bottom:14px;width:fit-content">
+      <button onclick="window._planMetric='dist';renderPlano()"
+        style="padding:6px 16px;border-radius:8px;border:none;background:${metricMode==='dist'?'#fff':'transparent'};color:${metricMode==='dist'?'var(--neon)':'var(--tx3)'};font-weight:700;font-size:12px;cursor:pointer;font-family:var(--sans);box-shadow:${metricMode==='dist'?'0 1px 4px rgba(0,0,0,.1)':'none'}">
+        📏 km
+      </button>
+      <button onclick="window._planMetric='time';renderPlano()"
+        style="padding:6px 16px;border-radius:8px;border:none;background:${metricMode==='time'?'#fff':'transparent'};color:${metricMode==='time'?'var(--neon)':'var(--tx3)'};font-weight:700;font-size:12px;cursor:pointer;font-family:var(--sans);box-shadow:${metricMode==='time'?'0 1px 4px rgba(0,0,0,.1)':'none'}">
+        ⏱ min
+      </button>
+    </div>
 
-
-function openDayModal(cell){
-  try{
-    const t=JSON.parse(cell.dataset.treino);
-    if(!t||t.zona==='OFF') return;
-    const zona=(t.zona||'Z1').toUpperCase().replace('LONGÃO','LONGAO');
-    const ztopColor={'Z1':'var(--neon)','Z2':'var(--orange)','Z3':'var(--red)','LONGAO':'var(--teal)','LONG':'var(--teal)'}[zona]||'var(--neon)';
-    const blocks=parseWorkoutBlocks(t.descricao,t.pace,zona);
-    const modal=document.createElement('div');
-    modal.style.cssText='position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:3000;display:flex;align-items:flex-end;justify-content:center;padding:0';
-    modal.innerHTML=`<div style="background:#fff;border-radius:24px 24px 0 0;padding:24px;width:100%;max-width:720px;max-height:80vh;overflow-y:auto;box-shadow:0 -8px 32px rgba(0,0,0,.15)">
-      <div style="width:40px;height:4px;background:var(--bd2);border-radius:2px;margin:0 auto 16px"></div>
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+    <!-- Next workout card -->
+    <div style="border-radius:var(--rl);border:1.5px solid ${zborder};background:${zbg};overflow:hidden;margin-bottom:12px">
+      <div style="padding:14px 16px;border-bottom:1px solid ${zborder};display:flex;justify-content:space-between;align-items:center">
         <div>
-          <div style="font-size:18px;font-weight:800;color:var(--tx)">${t.tipo||zona}</div>
-          <div style="display:flex;align-items:center;gap:8px;margin-top:3px">
-            <span style="font-size:12px;color:${ztopColor};font-weight:600">${zona}</span>
-            ${(()=>{const m=estimateWorkoutTime(t.descricao,zona);return m>0?`<span style="font-size:11px;color:var(--tx3)">~${m} min</span>`:''})()}
+          <div style="font-size:12px;font-weight:700;color:var(--tx3);text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">
+            ${next.dayLabel||'Próximo treino'}
           </div>
+          <div style="font-size:18px;font-weight:800;color:var(--tx)">${next.tipo||zona}</div>
         </div>
-        <button onclick="this.closest('[style*=fixed]').remove()" style="background:var(--bg3);border:none;border-radius:50%;width:32px;height:32px;cursor:pointer;font-size:16px">✕</button>
+        <div style="text-align:right">
+          ${next.tempo_estimado?`<div style="font-size:13px;font-weight:700;color:var(--tx3)">~${next.tempo_estimado}min</div>`:''}
+          <span style="font-size:11px;font-weight:700;padding:3px 10px;border-radius:10px;background:${zborder};color:${ztopColor}">${zona}</span>
+        </div>
       </div>
-      ${blocks.map(b=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:12px 14px;margin-bottom:8px;border-radius:var(--r);background:${b.isRest||b.isNonRunning?'transparent':'var(--bg3)'};${b.isRest||b.isNonRunning?'opacity:.6':''}">
-        <span style="font-size:14px;color:${b.isRest||b.isNonRunning?'var(--tx3)':'var(--tx)'};font-weight:${b.isRest?'400':'500'};${b.isRest?'font-style:italic':''}">${b.desc}</span>
-        ${b.pace&&!b.isRest&&!b.isNonRunning?`<div style="text-align:right">
-          <div style="font-family:var(--mono);font-size:14px;font-weight:700;color:${b.color}">${b.pace}</div>
-          <div style="font-size:10px;color:var(--tx3)">min/km</div>
-        </div>`:''}
+      <div style="padding:12px 16px">
+        ${renderNextWorkoutBlocks(next, metricMode, ztopColor)}
+      </div>
+    </div>
+
+    ${next._fromAnalysis?`<div style="font-size:11px;color:var(--teal);padding:6px 10px;background:rgba(0,184,148,.06);border-radius:var(--r);margin-bottom:12px">
+      🔧 Treino ajustado pelo coach com base na análise do último treino
+    </div>`:''}
+
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-neon" style="flex:1" onclick="goTab('treino')">📂 Inserir treino realizado</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="goTab('analise')">📊 Ver análise</button>
+    </div>`;
+  }
+
+  // Workout history summary
+  if(HIST.length > 1){
+    const recent = HIST.slice(-3).reverse();
+    html += `<div class="card" style="margin-top:12px">
+      <div class="clabel">Treinos recentes</div>
+      ${recent.map(t=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:8px 0;border-bottom:1px solid var(--bd)">
+        <div>
+          <div style="font-size:12px;font-weight:600;color:var(--tx)">${t.data}</div>
+          <div style="font-size:11px;color:var(--tx2)">${t.dist}km · ${t.tempo||''}</div>
+        </div>
+        <div style="font-family:var(--mono);font-size:13px;font-weight:700;color:var(--neon)">${t.pace}/km</div>
       </div>`).join('')}
     </div>`;
-    modal.onclick=e=>{if(e.target===modal)modal.remove();};
-    document.body.appendChild(modal);
-  }catch(e){console.log(e);}
+  }
+
+  html += '</div>';
+  el.innerHTML = html;
 }
 
-// ─── Default rule-based plan spreadsheet ────────────────────────
+function renderNextWorkoutBlocks(next, metricMode, color){
+  if(!next.descricao) return '';
+  const blocks = parseWorkoutBlocks(next.descricao, next.pace, next.zona||'Z1');
+  return blocks.map(b => {
+    if(b.isRest) return `<div style="padding:5px 0;border-bottom:1px solid rgba(0,0,0,.04);font-size:12px;color:var(--tx3);font-style:italic">${b.desc}</div>`;
+    if(b.isNonRunning) return `<div style="padding:5px 0;border-bottom:1px solid rgba(0,0,0,.04);font-size:12px;color:var(--tx2)">${b.desc}</div>`;
+
+    let desc = b.desc;
+    let right = b.pace || '';
+    if(metricMode === 'time'){
+      const kmM = b.desc.match(/^(\d+(?:\.\d+)?)km\s*/);
+      if(kmM && b.pace && b.pace.includes('–')){
+        const km = parseFloat(kmM[1]);
+        const segs = b.pace.split('–').map(p=>t2s(p.trim())).filter(v=>v>0);
+        if(segs.length===2){
+          const lo = Math.round(km*segs[0]/60), hi = Math.round(km*segs[1]/60);
+          desc = b.desc.replace(/^\d+(?:\.\d+)?km\s*/, (lo===hi?lo+'min':lo+'–'+hi+'min')+' ');
+        }
+      }
+    }
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(0,0,0,.04)">
+      <span style="font-size:13px;color:var(--tx)">${desc}</span>
+      ${right?`<div style="text-align:right;margin-left:12px">
+        <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:${b.color||color}">${right}</div>
+        <div style="font-size:9px;color:var(--tx3)">${metricMode==='time'?'pace':'min/km'}</div>
+      </div>`:''}
+    </div>`;
+  }).join('');
+}
+
 function renderDefaultPlanSheet(a, dias){
   const z=a.z;
   const bp=a.basePace;
