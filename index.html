@@ -2209,7 +2209,8 @@ function renderWeekPlan(week, a, weekNum){
           <span style="font-size:14px;font-weight:800;color:var(--tx)">${t.tipo||zona}</span>
         </div>
         <div style="display:flex;align-items:center;gap:8px">
-          ${t.tempo_estimado?`<span style="font-size:10px;color:var(--tx3)">~${t.tempo_estimado}min</span>`:''}
+          ${t.tempo_estimado?`<span style="font-size:10px;color:var(--tx3)">~${t.tempo_estimado}min total</span>`:''}
+          ${metricMode==='time'?`<span style="font-size:9px;color:var(--tx3);margin-left:4px">tempo por bloco →</span>`:''}
           <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${zborder};color:${ztopColor}">${zona}</span>
         </div>
       </div>
@@ -2217,16 +2218,55 @@ function renderWeekPlan(week, a, weekNum){
         ${blocks.map(b => {
           if(b.isRest) return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(0,0,0,.04);opacity:.6"><span style="font-size:12px;color:var(--tx3);font-style:italic">${b.desc}</span></div>`;
           if(b.isNonRunning) return `<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid rgba(0,0,0,.04)"><span style="font-size:12px;color:var(--tx2)">${b.desc}</span><span style="font-size:11px;color:var(--tx3)">—</span></div>`;
-          // Show in km or time mode
+                    // Build display based on km or time mode
+          let blockDesc = b.desc;
           let rightCol = '';
-          if(metricMode==='time' && t.tempo_estimado){
-            rightCol = `<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${b.color}">${b.pace||''}</span>`;
+
+          if(metricMode==='time'){
+            // TIME MODE: show duration in minutes instead of km
+            // e.g. "2km aquec" → "16min aquec" | "3km ritmo" → "22min ritmo"
+            const specialPace = b.isRest || b.isNonRunning || 
+              !b.pace || b.pace==='Z1 confortável' || b.pace==='veloc. máxima' || b.pace==='máx. esforço';
+
+            if(!specialPace){
+              const kmMatch = b.desc.match(/^(\d+(?:\.\d+)?)km\s*/);
+              if(kmMatch){
+                const km = parseFloat(kmMatch[1]);
+                // Calculate time from pace range
+                let timeStr = '';
+                if(b.pace.includes('–')){
+                  const paceSegs = b.pace.split('–').map(p => t2s(p.trim())).filter(v=>v>0);
+                  if(paceSegs.length === 2){
+                    const tLo = Math.round(km * paceSegs[0] / 60); // minutes
+                    const tHi = Math.round(km * paceSegs[1] / 60);
+                    timeStr = tLo===tHi ? `${tLo}min` : `${tLo}–${tHi}min`;
+                  }
+                } else {
+                  const paceSec = t2s(b.pace);
+                  if(paceSec>0) timeStr = `${Math.round(km*paceSec/60)}min`;
+                }
+                if(timeStr){
+                  // Replace "Xkm" with "Xmin" in description
+                  blockDesc = b.desc.replace(/^\d+(?:\.\d+)?km\s*/, timeStr + ' ');
+                }
+              }
+            }
+            // Always show pace in time mode (runner programs watch by pace)
+            rightCol = b.pace && !b.isRest && !b.isNonRunning
+              ? `<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${b.color}">${b.pace}</span>`
+              : '';
           } else {
-            rightCol = b.pace ? `<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${b.color}">${b.pace}</span>` : '';
+            // KM MODE: show as-is with pace
+            rightCol = b.pace && !b.isRest && !b.isNonRunning
+              ? `<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${b.color}">${b.pace}</span>`
+              : '';
           }
           return `<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(0,0,0,.04)">
-            <span style="font-size:12px;color:var(--tx)">${b.desc}</span>
-            ${rightCol}
+            <span style="font-size:12px;color:${b.isRest||b.isNonRunning?'var(--tx3)':'var(--tx)'}${b.isRest?';font-style:italic':''}">${blockDesc}</span>
+            <div style="text-align:right">
+              ${rightCol}
+              ${rightCol?`<div style="font-size:9px;color:var(--tx3);margin-top:1px">${metricMode==='time'?'pace':'min/km'}</div>`:''}
+            </div>
           </div>`;
         }).join('')}
       </div>
@@ -3000,10 +3040,17 @@ function computeAnalise(){
   const obj=OBJS.find(o=>o.id===USER_GOAL.obj_id)||OBJS[0];
   const last=h[n-1];
 
-  // ── PACE BASE: mediana dos treinos recentes (mais robusto que média) ──
-  const recent=h.slice(-8).filter(w=>w.paceSec>120&&w.paceSec<900);
-  let basePace = last.paceSec;
-  if(recent.length >= 2){
+  // ── PACE BASE: mediana dos treinos recentes (exclui teste de máximo esforço) ──
+  // Filter: pace 5:00-12:00/km (300-720 sec), dist >= 2km (not the 3km test)
+  const testDist = USER_GOAL?.test_dist || 3;
+  const regular = h.filter(w => 
+    w.paceSec >= 300 && w.paceSec <= 720 &&  // 5:00-12:00/km range
+    w.dist >= 2 &&                             // not very short workouts
+    !(Math.abs(w.dist - testDist) < 0.5 && w.paceSec < 420) // exclude test (short+fast)
+  );
+  const recent = regular.length > 0 ? regular.slice(-8) : h.slice(-8).filter(w=>w.paceSec>180&&w.paceSec<720);
+  let basePace = last.paceSec > 0 ? last.paceSec : (USER_GOAL?.vam_pace ? Math.round(USER_GOAL.vam_pace * 1.15) : 480);
+  if(recent.length >= 1){
     const sorted = recent.map(w=>w.paceSec).sort((a,b)=>a-b);
     basePace = sorted[Math.floor(sorted.length/2)];
   }
@@ -4172,4 +4219,3 @@ async function doDelete(id){
 
 </body>
 </html>
-
