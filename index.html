@@ -884,9 +884,20 @@ async function loadData(){
   await loadRaces();
   // Load previously generated plan
   try{
+    // Try localStorage first
     const savedNext = localStorage.getItem('cr_next_'+CU?.id);
     if(savedNext){ const p=JSON.parse(savedNext); window._nextWorkout=p.workout; }
   }catch(e){}
+  // Also check if last workout has proximo_treino in DB
+  if(!window._nextWorkout && HIST.length > 0){
+    const lastWithNext = [...HIST].reverse().find(w => w.proximo_treino);
+    if(lastWithNext){
+      const parsed = parseNextWorkoutText(lastWithNext.proximo_treino, null);
+      parsed._fromAnalysis = true;
+      parsed._fromDB = true;
+      window._nextWorkout = parsed;
+    }
+  }
   if(prof){
     USER_GOAL = prof;
     // Restore ALL onboarding state from saved goal
@@ -912,28 +923,35 @@ let USER_GOAL = null; // {obj_id, nivel, dias_semana, target_pace_sec, target_da
 
 async function saveGoal(g){
   USER_GOAL = g;
+  // Only save columns that are guaranteed to exist in the schema
+  const safe = {
+    user_id:CU.id,
+    obj_id:g.obj_id||null,
+    nivel:g.nivel||null,
+    nivel_label:g.nivel_label||null,
+    dias_semana:g.dias_semana||3,
+    target_pace_sec:g.target_pace_sec||0,
+    target_date:g.target_date||null,
+    onboard_done:g.onboard_done||false,
+    test_time:g.test_time||null,
+    test_fcmax:g.test_fcmax||0,
+    test_dist:g.test_dist||3,
+    test_fcmed:g.test_fcmed||0,
+    test_splits:g.test_splits||null,
+    test_cad:g.test_cad||0,
+    test_elev:g.test_elev||0,
+    vam_pace:g.vam_pace||0,
+  };
+  // Try to add newer columns — silently ignore if they don't exist
   try {
-    const {error} = await db.from('user_goals').upsert({user_id:CU.id, ...g});
-    if(error){
-      // Try with only the base columns that definitely exist
-      const base = {
-        user_id:CU.id,
-        obj_id:g.obj_id, nivel:g.nivel, nivel_label:g.nivel_label,
-        dias_semana:g.dias_semana, target_pace_sec:g.target_pace_sec,
-        target_date:g.target_date, onboard_done:g.onboard_done,
-        test_time:g.test_time, test_fcmax:g.test_fcmax,
-        test_dist:g.test_dist, test_fcmed:g.test_fcmed,
-        test_splits:g.test_splits, test_cad:g.test_cad,
-        test_elev:g.test_elev, vam_pace:g.vam_pace,
-      };
-      // Add optional newer columns one at a time
-      if(g.dias_selecionados !== undefined) base.dias_selecionados = g.dias_selecionados;
-      if(g.tempo_treino !== undefined) base.tempo_treino = g.tempo_treino;
-      if(g.tempo_longao !== undefined) base.tempo_longao = g.tempo_longao;
-      await db.from('user_goals').upsert(base);
-    }
+    const {error} = await db.from('user_goals').upsert({...safe,
+      dias_selecionados:g.dias_selecionados||null,
+      tempo_treino:g.tempo_treino||45,
+      tempo_longao:g.tempo_longao||0,
+    });
+    if(error) await db.from('user_goals').upsert(safe);
   } catch(e) {
-    console.warn('saveGoal error:', e);
+    try { await db.from('user_goals').upsert(safe); } catch(e2) { console.warn('saveGoal:', e2); }
   }
 }
 
@@ -2201,15 +2219,30 @@ function renderPlano(){
         <button class="btn btn-neon" onclick="goTab('treino')">📂 Inserir teste de 3km</button>
       </div>`;
     } else if(HIST.length === 1 && USER_GOAL?.test_time){
-      html += `<div class="card card-accent">
-        <div style="font-size:15px;font-weight:700;margin-bottom:8px">✅ Teste registrado!</div>
-        <div style="font-size:13px;color:var(--tx2);margin-bottom:14px;line-height:1.7">
-          Zonas calculadas. Gere a análise do teste para ver o primeiro treino sugerido.
-        </div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-neon" style="flex:1" onclick="goTab('analise')">📊 Analisar teste</button>
-        </div>
-      </div>`;
+      // Auto-generate a first workout based on zones (no analysis needed)
+      const planDays = USER_GOAL?.dias_selecionados||['ter','qui','dom'];
+      const firstDay = planDays[0];
+      const dayNames2 = {seg:'Segunda',ter:'Terça',qua:'Quarta',qui:'Quinta',sex:'Sexta',sab:'Sábado',dom:'Domingo'};
+      const tempoMin = USER_GOAL?.tempo_treino||45;
+      const pAq = z.e ? sp(z.e.max) : sp(Math.round(a.basePace*1.2));
+      const pBase = z.e ? sp(z.e.min) : sp(Math.round(a.basePace*1.1));
+      const paceZ1sec = z.e ? (z.e.min+z.e.max)/2 : a.basePace*1.15;
+      const overhead = 3 * paceZ1sec;
+      const avail = tempoMin*60 - overhead;
+      const baseKm = Math.max(2, Math.round(avail/paceZ1sec*10)/10);
+      const firstWorkout = {
+        tipo: 'BASE',
+        zona: 'Z1',
+        pace: pBase,
+        tempo_estimado: tempoMin,
+        dayLabel: (dayNames2[firstDay]||firstDay.toUpperCase()) + ' — primeiro treino',
+        descricao: `2km aquec ${pAq} + ${baseKm}km ritmo ${pBase} + 1km leve + alongamento`,
+        _fromAnalysis: false
+      };
+      window._nextWorkout = firstWorkout;
+      try{ localStorage.setItem('cr_next_'+CU?.id, JSON.stringify({workout:firstWorkout,savedAt:new Date().toISOString()})); }catch(e){}
+      // Re-render with the workout now set
+      el.innerHTML=''; renderPlano(); return;
     } else {
       html += `<div class="card">
         <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:8px">Nenhum treino agendado ainda</div>
@@ -3230,6 +3263,55 @@ function haversine(lat1,lon1,lat2,lon2){
   const a=Math.sin(dLat/2)**2+Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
   return R*2*Math.atan2(Math.sqrt(a),Math.sqrt(1-a));
 }
+
+// ── Parse workout description into blocks ─────────────────────────────────
+function parsePaceRange(paceStr, zona, segDesc){
+  const isStride = segDesc && /veloc|strides|subida|sprint|80m|60m/i.test(segDesc);
+  if(isStride) return 'máx. esforço';
+  if(!paceStr || paceStr==='—') return '';
+  if(/veloc|máximo|máx/i.test(paceStr)) return 'máx. esforço';
+  let clean = paceStr.replace(/[^\d:]/g,'').trim();
+  if(!clean.includes(':')) return '';
+  const sec = t2s(clean);
+  if(!sec || sec < 120 || sec > 1200) return '';
+  const pct = zona==='Z3'?0.04 : zona==='Z2'?0.05 : 0.08;
+  const lo = Math.round(sec*(1-pct)), hi = Math.round(sec*(1+pct));
+  return sp(lo)+' – '+sp(hi);
+}
+
+function parseWorkoutBlocks(descricao, paceStr, zona){
+  if(!descricao) return [];
+  const blocks = [];
+  const zoneColor = zona==='Z1'?'var(--teal)':zona==='Z2'?'var(--orange)':zona==='Z3'?'var(--red)':'var(--teal)';
+  const parts = descricao.split(/\s*\+\s*/);
+  parts.forEach(part => {
+    part = part.trim();
+    if(!part) return;
+    const commaParts = part.split(/,\s*/);
+    const mainPart = commaParts[0].trim();
+    const restPart = commaParts.slice(1).join(', ').trim();
+    const paceMatch = mainPart.match(/(\d+:\d+)/);
+    let segPace = paceMatch ? paceMatch[1] : '';
+    let segDesc = mainPart.replace(/\d+:\d+/g,'').replace(/\s+/g,' ').trim();
+    segDesc = segDesc.replace(/\/km$/i,'').replace(/min\/km$/i,'').trim();
+    let segZona = zona;
+    if(/aquec|warm/i.test(segDesc)) segZona='Z1';
+    else if(/\bleve\b|desaquec/i.test(segDesc)) segZona='Z1';
+    else if(/\britmo\b|tempo run|ritmado/i.test(segDesc) && !/tiro|sprint|veloc/i.test(segDesc)) segZona='Z2';
+    else if(/tiro|veloc|sprint|strides|1000m|400m|200m|80m|60m/i.test(segDesc)) segZona='Z3';
+    const segColor = segZona==='Z1'?'var(--teal)':segZona==='Z2'?'var(--orange)':segZona==='Z3'?'var(--red)':'var(--tx2)';
+    const isNonRunning = /alongamento|aquecimento muscular|fortalec|mobilidade/i.test(segDesc);
+    if(isNonRunning){ blocks.push({desc:segDesc, pace:'', color:'var(--tx3)', zona:'', isNonRunning:true}); return; }
+    let finalPace = segPace ? parsePaceRange(segPace, segZona, segDesc) : '';
+    if(!finalPace && segZona==='Z1') finalPace = 'Z1 confortável';
+    blocks.push({desc:segDesc, pace:finalPace, color:segColor, zona:segZona});
+    if(restPart && /caminh|recup|descanso|trote/i.test(restPart)){
+      blocks.push({desc:'↩ descanso: '+restPart.replace(/\d+:\d+/g,'').trim(), pace:'', color:'var(--tx3)', zona:'Z1', isRest:true});
+    }
+  });
+  return blocks.length>0 ? blocks : [{desc:descricao, pace:parsePaceRange(paceStr,zona,descricao), color:zoneColor, zona}];
+}
+
 
 function parseGPX(xml){
   const doc = new DOMParser().parseFromString(xml, 'text/xml');
