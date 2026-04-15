@@ -2042,42 +2042,67 @@ RESPONDA em formato markdown direto:
 
   // ── CALL CLAUDE API ──
   try {
-    const text = await callClaudeAPI([{role:'user', content: prompt}], 1200);
-    out.innerHTML = renderIAText(text);
+    // Strip "próximo treino" from main text — show it separately as styled card
+    const proximoSplit = text.split(/\n##[^#]*[Pp]róximo[^\n]*/);
+    const mainText = proximoSplit[0].trim();
+    const proximoText = proximoSplit.length > 1 ? proximoSplit[proximoSplit.length-1].trim() : '';
+
+    // Render main analysis only (no duplication)
+    out.innerHTML = renderIAText(mainText);
     btn.textContent = '✨ Gerar nova análise';
     btn.disabled = false;
 
-    // Extract "próximo treino" section from analysis
-    const proximoMatch = text.match(/##[^#]*[Pp]róximo[^\n]*\n([\s\S]*?)(?=\n##|$)/);
-    const proximoText = proximoMatch ? proximoMatch[1].trim() : '';
+    // Find next training day based on current date
+    const planDays = USER_GOAL?.dias_selecionados||['ter','qui','dom'];
+    const todayKey2 = ['dom','seg','ter','qua','qui','sex','sab'][new Date().getDay()];
+    const lastDayIdx2 = planDays.indexOf(todayKey2);
+    const nextDayKey = planDays[(lastDayIdx2 + 1) % planDays.length];
+    const dayNames = {seg:'Segunda',ter:'Terça',qua:'Quarta',qui:'Quinta',sex:'Sexta',sab:'Sábado',dom:'Domingo'};
 
-    // Save analysis to the last workout in DB
+    if(proximoText){
+      // Parse into structured workout
+      const parsedNext = parseNextWorkoutText(proximoText, nextDayKey);
+      parsedNext._fromAnalysis = true;
+
+      // Inject into current week plan
+      if(!window._currentWeekPlan){
+        const treinos = {};
+        planDays.forEach(d => { treinos[d] = {tipo:'OFF',zona:'OFF',descricao:'Descanso',pace:''}; });
+        window._currentWeekPlan = {semana:1,foco:'Plano ajustado pela análise',nota:'',treinos};
+        window._currentWeekNum = 1;
+      }
+      window._currentWeekPlan.treinos[nextDayKey] = parsedNext;
+      window._currentWeekPlan._adjustedDay = nextDayKey;
+      try{
+        localStorage.setItem('cr_plan_'+CU?.id, JSON.stringify({
+          week:window._currentWeekPlan, weekNum:window._currentWeekNum||1, savedAt:new Date().toISOString()
+        }));
+      }catch(e){}
+
+      // Show next workout card once at bottom of analysis
+      const card = document.createElement('div');
+      card.style.cssText = 'margin-top:14px;padding:14px;background:rgba(255,92,0,.06);border-radius:var(--rl);border:1.5px solid rgba(255,92,0,.25)';
+      card.innerHTML = `
+        <div style="font-size:11px;font-weight:700;color:var(--neon);text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px">
+          📅 Próximo treino — ${dayNames[nextDayKey]||nextDayKey} · Atualizado no plano
+        </div>
+        <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:6px">${parsedNext.tipo}</div>
+        ${renderIAText(proximoText)}
+        <button onclick="goTab('plano')" style="margin-top:10px;padding:8px 18px;border-radius:20px;background:var(--neon);color:#fff;border:none;cursor:pointer;font-size:12px;font-weight:700;font-family:var(--sans)">Ver plano atualizado →</button>
+      `;
+      out.appendChild(card);
+    }
+
+    // Save to DB
     if(HIST.length > 0){
-      const lastW = HIST[HIST.length-1];
-      if(lastW.id){
-        await db.from('workouts').update({
+      const lastW2 = HIST[HIST.length-1];
+      if(lastW2.id){
+        db.from('workouts').update({
           analise: text.substring(0,2000),
           proximo_treino: proximoText.substring(0,500)
-        }).eq('id', lastW.id).eq('user_id', CU.id);
-        lastW.analise = text.substring(0,2000);
-        lastW.proximo_treino = proximoText;
-      }
-
-      // Save next workout suggestion to plan
-      if(proximoText){
-        window._nextWorkoutSuggestion = proximoText;
-        // Find next training day
-        const planDays = USER_GOAL?.dias_selecionados||['ter','qui','dom'];
-        const lastDate = new Date(lastW.data.split('/').reverse().join('-'));
-        const dayMap = ['dom','seg','ter','qua','qui','sex','sab'];
-        const lastDayIdx = planDays.indexOf(dayMap[lastDate.getDay()]);
-        const nextDayKey = planDays[(lastDayIdx+1) % planDays.length];
-        const dayNames = {seg:'Segunda',ter:'Terça',qua:'Quarta',qui:'Quinta',sex:'Sexta',sab:'Sábado',dom:'Domingo'};
-        // Add note below analysis
-        const nextDayNote = document.createElement('div');
-        nextDayNote.style.cssText = 'margin-top:12px;padding:12px 14px;background:rgba(255,92,0,.06);border-radius:var(--rl);border-left:3px solid var(--neon)';
-        nextDayNote.innerHTML = `<div style="font-size:11px;font-weight:700;color:var(--neon);margin-bottom:6px">📅 PRÓXIMO TREINO — ${dayNames[nextDayKey]||nextDayKey.toUpperCase()}</div><div style="font-size:12px;color:var(--tx);line-height:1.7">${renderIAText(proximoText).replace(/<[^>]+>/g,' ').trim()}</div>`;
-        out.appendChild(nextDayNote);
+        }).eq('id', lastW2.id).eq('user_id', CU.id);
+        lastW2.analise = text.substring(0,2000);
+        lastW2.proximo_treino = proximoText;
       }
     }
   } catch(err) {
@@ -2489,140 +2514,15 @@ function renderWorkoutCell(t, col, cls){
 }
 
 function renderPlanSheet(plan, a){
-  const allDays=['seg','ter','qua','qui','sex','sab','dom'];
-  const allLabels=['SEG','TER','QUA','QUI','SEX','SÁB','DOM'];
-  // Use selected days; fallback to first N days based on dias_semana count
-  const diasCount = USER_GOAL?.dias_semana || 3;
-  const defaultDays = ['ter','qui','dom'].slice(0,diasCount); // sensible default
-  const userDays = (USER_GOAL?.dias_selecionados && USER_GOAL.dias_selecionados.length>0)
-    ? USER_GOAL.dias_selecionados : defaultDays;
-
-  const zoneColor={Z1:'var(--neon)',Z2:'var(--orange)',Z3:'var(--red)',LONGAO:'var(--teal)',LONG:'var(--teal)',FORT:'var(--purple)',OFF:'var(--tx3)'};
-  const viewMode = window._planDayView||'table';
-
-  const metricMode = window._planMetric||'dist'; // 'dist' or 'time'
-  // View toggle
-  let html = `<div style="display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap">
-    <div style="display:flex;gap:6px;flex:1">
-      <button onclick="window._planDayView='table';renderPlano()" 
-        style="flex:1;padding:8px;border-radius:var(--r);border:2px solid ${viewMode==='table'?'var(--neon)':'var(--bd)'};background:${viewMode==='table'?'rgba(255,92,0,.08)':'var(--bg2)'};color:${viewMode==='table'?'var(--neon)':'var(--tx2)'};font-weight:700;font-size:12px;cursor:pointer;font-family:var(--sans)">
-        📋 Planilha
-      </button>
-      <button onclick="window._planDayView='cards';renderPlano()"
-        style="flex:1;padding:8px;border-radius:var(--r);border:2px solid ${viewMode==='cards'?'var(--neon)':'var(--bd)'};background:${viewMode==='cards'?'rgba(255,92,0,.08)':'var(--bg2)'};color:${viewMode==='cards'?'var(--neon)':'var(--tx2)'};font-weight:700;font-size:12px;cursor:pointer;font-family:var(--sans)">
-        📆 Por dia
-      </button>
-    </div>
-    <div style="display:flex;gap:4px;background:var(--bg3);border-radius:var(--r);padding:3px">
-      <button onclick="window._planMetric='dist';renderPlano()"
-        style="padding:5px 10px;border-radius:8px;border:none;background:${metricMode==='dist'?'#fff':'transparent'};color:${metricMode==='dist'?'var(--neon)':'var(--tx3)'};font-weight:700;font-size:11px;cursor:pointer;font-family:var(--sans);box-shadow:${metricMode==='dist'?'0 1px 4px rgba(0,0,0,.1)':'none'}">
-        📏 km
-      </button>
-      <button onclick="window._planMetric='time';renderPlano()"
-        style="padding:5px 10px;border-radius:8px;border:none;background:${metricMode==='time'?'#fff':'transparent'};color:${metricMode==='time'?'var(--neon)':'var(--tx3)'};font-weight:700;font-size:11px;cursor:pointer;font-family:var(--sans);box-shadow:${metricMode==='time'?'0 1px 4px rgba(0,0,0,.1)':'none'}">
-        ⏱ min
-      </button>
-    </div>
-  </div>`;
-
-  if(viewMode==='table'){
-    // TABLE VIEW — show only active days
-    html+=`<div style="overflow-x:auto;-webkit-overflow-scrolling:touch">
-    <table class="plan-sheet">
-      <thead><tr>
-        <th style="width:36px;min-width:36px"></th>
-        ${allDays.map((d,i)=>{
-          const isActive=userDays.includes(d);
-          return `<th style="${!isActive?'opacity:.35;':''}min-width:${isActive?'90px':'36px'}">${allLabels[i]}</th>`;
-        }).join('')}
-      </tr></thead>
-      <tbody>`;
-
-    plan.semanas.forEach((sem,si)=>{
-      html+=`<tr><td class="ps-week">SEM ${si+1}</td>`;
-      allDays.forEach(d=>{
-        const t=sem.treinos[d]||{tipo:'OFF',descricao:'Descanso',zona:'OFF'};
-        const isActive=userDays.includes(d);
-        if(!isActive){
-          html+=`<td class="ps-off" style="opacity:.3;min-width:36px">—</td>`;
-        } else {
-          html+=renderWorkoutCell(t);
-        }
-      });
-      html+=`</tr>`;
-    });
-    html+=`</tbody></table></div>`;
-
-  } else {
-    // CARDS VIEW — one card per workout day, expandable by week
-    html+=`<div>`;
-    plan.semanas.forEach((sem,si)=>{
-      html+=`<div style="margin-bottom:12px">
-        <div style="font-size:12px;font-weight:700;color:var(--neon);text-transform:uppercase;letter-spacing:.8px;margin-bottom:8px;padding:8px 12px;background:rgba(255,92,0,.06);border-radius:var(--r)">
-          Semana ${si+1} — ${sem.foco||''}
-        </div>
-        <div style="display:flex;flex-direction:column;gap:8px">`;
-
-      const dayMeta={seg:'Segunda',ter:'Terça',qua:'Quarta',qui:'Quinta',sex:'Sexta',sab:'Sábado',dom:'Domingo'};
-      userDays.forEach(d=>{
-        const t=sem.treinos[d]||{tipo:'OFF',descricao:'Descanso',zona:'OFF'};
-        const zona=(t.zona||'OFF').toUpperCase().replace('LONGÃO','LONGAO');
-        const ztopColor={'Z1':'var(--neon)','Z2':'var(--orange)','Z3':'var(--red)','LONGAO':'var(--teal)','LONG':'var(--teal)','FORT':'var(--purple)','OFF':'var(--tx3)'}[zona]||'var(--tx3)';
-        const zbg={'Z1':'rgba(255,92,0,.04)','Z2':'rgba(9,132,227,.04)','Z3':'rgba(232,54,93,.04)','LONGAO':'rgba(0,184,148,.04)','LONG':'rgba(0,184,148,.04)','FORT':'rgba(108,92,231,.04)','OFF':'var(--bg3)'}[zona]||'var(--bg3)';
-        const zborder={'Z1':'rgba(255,92,0,.2)','Z2':'rgba(9,132,227,.2)','Z3':'rgba(232,54,93,.2)','LONGAO':'rgba(0,184,148,.2)','LONG':'rgba(0,184,148,.2)','FORT':'rgba(108,92,231,.2)','OFF':'var(--bd)'}[zona]||'var(--bd)';
-
-        if(zona==='OFF'){
-          html+=`<div style="display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:var(--r);background:var(--bg3);border:1px solid var(--bd)">
-            <div style="font-size:11px;font-weight:700;color:var(--tx3);width:32px">${dayMeta[d]?.slice(0,3)?.toUpperCase()}</div>
-            <div style="font-size:13px;font-weight:600;color:var(--tx3)">— Descanso</div>
-          </div>`;
-        } else {
-          const blocks=parseWorkoutBlocks(t.descricao, t.pace, zona);
-          html+=`<div style="border-radius:var(--rl);overflow:hidden;border:1px solid ${zborder};background:${zbg};box-shadow:0 2px 8px rgba(0,0,0,0.05)">
-            <div style="padding:10px 14px 8px;border-bottom:1px solid ${zborder};display:flex;justify-content:space-between;align-items:center">
-              <div style="display:flex;align-items:center;gap:8px">
-                <div style="font-size:10px;font-weight:700;color:var(--tx3);width:32px">${dayMeta[d]?.slice(0,3)?.toUpperCase()}</div>
-                <div style="font-size:14px;font-weight:700;color:var(--tx)">${t.tipo||zona}</div>
-              </div>
-              <div style="display:flex;align-items:center;gap:6px">
-                ${(()=>{const mins=estimateWorkoutTime(t.descricao,zona);return mins>0?`<span style="font-size:10px;color:var(--tx3)">~${mins} min</span>`:''})()}
-                <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${zborder};color:${ztopColor}">${zona}</span>
-              </div>
-            </div>
-            <div style="padding:8px 14px">
-              ${blocks.map(b=>`<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 0;border-bottom:1px solid rgba(0,0,0,0.04);${b.isRest||b.isNonRunning?'opacity:.6':''}">
-                <span style="font-size:12px;color:${b.isRest||b.isNonRunning?'var(--tx3)':'var(--tx)'};${b.isRest?'font-style:italic':''}">${b.desc}</span>
-                ${b.pace&&!b.isRest&&!b.isNonRunning?`<span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${b.color};white-space:nowrap;margin-left:8px">${b.pace}</span>`:''}
-              </div>`).join('')}
-            </div>
-          </div>`;
-        }
-      });
-      html+=`</div></div>`;
-    });
-    html+=`</div>`;
-  }
-
-  // Week focus cards with corrections
-  html+=`<div style="display:flex;flex-direction:column;gap:8px;margin-top:12px">`;
-  plan.semanas.forEach((sem,si)=>{
-    html+=`<div class="card" style="padding:12px 14px">
-      <div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">
-        <span style="font-size:10px;font-weight:700;color:var(--neon);background:rgba(255,92,0,.1);padding:2px 8px;border-radius:10px">SEM ${si+1}</span>
-        <div style="font-size:13px;font-weight:700;color:var(--tx)">${sem.foco||'—'}</div>
-      </div>
-      ${sem.nota?`<div style="font-size:12px;color:var(--tx2);margin-bottom:${sem.correcoes?'8px':'0'}">${sem.nota}</div>`:''}
-      ${sem.correcoes&&sem.correcoes!=='Primeiro plano'?`<div style="font-size:11px;padding:6px 10px;background:rgba(0,184,148,.06);border-radius:var(--r);border-left:3px solid var(--teal);color:var(--teal)">
-        🔧 <strong>Ajuste:</strong> ${sem.correcoes}
-      </div>`:''}
-    </div>`;
-  });
-  html+=`</div>`;
-
-  return html;
+  if(!plan) return '';
+  const week = plan.semanas ? plan.semanas[0] : (plan.treinos ? plan : null);
+  if(!week) return '';
+  if(!a) a = computeAnalise();
+  if(!a) return '';
+  return renderWeekPlan(week, a, window._currentWeekNum||1);
 }
 
-// Day detail modal
+
 function openDayModal(cell){
   try{
     const t=JSON.parse(cell.dataset.treino);
