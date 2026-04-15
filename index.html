@@ -1072,111 +1072,164 @@ function goTab(n){
 function renderHome(){
   const el=document.getElementById('pn-home');
   if(!USER_GOAL||!USER_GOAL.onboard_done){ renderOnboarding(el); return; }
+
   const obj = (USER_GOAL.obj_id ? OBJS.find(o=>o.id===USER_GOAL.obj_id) : null) || OB_OBJ || OBJS[0];
-  const n = HIST.length;
   const name = (PROFILE?.name||CU?.email?.split('@')[0]||'Atleta').split(' ')[0];
+  const n = HIST.length;
+  const dayName = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'][new Date().getDay()];
 
-  const dayName=['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'][new Date().getDay()];
-  let html=`<div style="padding-top:8px;margin-bottom:16px">
-    <div style="font-size:12px;font-weight:700;color:var(--neon);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${dayName} · Vamos treinar! 🏃</div>
-    <div style="font-size:26px;font-weight:800;letter-spacing:-.5px;margin-bottom:2px;color:var(--tx)">Olá, ${name||'Atleta'}!</div>
-    <div style="font-size:13px;color:var(--tx2)">Seu progresso está sendo acompanhado pelo coach.</div>
-  </div>`;
+  // ── Determine app state ──
+  const hasTest = !!(USER_GOAL?.test_time);
+  const hasNextWorkout = !!(window._nextWorkout);
+  const regularWorkouts = HIST.filter(w => !(Math.abs((w.dist||0)-(USER_GOAL?.test_dist||3))<0.5 && w.paceSec<450));
 
-  // Goal card
-  html+=`<div class="card card-accent">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">
-      <div>
-        <div style="font-size:11px;color:var(--tx3);font-weight:700;letter-spacing:.8px;text-transform:uppercase;margin-bottom:3px">Objetivo</div>
-        <div style="font-size:15px;font-weight:700">${obj.icon} ${obj.t}</div>
+  let state = 'no_test';
+  if(hasTest && regularWorkouts.length === 0) state = 'test_done';
+  else if(hasTest && hasNextWorkout) state = 'has_next';
+  else if(hasTest && !hasNextWorkout && regularWorkouts.length > 0) state = 'need_analysis';
+
+  // ── Header ──
+  let html = `<div style="padding-top:8px">
+    <div style="margin-bottom:16px">
+      <div style="font-size:11px;font-weight:700;color:var(--neon);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${dayName}</div>
+      <div style="font-size:24px;font-weight:800;letter-spacing:-.5px;color:var(--tx)">Olá, ${name}!</div>
+      <div style="font-size:12px;color:var(--tx2);margin-top:2px">${obj.icon} ${obj.t}</div>
+    </div>`;
+
+  // ── STATE CARDS ──
+
+  if(state === 'no_test'){
+    html += `
+    <div style="border-radius:var(--rl);overflow:hidden;margin-bottom:16px">
+      <div style="background:var(--neon);padding:20px;color:#fff">
+        <div style="font-size:13px;font-weight:700;opacity:.85;margin-bottom:6px">PASSO 1 — TESTE DE CALIBRAÇÃO</div>
+        <div style="font-size:20px;font-weight:800;margin-bottom:8px">Corra 3,2km para calibrar seu plano</div>
+        <div style="font-size:13px;opacity:.9;line-height:1.6">Corra 3,2km no ritmo mais forte que conseguir manter sem quebrar. Salve no relógio (GPX/TCX) e insira aqui. O coach calcula suas zonas reais e monta o primeiro treino.</div>
       </div>
-      <button class="btn btn-ghost btn-sm" style="width:auto" onclick="resetGoal()">Alterar</button>
+      <div style="background:#fff;padding:16px;display:flex;gap:8px">
+        <button class="btn btn-neon" style="flex:1" onclick="goTab('treino')">📂 Inserir teste agora</button>
+      </div>
     </div>
-    <div style="display:flex;gap:10px;flex-wrap:wrap">
-      <span class="badge badge-neon">${USER_GOAL.nivel_label||USER_GOAL.nivel}</span>
-      <span class="badge badge-gray">${USER_GOAL.dias_semana} dias/semana</span>
-      ${USER_GOAL.target_pace_sec?`<span class="badge badge-teal">Alvo: ${sp(USER_GOAL.target_pace_sec)}/km</span>`:''}
-      ${USER_GOAL.test_time?`<span class="badge badge-orange">Teste 3km: ${USER_GOAL.test_time}</span>`:``}
-    </div>
-  </div>`;
-
-  {
-    // Smart CTA based on app state
-    const hasPlan = !!(window._iaPlano || window._defaultPlan);
-    if(n===0){
-      html+=`<div class="card card-teal" style="margin-bottom:12px">
-        <div class="clabel">🚀 Próximo passo</div>
-        <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:6px">Faça o teste de 3km para calibrar suas zonas</div>
-        <div style="font-size:12px;color:var(--tx2);margin-bottom:12px">Corra 3km no máximo esforço, salve o arquivo do relógio e insira aqui. O app define suas zonas Z1, Z2, Z3 com precisão.</div>
-        <button class="btn btn-neon" onclick="goTab('treino')">📂 Inserir teste de 3km</button>
-      </div>`;
-    } else if(n===1 && USER_GOAL?.test_time){
-      html+=`<div class="card card-accent" style="margin-bottom:12px">
-        <div class="clabel" style="color:var(--teal)">✅ Teste registrado · Zonas calibradas</div>
-        <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:4px">Zonas calculadas pela VAM do seu teste!</div>
-        <div style="font-size:12px;color:var(--tx2);margin-bottom:12px">Veja a análise do teste e gere seu plano personalizado de 4 semanas.</div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-neon" style="flex:1" onclick="goTab('analise')">📊 Ver análise do teste</button>
-          <button class="btn" style="flex:1;background:var(--orange);color:#fff" onclick="goTab('plano')">📅 Gerar meu plano →</button>
-        </div>
-      </div>`;
-    } else if(hasPlan){
-      const planDays = USER_GOAL?.dias_selecionados||['ter','qui','dom'];
-      const todayKey = ['dom','seg','ter','qua','qui','sex','sab'][new Date().getDay()];
-      const isTrainDay = planDays.includes(todayKey);
-      const dayName = {seg:'Segunda',ter:'Terça',qua:'Quarta',qui:'Quinta',sex:'Sexta',sab:'Sábado',dom:'Domingo'}[todayKey]||'';
-      const currentWeek = window._currentWeekPlan;
-      const todayWorkout = currentWeek?.treinos?.[todayKey];
-      const hasTodayWorkout = todayWorkout && todayWorkout.zona !== 'OFF';
-
-      // Next upcoming workout
-      const nextDay = planDays.find(d => {
-        const dayOrder = ['seg','ter','qua','qui','sex','sab','dom'];
-        const todayIdx = dayOrder.indexOf(todayKey);
-        return dayOrder.indexOf(d) > todayIdx;
-      }) || planDays[0];
-      const nextWorkout = currentWeek?.treinos?.[nextDay];
-
-      html+=`<div class="card ${hasTodayWorkout?'card-accent':'card-teal'}" style="margin-bottom:12px">
-        <div class="clabel">${hasTodayWorkout?`🏃 ${dayName} — dia de treino!`:'📋 Plano ativo'}</div>
-        ${hasTodayWorkout?`
-          <div style="font-size:14px;font-weight:700;color:var(--tx);margin-bottom:6px">${todayWorkout.tipo} — ${todayWorkout.tempo_estimado?todayWorkout.tempo_estimado+'min':'tempo livre'}</div>
-          <div style="font-size:12px;color:var(--tx2);padding:8px 12px;background:rgba(255,92,0,.04);border-radius:var(--r);margin-bottom:10px;line-height:1.7">${todayWorkout.descricao}</div>
-          <div style="font-size:11px;font-weight:700;color:var(--neon);margin-bottom:10px">Pace: ${todayWorkout.pace||'—'}</div>
-        `:`
-          <div style="font-size:13px;color:var(--tx2);margin-bottom:8px">Próximo treino: <strong>${dayName} — ${nextWorkout?.tipo||'—'}</strong></div>
-        `}
-        <div style="display:flex;gap:8px;flex-wrap:wrap">
-          <button class="btn btn-neon" style="flex:1" onclick="goTab('treino')">📂 Inserir treino realizado</button>
-          <button class="btn btn-ghost" style="flex:1" onclick="goTab('plano')">📅 Ver plano completo</button>
-        </div>
-      </div>`;
-    } else if(n>0 && !hasPlan){
-      html+=`<div class="card card-orange" style="margin-bottom:12px">
-        <div class="clabel">📅 Gere seu plano de treino</div>
-        <div style="font-size:13px;color:var(--tx2);margin-bottom:12px">Com base nos seus treinos, o coach monta um plano de 4 semanas personalizado.</div>
-        <button class="btn btn-neon" onclick="goTab('plano')">🤖 Gerar Plano IA</button>
-      </div>`;
-    }
-  }
-
-  // Last workout summary
-  if(n>0){
-    const last=HIST[n-1];
-    // Check if this looks like the test workout
-    const testDist = USER_GOAL?.test_dist||3;
-    const isTestEntry = Math.abs((last.dist||0)-testDist)<0.5 && last.paceSec<450;
-    const label = isTestEntry ? 'Teste de calibração · '+last.data : 'Último treino · '+last.data;
-    html+=`<div class="card" style="margin-bottom:10px">
-      <div class="clabel">${label}</div>
-      <div class="metrics" style="margin-bottom:0">
-        <div class="metric metric-neon"><div class="mlabel">Pace</div><div class="mval" style="color:var(--neon)">${last.pace}</div><div class="msub">min/km</div></div>
-        <div class="metric metric-orange"><div class="mlabel">Distância</div><div class="mval" style="color:var(--orange)">${last.dist}</div><div class="msub">km</div></div>
-        <div class="metric metric-teal"><div class="mlabel">Duração</div><div class="mval" style="font-size:${(last.tempo||'—').length>5?13:16}px;color:var(--teal)">${last.tempo||'—'}</div><div class="msub">${n} treino${n>1?'s':''}</div></div>
+    <div class="card" style="margin-bottom:12px">
+      <div class="clabel">O que acontece depois do teste?</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        ${['🎯 Coach calcula suas zonas Z1, Z2, Z3 com base na sua VAM real','📅 Primeiro treino é gerado automaticamente para o próximo dia','🔄 A cada treino inserido, o coach ajusta e indica o próximo','📈 Evolução rastreada semana a semana até o objetivo'].map(t=>`<div style="font-size:12px;color:var(--tx2)">${t}</div>`).join('')}
       </div>
     </div>`;
   }
-  el.innerHTML=html;
+
+  else if(state === 'test_done'){
+    // Has test, no workouts yet — auto-show first workout
+    if(!hasNextWorkout){
+      // Generate first workout automatically
+      const a = computeAnalise();
+      if(a){
+        const z = a.z, bp = a.basePace;
+        const planDays = USER_GOAL?.dias_selecionados||['ter','qui','dom'];
+        const testDate = HIST.length>0 ? new Date(HIST[HIST.length-1].data.split('/').reverse().join('-')) : new Date();
+        const dayMap = ['dom','seg','ter','qua','qui','sex','sab'];
+        const testDayIdx = dayMap.indexOf(dayMap[testDate.getDay()]);
+        // Find next training day after test
+        const nextDayKey = planDays.find(d => {
+          const order = ['seg','ter','qua','qui','sex','sab','dom'];
+          return order.indexOf(d) > order.indexOf(dayMap[testDate.getDay()]);
+        }) || planDays[0];
+        const dayNames = {seg:'Segunda',ter:'Terça',qua:'Quarta',qui:'Quinta',sex:'Sexta',sab:'Sábado',dom:'Domingo'};
+        const tempoMin = USER_GOAL?.tempo_treino||45;
+        const pAq = z.e ? sp(z.e.max) : sp(Math.round(bp*1.2));
+        const pBase = z.e ? sp(z.e.min) : sp(Math.round(bp*1.1));
+        const paceZ1sec = z.e ? (z.e.min+z.e.max)/2 : bp*1.15;
+        const avail = tempoMin*60 - 3*paceZ1sec;
+        const baseKm = Math.max(2, Math.round(avail/paceZ1sec*10)/10);
+        const fw = {
+          tipo:'BASE', zona:'Z1', pace:pBase, tempo_estimado:tempoMin,
+          dayLabel: dayNames[nextDayKey]+' — primeiro treino',
+          descricao:`2km aquec ${pAq} + ${baseKm}km ritmo ${pBase} + 1km leve + alongamento`,
+          _fromAnalysis:false
+        };
+        window._nextWorkout = fw;
+        try{ localStorage.setItem('cr_next_'+CU?.id, JSON.stringify({workout:fw,savedAt:new Date().toISOString()})); }catch(e){}
+      }
+    }
+    // Fall through to has_next
+    state = 'has_next';
+  }
+
+  if(state === 'has_next' && window._nextWorkout){
+    const nw = window._nextWorkout;
+    const zona = (nw.zona||'Z1').toUpperCase().replace('LONGÃO','LONGAO');
+    const ztop = {Z1:'var(--neon)',Z2:'var(--orange)',Z3:'var(--red)',LONGAO:'var(--teal)'}[zona]||'var(--neon)';
+    const zbg = {Z1:'rgba(255,92,0,.04)',Z2:'rgba(9,132,227,.04)',Z3:'rgba(232,54,93,.04)',LONGAO:'rgba(0,184,148,.04)'}[zona]||'rgba(255,92,0,.04)';
+    const zborder = {Z1:'rgba(255,92,0,.2)',Z2:'rgba(9,132,227,.2)',Z3:'rgba(232,54,93,.2)',LONGAO:'rgba(0,184,148,.2)'}[zona]||'rgba(255,92,0,.2)';
+
+    html += `
+    <div style="border-radius:var(--rl);border:1.5px solid ${zborder};background:${zbg};overflow:hidden;margin-bottom:14px">
+      <div style="padding:14px 16px;border-bottom:1px solid ${zborder};display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:11px;font-weight:700;color:${ztop};text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">PRÓXIMO TREINO · ${nw.dayLabel||''}</div>
+          <div style="font-size:18px;font-weight:800;color:var(--tx)">${nw.tipo}</div>
+        </div>
+        <div style="text-align:right">
+          ${nw.tempo_estimado?`<div style="font-size:20px;font-weight:800;color:${ztop}">${nw.tempo_estimado}<span style="font-size:11px">min</span></div>`:''}
+          <div style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:10px;background:${zborder};color:${ztop}">${zona}</div>
+        </div>
+      </div>
+      <div style="padding:12px 16px">
+        ${(()=>{
+          const blocks = parseWorkoutBlocks(nw.descricao||'', nw.pace||'', zona);
+          return blocks.map(b => {
+            if(b.isRest) return `<div style="padding:5px 0;border-bottom:1px solid rgba(0,0,0,.04);font-size:12px;color:var(--tx3);font-style:italic">${b.desc}</div>`;
+            if(b.isNonRunning) return `<div style="padding:5px 0;border-bottom:1px solid rgba(0,0,0,.04);font-size:12px;color:var(--tx2)">${b.desc}</div>`;
+            return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(0,0,0,.04)">
+              <span style="font-size:13px;color:var(--tx)">${b.desc}</span>
+              ${b.pace?`<span style="font-family:var(--mono);font-size:12px;font-weight:700;color:${b.color}">${b.pace}</span>`:''}
+            </div>`;
+          }).join('');
+        })()}
+      </div>
+    </div>
+    ${nw._fromAnalysis?`<div style="font-size:11px;color:var(--teal);padding:6px 10px;background:rgba(0,184,148,.06);border-radius:var(--r);margin-bottom:10px">🔧 Ajustado pelo coach com base na análise do último treino</div>`:''}
+    <div style="display:flex;gap:8px;margin-bottom:14px">
+      <button class="btn btn-neon" style="flex:2" onclick="goTab('treino')">📂 Inserir treino realizado</button>
+      <button class="btn btn-ghost" style="flex:1" onclick="gerarAnaliseRapida()">📊 Análise</button>
+    </div>`;
+  }
+
+  else if(state === 'need_analysis'){
+    html += `
+    <div class="card card-orange" style="margin-bottom:14px">
+      <div style="font-size:15px;font-weight:700;color:var(--tx);margin-bottom:6px">📊 Analisar treino para próximo</div>
+      <div style="font-size:13px;color:var(--tx2);margin-bottom:12px;line-height:1.6">Treino registrado! Gere a análise para o coach definir o próximo treino.</div>
+      <button class="btn btn-neon" onclick="goTab('analise')">Gerar análise →</button>
+    </div>`;
+  }
+
+  // Last workout compact
+  if(regularWorkouts.length > 0){
+    const last = regularWorkouts[regularWorkouts.length-1];
+    html += `<div class="card" style="margin-bottom:12px">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div>
+          <div style="font-size:11px;color:var(--tx3);font-weight:700;text-transform:uppercase;letter-spacing:.5px">Último treino · ${last.data}</div>
+          <div style="font-size:14px;font-weight:700;color:var(--tx);margin-top:2px">${last.dist}km em ${last.tempo||'—'}</div>
+        </div>
+        <div style="font-family:var(--mono);font-size:22px;font-weight:800;color:var(--neon)">${last.pace}</div>
+      </div>
+    </div>`;
+  }
+
+  html += '</div>';
+  el.innerHTML = html;
+}
+
+// Quick analysis trigger from home
+async function gerarAnaliseRapida(){
+  goTab('analise');
+  // Small delay to let the tab render, then auto-trigger analysis
+  setTimeout(()=>{
+    const btn = document.getElementById('btn-ia');
+    if(btn && !btn.disabled) btn.click();
+  }, 400);
 }
 
 function renderOnboarding(el){
@@ -2066,6 +2119,9 @@ RESPONDA em formato markdown direto:
     out.innerHTML = renderIAText(mainText);
     btn.textContent = '✨ Gerar nova análise';
     btn.disabled = false;
+
+    // After analysis: auto-navigate to home to show next workout
+    setTimeout(()=>{ goTab('home'); }, 1500);
 
     // Find next training day based on current date
     const planDays = USER_GOAL?.dias_selecionados||['ter','qui','dom'];
@@ -3654,8 +3710,8 @@ async function obFinish(){
   });
   // Save obj selection to localStorage
   try{ if(OB_OBJ) localStorage.setItem('cr_obj_'+CU?.id, OB_OBJ.id); }catch(e){}
-  // Auto-navigate to analysis after test
-  setTimeout(()=>{ goTab('analise'); }, 300);
+  // Go to home — it will auto-show test analysis and first workout
+  setTimeout(()=>{ goTab('home'); }, 300);
 }
 
 function resetGoal(){
