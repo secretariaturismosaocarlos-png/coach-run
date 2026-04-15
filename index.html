@@ -859,6 +859,15 @@ function playNotif(){
 //  DATA LAYER (Supabase)
 // ═══════════════════════════════════════════════════
 async function loadData(){
+  // Restore obj_id from localStorage if available (more reliable than DB)
+  try{
+    const savedObjId = localStorage.getItem('cr_obj_'+CU?.id);
+    if(savedObjId){
+      const savedObj = OBJS.find(o=>o.id===savedObjId);
+      if(savedObj){ OB_OBJ=savedObj; window._obSelCat=savedObj.cat; }
+    }
+  }catch(e){}
+
   const {data:workouts} = await db.from('workouts').select('*').eq('user_id', CU.id).order('created_at');
   // Deduplicate: remove workouts with same date+dist+pace (keep latest)
   const seen = new Map();
@@ -3049,10 +3058,15 @@ function computeAnalise(){
     !(Math.abs(w.dist - testDist) < 0.5 && w.paceSec < 420) // exclude test (short+fast)
   );
   const recent = regular.length > 0 ? regular.slice(-8) : h.slice(-8).filter(w=>w.paceSec>180&&w.paceSec<720);
-  let basePace = last.paceSec > 0 ? last.paceSec : (USER_GOAL?.vam_pace ? Math.round(USER_GOAL.vam_pace * 1.15) : 480);
+  // Fallback: use VAM-derived comfortable pace if no regular workouts
+  const vamComfort = USER_GOAL?.vam_pace ? Math.round(USER_GOAL.vam_pace * 1.18) : 0;
+  let basePace = last.paceSec > 0 ? last.paceSec : (vamComfort || 480);
   if(recent.length >= 1){
     const sorted = recent.map(w=>w.paceSec).sort((a,b)=>a-b);
     basePace = sorted[Math.floor(sorted.length/2)];
+  } else if(vamComfort > 0){
+    // Only test workout available — use VAM+18% as training pace estimate
+    basePace = vamComfort;
   }
 
   // ── TENDÊNCIA DE EVOLUÇÃO (compara blocos de treinos) ──
@@ -3497,19 +3511,18 @@ function processFile(file){
         const dist = r.dist>0?r.dist:0;
         const pace = dist>0&&r.durSec>0?sp(Math.round(r.durSec/dist)):(r.avgPaceSec>0?sp(r.avgPaceSec):'');
         // Build rich summary
-        const lines = [
-          `<strong>✅ Arquivo lido com sucesso!</strong>`,
-          dist>0?`📏 Distância: <strong>${dist}km</strong>`:'',
-          r.durSec>0?`⏱ Duração: <strong>${s2t(Math.round(r.durSec))}</strong>`:'',
-          pace?`🏃 Pace médio: <strong>${pace}/km</strong>`:'',
-          r.fcmed>0?`❤️ FC média: <strong>${r.fcmed} bpm</strong>  FC máx: <strong>${r.fcmax||'—'} bpm</strong>`:'',
-          r.cad>0?`👣 Cadência: <strong>${r.cad} spm</strong>`:'',
-          r.elevGain>0?`⛰️ Elevação: <strong>${r.elevGain}m</strong>`:'',
-          r.splits&&r.splits.length>0?`⚡ Splits: ${r.splits.join(' · ')}`:'',
-          r.paceFastest?`🔥 Mais rápido: ${r.paceFastest}  🐢 Mais lento: ${r.paceSlowest}`:'',
-          r.pauseCount>0?`⏸ Pausas: ${r.pauseCount}`:'',
-        ].filter(Boolean).join('<br>');
-        showUploadStatus(lines,'ok');
+        // Build clean summary
+        const parts = [
+          dist>0?`📏 ${dist}km`:'',
+          r.durSec>0?`⏱ ${s2t(Math.round(r.durSec))}`:'',
+          pace?`🏃 ${pace}/km`:'',
+          r.fcmed>0?`❤️ FC ${r.fcmed}/${r.fcmax||'—'}bpm`:'',
+          r.cad>0?`👣 ${r.cad}spm`:'',
+          r.elevGain>0?`⛰️ ${r.elevGain}m`:'',
+        ].filter(Boolean).join('  ·  ');
+        const splitsLine = r.splits&&r.splits.length>0 ? `<br>⚡ ${r.splits.join(' · ')}` : '';
+        const fastLine = r.paceFastest ? `<br>🔥 Mais rápido: ${r.paceFastest}  🐢 Mais lento: ${r.paceSlowest}` : '';
+        showUploadStatus(`✅ <strong>Arquivo lido!</strong>  ${parts}${splitsLine}${fastLine}`,'ok');
       }
       else showUploadStatus('Não foi possível ler. Tente outro formato ou insira manualmente.','err');
     }catch(err){showUploadStatus('Erro: '+err.message,'err');}
@@ -3520,10 +3533,11 @@ function processFile(file){
 function showUploadStatus(msg,type){
   const el=document.getElementById('upload-status');if(!el)return;
   el.style.display='block';
-  if(type==='ok'){el.style.background='var(--teal-dim)';el.style.color='var(--teal)';el.style.borderColor='var(--teal)';}
-  else if(type==='err'){el.style.background='var(--red-dim)';el.style.color='var(--red)';el.style.borderColor='var(--red)';}
-  else{el.style.background='var(--bg3)';el.style.color='var(--tx2)';el.style.borderColor='var(--bd)';}
-  el.textContent=msg;
+  el.style.borderRadius='var(--r)';el.style.padding='10px 14px';el.style.fontSize='12px';el.style.lineHeight='1.7';
+  if(type==='ok'){el.style.background='rgba(0,184,148,.08)';el.style.color='var(--teal)';el.style.border='1px solid rgba(0,184,148,.25)';}
+  else if(type==='err'){el.style.background='var(--red-dim)';el.style.color='var(--red)';el.style.border='1px solid rgba(232,54,93,.25)';}
+  else{el.style.background='var(--bg3)';el.style.color='var(--tx2)';el.style.border='1px solid var(--bd)';}
+  el.innerHTML=msg;
 }
 
 function haversine(lat1,lon1,lat2,lon2){
@@ -3826,7 +3840,11 @@ function obPickObj(id){
   OB_OBJ=OBJS.find(o=>o.id===id)||null;
   OB_TARGET_PACE='';
   OB_TARGET_DATE='';
-  if(OB_OBJ) window._obSelCat=OB_OBJ.cat;
+  if(OB_OBJ){
+    window._obSelCat=OB_OBJ.cat;
+    // Save selection immediately so it persists
+    try{ localStorage.setItem('cr_obj_'+CU?.id, id); }catch(e){}
+  }
   renderHome();
 }
 
@@ -3876,6 +3894,8 @@ async function obFinish(){
     test_elev:td.elevGain||0,
     test_splits:td.splits||[]
   });
+  // Save obj selection to localStorage
+  try{ if(OB_OBJ) localStorage.setItem('cr_obj_'+CU?.id, OB_OBJ.id); }catch(e){}
   // Auto-navigate to analysis after test
   setTimeout(()=>{ goTab('analise'); }, 300);
 }
