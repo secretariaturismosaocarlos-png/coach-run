@@ -1071,7 +1071,10 @@ function goTab(n){
 // ═══════════════════════════════════════════════════
 function renderHome(){
   const el=document.getElementById('pn-home');
-  if(!USER_GOAL||!USER_GOAL.onboard_done){ renderOnboarding(el); return; }
+  // Force onboarding if config is incomplete
+  const configComplete = USER_GOAL && USER_GOAL.onboard_done && 
+    USER_GOAL.obj_id && USER_GOAL.nivel && USER_GOAL.dias_semana;
+  if(!configComplete){ renderOnboarding(el); return; }
 
   const obj = (USER_GOAL.obj_id ? OBJS.find(o=>o.id===USER_GOAL.obj_id) : null) || OB_OBJ || OBJS[0];
   const name = (PROFILE?.name||CU?.email?.split('@')[0]||'Atleta').split(' ')[0];
@@ -1094,7 +1097,11 @@ function renderHome(){
       <div style="font-size:11px;font-weight:700;color:var(--neon);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px">${dayName}</div>
       <div style="font-size:24px;font-weight:800;letter-spacing:-.5px;color:var(--tx)">Olá, ${name}!</div>
       <div style="font-size:12px;color:var(--tx2);margin-top:2px">${obj.icon} ${obj.t}</div>
-    </div>`;
+    </div>
+    <div style="font-size:11px;color:var(--tx3);margin-bottom:12px;padding:6px 10px;background:var(--bg3);border-radius:var(--r);display:flex;justify-content:space-between;align-items:center">
+      <span>Nível: ${USER_GOAL?.nivel_label||USER_GOAL?.nivel||'—'} · ${USER_GOAL?.dias_semana||3} dias/sem · ${USER_GOAL?.tempo_treino||45}min por treino</span>
+      <button onclick="resetGoal()" style="background:none;border:none;cursor:pointer;color:var(--neon);font-size:11px;font-weight:700;font-family:var(--sans);padding:0 4px">⚙️ Alterar</button>
+    </div>\``;
 
   // ── STATE CARDS ──
 
@@ -3718,11 +3725,17 @@ async function obFinish(){
   setTimeout(()=>{ goTab('home'); }, 300);
 }
 
-function resetGoal(){
-  if(!confirm('Isso vai reiniciar sua configuração de objetivo. Continuar?'))return;
+async function resetGoal(){
+  if(!confirm('Isso vai reiniciar sua configuração. Os treinos não serão apagados. Continuar?'))return;
   OB_STEP=1;OB_OBJ=null;OB_NIVEL=null;OB_NIVEL_LABEL='';OB_DIAS=3;window._obSelCat='5K';
   OB_TARGET_PACE='';OB_TARGET_DATE='';OB_TEST_TIME='';OB_TEST_FCMAX=0;
-  USER_GOAL=null;renderHome();
+  OB_DIAS_SELECIONADOS=[];OB_TEMPO_TREINO=45;OB_TEMPO_LONGAO=0;
+  window._nextWorkout=null;
+  USER_GOAL=null;
+  // Also clear from Supabase so it doesn't reload
+  try{ await db.from('user_goals').delete().eq('user_id',CU.id); }catch(e){}
+  try{ localStorage.removeItem('cr_plan_'+CU?.id); localStorage.removeItem('cr_next_'+CU?.id); localStorage.removeItem('cr_obj_'+CU?.id); }catch(e){}
+  renderHome();
 }
 
 
