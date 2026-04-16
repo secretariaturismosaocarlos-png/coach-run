@@ -1212,7 +1212,12 @@ function renderHome(){
   }
 
   // Last workout compact — only show if pace is reasonable (not a test/walking session)
-  const realWorkouts = regularWorkouts.filter(w => w.paceSec >= 270 && w.paceSec <= 720); // 4:30-12:00/km
+  // Only show recent workouts (last 90 days) with valid pace
+  const cutoff = new Date(); cutoff.setDate(cutoff.getDate()-90);
+  const realWorkouts = regularWorkouts.filter(w => {
+    if(w.paceSec < 270 || w.paceSec > 720) return false;
+    try{ const [dd,mm,yyyy]=w.data.split('/'); return new Date(yyyy,mm-1,dd)>=cutoff; }catch(e){ return true; }
+  });
   if(realWorkouts.length > 0){
     const last = realWorkouts[realWorkouts.length-1];
     html += `<div class="card" style="margin-bottom:12px">
@@ -2132,12 +2137,24 @@ RESPONDA em formato markdown direto:
     btn.textContent = '✨ Gerar nova análise';
     btn.disabled = false;
 
-    // Find next training day based on current date
+    // Find next training day AFTER the last workout
     const planDays = USER_GOAL?.dias_selecionados||['ter','qui','dom'];
-    const todayKey2 = ['dom','seg','ter','qua','qui','sex','sab'][new Date().getDay()];
-    const lastDayIdx2 = planDays.indexOf(todayKey2);
-    const nextDayKey = planDays[(lastDayIdx2 + 1) % planDays.length];
+    const dayMap2 = ['dom','seg','ter','qua','qui','sex','sab'];
+    const dayOrder = ['seg','ter','qua','qui','sex','sab','dom'];
     const dayNames = {seg:'Segunda',ter:'Terça',qua:'Quarta',qui:'Quinta',sex:'Sexta',sab:'Sábado',dom:'Domingo'};
+    // Use last workout date (not today) to find next day
+    let refDayKey = dayMap2[new Date().getDay()]; // fallback to today
+    if(HIST.length > 0){
+      const lastW = HIST[HIST.length-1];
+      try{
+        const [dd,mm,yyyy] = lastW.data.split('/');
+        refDayKey = dayMap2[new Date(yyyy,mm-1,dd).getDay()];
+      }catch(e){}
+    }
+    // Find next plan day strictly after refDay
+    const refIdx = dayOrder.indexOf(refDayKey);
+    let nextDayKey = planDays.find(d => dayOrder.indexOf(d) > refIdx);
+    if(!nextDayKey) nextDayKey = planDays[0]; // wrap to next week
 
     if(proximoText){
       // Parse into structured workout and set as next
@@ -2163,7 +2180,7 @@ RESPONDA em formato markdown direto:
         <div style="font-size:13px;font-weight:700;color:var(--tx);margin-bottom:6px">${parsedNext.tipo}</div>
         ${renderIAText(proximoText)}
         <div style="display:flex;gap:8px;margin-top:12px">
-          <button onclick="goTab('home')" style="flex:1;padding:10px;border-radius:20px;background:var(--neon);color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--sans)">🏠 Ver treino na tela inicial</button>
+          <button onclick="goTab('plano')" style="flex:1;padding:10px;border-radius:20px;background:var(--neon);color:#fff;border:none;cursor:pointer;font-size:13px;font-weight:700;font-family:var(--sans)">📅 Ver treino no Plano</button>
         </div>
       `;
       out.appendChild(card);
@@ -2396,30 +2413,81 @@ function renderPlano(){
 
 function renderNextWorkoutBlocks(next, metricMode, color){
   if(!next.descricao) return '';
-  const blocks = parseWorkoutBlocks(next.descricao, next.pace, next.zona||'Z1');
-  return blocks.map(b => {
-    if(b.isRest) return `<div style="padding:5px 0;border-bottom:1px solid rgba(0,0,0,.04);font-size:12px;color:var(--tx3);font-style:italic">${b.desc}</div>`;
-    if(b.isNonRunning) return `<div style="padding:5px 0;border-bottom:1px solid rgba(0,0,0,.04);font-size:12px;color:var(--tx2)">${b.desc}</div>`;
+  const desc = next.descricao;
+  const zona = (next.zona||'Z1').toUpperCase().replace('LONGÃO','LONGAO');
 
-    let desc = b.desc;
-    let right = b.pace || '';
-    if(metricMode === 'time'){
-      const kmM = b.desc.match(/^(\d+(?:\.\d+)?)km\s*/);
-      if(kmM && b.pace && b.pace.includes('–')){
-        const km = parseFloat(kmM[1]);
-        const segs = b.pace.split('–').map(p=>t2s(p.trim())).filter(v=>v>0);
-        if(segs.length===2){
-          const lo = Math.round(km*segs[0]/60), hi = Math.round(km*segs[1]/60);
-          desc = b.desc.replace(/^\d+(?:\.\d+)?km\s*/, (lo===hi?lo+'min':lo+'–'+hi+'min')+' ');
+  // Detect format: arrow-bullets (›) or plus-separated
+  const hasArrows = desc.includes('›') || desc.includes('>');
+  const hasDash = !hasArrows && desc.includes(' - ');
+
+  if(hasArrows || hasDash){
+    // Parse bullet-style lines: "›Aquecimento: 1km Z1 (8:30/km)"
+    const sep = hasArrows ? /[›>]/ : / - /;
+    const lines = desc.split(sep).map(l=>l.trim()).filter(l=>l && l.length>2);
+
+    return lines.map(line => {
+      // Skip header line (no pace info)
+      const isHeader = /^treino|^intervalad|^base|^tempo run|^longão/i.test(line) && !line.match(/\d+km/);
+      if(isHeader) return `<div style="font-size:13px;font-weight:700;color:var(--tx);padding:4px 0 8px">${line}</div>`;
+
+      // Extract pace from parentheses or direct
+      const paceMatch = line.match(/\(([0-9:]+(?:[-–][0-9:]+)?\/km)\)|([0-9:]+(?:[-–][0-9:]+)?)\/km/);
+      let pace = paceMatch ? (paceMatch[1]||paceMatch[2]) : '';
+      pace = pace.replace('/km','').trim();
+
+      // Clean description
+      let cleanDesc = line.replace(/\([^)]*\/km\)/g,'').replace(/[0-9:]+(?:[-–][0-9:]+)?\/km/g,'').trim();
+      cleanDesc = cleanDesc.replace(/:\s*$/, '').trim();
+
+      // Detect zone color
+      let lineColor = color;
+      if(/Z1|leve|aquec|desaquec|calma|trote/i.test(line)) lineColor = 'var(--teal)';
+      else if(/Z2|limiar|moderado|sustentado/i.test(line)) lineColor = 'var(--orange)';
+      else if(/Z3|forte|rápido|VO2|intervalo/i.test(line)) lineColor = 'var(--red)';
+      else if(/longão|longo/i.test(line)) lineColor = 'var(--teal)';
+      else if(/recup|descanso|caminh/i.test(line)) lineColor = 'var(--tx3)';
+
+      // Is it a total/summary line?
+      const isSummary = /^Total:|^Foco:|^Duração:/i.test(line);
+      if(isSummary) return `<div style="padding:6px 0;border-top:1px solid var(--bd);font-size:11px;color:var(--tx2);font-style:italic">${line}</div>`;
+
+      // Is it a rest/recovery line?
+      const isRest = /recup|descanso|caminh|trote Z1/i.test(line) && !line.match(/\dkm/);
+      if(isRest) return `<div style="padding:4px 0;font-size:12px;color:var(--tx3);font-style:italic;border-bottom:1px solid rgba(0,0,0,.04)">↩ ${cleanDesc}</div>`;
+
+      // Convert km→min if in time mode
+      if(metricMode === 'time' && pace){
+        const kmM = cleanDesc.match(/(\d+(?:[,.]\d+)?)\s*km/);
+        if(kmM){
+          const km = parseFloat(kmM[1].replace(',','.'));
+          const paceClean = pace.replace('–','-');
+          const segs = paceClean.split('-').map(p=>t2s(p.trim())).filter(v=>v>0);
+          if(segs.length>=1 && km>0){
+            const lo = Math.round(km*segs[0]/60);
+            const hi = segs[1] ? Math.round(km*segs[1]/60) : lo;
+            const timeStr = lo===hi ? lo+'min' : lo+'–'+hi+'min';
+            cleanDesc = cleanDesc.replace(/\d+(?:[,.]\d+)?\s*km/, timeStr);
+          }
         }
       }
-    }
-    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid rgba(0,0,0,.04)">
-      <span style="font-size:13px;color:var(--tx)">${desc}</span>
-      ${right?`<div style="text-align:right;margin-left:12px">
-        <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:${b.color||color}">${right}</div>
-        <div style="font-size:9px;color:var(--tx3)">${metricMode==='time'?'pace':'min/km'}</div>
-      </div>`:''}
+
+      return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(0,0,0,.04)">
+        <span style="font-size:13px;color:var(--tx);flex:1;padding-right:8px">${cleanDesc}</span>
+        ${pace?`<div style="text-align:right;flex-shrink:0">
+          <div style="font-family:var(--mono);font-size:12px;font-weight:700;color:${lineColor}">${pace}</div>
+          <div style="font-size:9px;color:var(--tx3)">${metricMode==='time'?'pace':'min/km'}</div>
+        </div>`:''}
+      </div>`;
+    }).join('');
+  }
+
+  // Fallback: old + separator format
+  const blocks = parseWorkoutBlocks(desc, next.pace||'', zona);
+  return blocks.map(b => {
+    if(b.isRest||b.isNonRunning) return `<div style="padding:5px 0;border-bottom:1px solid rgba(0,0,0,.04);font-size:12px;color:var(--tx3);font-style:italic">${b.desc}</div>`;
+    return `<div style="display:flex;justify-content:space-between;align-items:center;padding:7px 0;border-bottom:1px solid rgba(0,0,0,.04)">
+      <span style="font-size:13px;color:var(--tx)">${b.desc}</span>
+      ${b.pace?`<div style="font-family:var(--mono);font-size:12px;font-weight:700;color:${b.color||color}">${b.pace}</div>`:''}
     </div>`;
   }).join('');
 }
