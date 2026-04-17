@@ -880,7 +880,7 @@ async function loadData(){
   HIST = Array.from(seen.values())
     .sort((a,b) => new Date(a.created_at) - new Date(b.created_at))
     .map(w=>({...w, paceSec:ps(w.pace), analise:w.analise||null, proximo_treino:w.proximo_treino||null}));
-  const {data:prof} = await db.from('user_goals').select('*').eq('user_id', CU.id).single();
+  const {data:prof} = await db.from('user_goals').select('*').eq('user_id', CU.id).maybeSingle();
   await loadRaces();
   // Load previously generated plan
   try{
@@ -1424,7 +1424,7 @@ function renderOnboarding(el){
 function previewZones(testTime, fcmax){
   const z = calcZonesFromTest(testTime, fcmax);
   if(!z) return '<div style="font-size:12px;color:var(--tx2)">Tempo inválido.</div>';
-  return Object.values(z).map(zv=>
+  return Object.values(z).filter(zv=>zv.label).map(zv=>
     `<div style="display:flex;justify-content:space-between;align-items:center;padding:4px 8px;border-radius:6px;margin-bottom:3px;background:${zv.bg}">
       <span style="font-size:12px;font-weight:600;color:${zv.color}">${zv.emoji} ${zv.label}</span>
       <span style="font-family:var(--mono);font-size:11px;font-weight:700;color:${zv.color}">${sp(zv.min)}–${sp(zv.max)}</span>
@@ -2009,6 +2009,7 @@ async function gerarAnaliseIA(){
   const tempoMin=USER_GOAL?.tempo_treino||45;
 
   const testData = USER_GOAL;
+  const fileData = window._lastFileData || {};  // data from last uploaded file
   const isTestWorkout = HIST.length <= 1 && testData?.test_time;
 
   // ── BUILD PROMPT based on context ──
