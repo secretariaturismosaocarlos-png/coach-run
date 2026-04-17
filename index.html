@@ -956,30 +956,21 @@ async function saveGoal(g){
 }
 
 async function saveWorkout(t){
-  // Prevent duplicates: check if same date+dist+pace already in HIST
-  const existing = HIST.find(h =>
-    h.data===t.data &&
-    Math.abs((h.dist||0)-(t.dist||0)) < 0.2 &&
-    h.pace===t.pace
-  );
-  if(existing){
-    // Show warning inline in form
-    const warnEl = document.getElementById('treino-msg') || document.createElement('div');
-    warnEl.id = 'treino-msg';
-    warnEl.style.cssText = 'color:var(--orange);font-size:12px;padding:8px;background:var(--orange-dim);border-radius:var(--r);margin-bottom:8px';
-    warnEl.textContent = '⚠️ Treino similar já registrado nessa data. Verifique o histórico.';
-    const form = document.querySelector('#pn-treino .card');
-    if(form) form.prepend(warnEl);
-    setTimeout(()=>warnEl?.remove(), 4000);
-    return;
-  }
   const {data,error} = await db.from('workouts').insert({
     user_id:CU.id, data:t.data, dist:t.dist, tempo:t.tempo,
     pace:t.pace, fcmed:t.fcmed||null, fcmax:t.fcmax||null,
     cad:t.cad||null, splits:t.splits||null, elev:t.elev||null, pse:t.pse||null,
     analise:t.analise||null, proximo_treino:t.proximo_treino||null
   }).select().single();
-  if(data){ t.id=data.id; t.created_at=data.created_at; HIST.push({...t, paceSec:ps(t.pace)}); }
+  if(error){
+    console.error('saveWorkout error:', error);
+    showSaveMsg('Erro ao salvar: '+error.message,'err');
+    return;
+  }
+  if(data){
+    t.id=data.id; t.created_at=data.created_at;
+    HIST.push({...t, paceSec:ps(t.pace)});
+  }
 }
 
 async function deleteWorkout(id){
@@ -2426,9 +2417,9 @@ function renderNextWorkoutBlocks(next, metricMode, color){
     const lines = desc.split(sep).map(l=>l.trim()).filter(l=>l && l.length>2);
 
     return lines.map(line => {
-      // Skip header line (no pace info)
-      const isHeader = /^treino|^intervalad|^base|^tempo run|^longão/i.test(line) && !line.match(/\d+km/);
-      if(isHeader) return `<div style="font-size:13px;font-weight:700;color:var(--tx);padding:4px 0 8px">${line}</div>`;
+      // Skip redundant header line (tipo already shown in card header)
+      const isHeader = /^treino\s+|^intervalad|^base aeróbic|^tempo run|^longão$/i.test(line.trim()) && !line.match(/\d+km|\d+min/);
+      if(isHeader) return ''; // skip — already in card header
 
       // Extract pace from parentheses or direct
       const paceMatch = line.match(/\(([0-9:]+(?:[-–][0-9:]+)?\/km)\)|([0-9:]+(?:[-–][0-9:]+)?)\/km/);
@@ -3155,9 +3146,15 @@ async function doSaveTreino(){
   if(!pace){showSaveMsg('Informe o pace ou a duração.','err');return;}
   const splits=splitsRaw?splitsRaw.split(',').map(s=>s.trim()).filter(Boolean):null;
   showSaveMsg('Salvando...','ok');
-  await saveWorkout({data:data.split('-').reverse().join('/'),dist,tempo:tempo||null,pace,fcmed,fcmax,cad,splits,elev,pse});
-  showSaveMsg('✓ Treino salvo!','ok');
-  setTimeout(()=>goTab('analise'),1200);
+  const feelings = (window._feelings||[]).join(', ');
+  await saveWorkout({data:data.split('-').reverse().join('/'),dist,tempo:tempo||null,pace,fcmed,fcmax,cad,splits,elev,pse,feelings});
+  // Check if save succeeded (HIST grew)
+  const lastH = HIST[HIST.length-1];
+  if(lastH && lastH.pace===pace){
+    showSaveMsg('✅ Treino salvo!','ok');
+    window._feelings=[];
+    setTimeout(()=>goTab('analise'),1200);
+  }
 }
 
 function showSaveMsg(msg,type){
@@ -3364,18 +3361,29 @@ function processFile(file){
         const dist = r.dist>0?r.dist:0;
         const pace = dist>0&&r.durSec>0?sp(Math.round(r.durSec/dist)):(r.avgPaceSec>0?sp(r.avgPaceSec):'');
         // Build rich summary
-        // Build clean summary
-        const parts = [
-          dist>0?`📏 ${dist}km`:'',
-          r.durSec>0?`⏱ ${s2t(Math.round(r.durSec))}`:'',
-          pace?`🏃 ${pace}/km`:'',
-          r.fcmed>0?`❤️ FC ${r.fcmed}/${r.fcmax||'—'}bpm`:'',
-          r.cad>0?`👣 ${r.cad}spm`:'',
-          r.elevGain>0?`⛰️ ${r.elevGain}m`:'',
-        ].filter(Boolean).join('  ·  ');
-        const splitsLine = r.splits&&r.splits.length>0 ? `<br>⚡ ${r.splits.join(' · ')}` : '';
-        const fastLine = r.paceFastest ? `<br>🔥 Mais rápido: ${r.paceFastest}  🐢 Mais lento: ${r.paceSlowest}` : '';
-        showUploadStatus(`✅ <strong>Arquivo lido!</strong>  ${parts}${splitsLine}${fastLine}`,'ok');
+        // Build clean visual summary
+        const statsGrid = [
+          dist>0?`<div style="text-align:center"><div style="font-size:18px;font-weight:800;color:var(--neon)">${dist}</div><div style="font-size:10px;color:var(--tx3)">km</div></div>`:'',
+          r.durSec>0?`<div style="text-align:center"><div style="font-size:18px;font-weight:800;color:var(--teal)">${s2t(Math.round(r.durSec))}</div><div style="font-size:10px;color:var(--tx3)">duração</div></div>`:'',
+          pace?`<div style="text-align:center"><div style="font-size:18px;font-weight:800;color:var(--orange)">${pace}</div><div style="font-size:10px;color:var(--tx3)">min/km</div></div>`:'',
+          r.fcmed>0?`<div style="text-align:center"><div style="font-size:18px;font-weight:800;color:var(--red)">${r.fcmed}</div><div style="font-size:10px;color:var(--tx3)">FC média</div></div>`:'',
+        ].filter(Boolean).join('');
+        const row2 = [
+          r.cad>0?`<span style="font-size:11px;color:var(--tx2)">👣 ${r.cad} spm</span>`:'',
+          r.elevGain>0?`<span style="font-size:11px;color:var(--tx2)">⛰️ ${r.elevGain}m</span>`:'',
+          r.fcmax>0?`<span style="font-size:11px;color:var(--tx2)">FC máx: ${r.fcmax}</span>`:'',
+        ].filter(Boolean).join('<span style="margin:0 6px;color:var(--bd)">·</span>');
+        const splitsRow = r.splits&&r.splits.length>0?
+          `<div style="margin-top:8px;padding-top:8px;border-top:1px solid var(--bd)">
+            <div style="font-size:10px;color:var(--tx3);font-weight:700;margin-bottom:4px">SPLITS POR KM</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap">
+              ${r.splits.map((s,i)=>`<span style="padding:3px 8px;border-radius:8px;background:var(--bg3);font-size:12px;font-family:var(--mono);font-weight:700;color:${s===r.paceFastest?'var(--teal)':s===r.paceSlowest?'var(--orange)':'var(--tx)'}">${s}</span>`).join('')}
+            </div>
+          </div>`:'';
+        showUploadStatus(`<div style="font-size:11px;font-weight:700;color:var(--teal);margin-bottom:10px">✅ Arquivo lido com sucesso</div>
+          <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:${row2?'8px':'0'}">${statsGrid}</div>
+          ${row2?`<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">${row2}</div>`:''}
+          ${splitsRow}`,'ok');
       }
       else showUploadStatus('Não foi possível ler. Tente outro formato ou insira manualmente.','err');
     }catch(err){showUploadStatus('Erro: '+err.message,'err');}
