@@ -172,8 +172,65 @@ button,input,select{font-family:inherit;outline:none}
   .pace-g{grid-template-columns:repeat(3,1fr)}
 }
 </style>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
+
+<!-- ══ LOGIN ══ -->
+<div class="scr on" id="scr-login">
+  <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;background:var(--bg)">
+    <div style="width:100%;max-width:380px">
+      <div class="logo" style="justify-content:center;margin-bottom:32px">
+        <div class="logo-mark">🏃</div>
+        <span class="logo-name" style="margin-left:8px">COACH RUN</span>
+      </div>
+      <div id="login-form">
+        <div style="font-family:var(--ff-d);font-size:28px;font-weight:800;margin-bottom:6px;text-align:center">Bem-vindo!</div>
+        <div style="font-size:13px;color:var(--k4);text-align:center;margin-bottom:28px;line-height:1.6">Acesse sua conta para continuar</div>
+        <div class="fld"><label>Email</label><input id="login-email" type="email" placeholder="seu@email.com"></div>
+        <div class="fld"><label>Senha</label><input id="login-senha" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+        <div id="login-err" style="display:none;padding:10px 13px;border-radius:10px;background:var(--re2);border-left:3px solid var(--re);color:#c40030;font-size:12px;margin-bottom:12px"></div>
+        <button class="btn b-or" onclick="doLogin()" id="btn-login">Entrar</button>
+        <button class="btn b-gh" onclick="showCadastro()" style="margin-top:8px;font-size:13px">Criar conta</button>
+        <div style="text-align:center;margin-top:12px">
+          <button onclick="showForgot()" style="border:none;background:0;color:var(--k4);font-size:12px;cursor:pointer;text-decoration:underline">Esqueci minha senha</button>
+        </div>
+      </div>
+      <div id="cadastro-form" style="display:none">
+        <div style="font-family:var(--ff-d);font-size:24px;font-weight:800;margin-bottom:6px;text-align:center">Criar conta</div>
+        <div style="font-size:12px;color:var(--k4);text-align:center;margin-bottom:24px;line-height:1.6">Crie sua conta e aguarde a aprovação para acessar o app.</div>
+        <div class="fld"><label>Nome</label><input id="cad-nome" type="text" placeholder="Seu nome completo"></div>
+        <div class="fld"><label>Email</label><input id="cad-email" type="email" placeholder="seu@email.com"></div>
+        <div class="fld"><label>Senha</label><input id="cad-senha" type="password" placeholder="Mínimo 6 caracteres"></div>
+        <div id="cad-err" style="display:none;padding:10px 13px;border-radius:10px;background:var(--re2);border-left:3px solid var(--re);color:#c40030;font-size:12px;margin-bottom:12px"></div>
+        <div id="cad-ok" style="display:none;padding:10px 13px;border-radius:10px;background:var(--gr2);border-left:3px solid var(--gr);color:#007A44;font-size:12px;margin-bottom:12px"></div>
+        <button class="btn b-or" onclick="doCadastro()" id="btn-cad">Criar conta</button>
+        <button class="btn b-gh" onclick="showLogin()" style="margin-top:8px;font-size:13px">← Voltar ao login</button>
+      </div>
+      <div id="forgot-form" style="display:none">
+        <div style="font-family:var(--ff-d);font-size:24px;font-weight:800;margin-bottom:6px;text-align:center">Recuperar senha</div>
+        <div class="fld"><label>Email</label><input id="forgot-email" type="email" placeholder="seu@email.com"></div>
+        <div id="forgot-msg" style="display:none;padding:10px 13px;border-radius:10px;font-size:12px;margin-bottom:12px"></div>
+        <button class="btn b-or" onclick="doForgot()">Enviar link de recuperação</button>
+        <button class="btn b-gh" onclick="showLogin()" style="margin-top:8px;font-size:13px">← Voltar</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ══ PENDENTE ══ -->
+<div class="scr" id="scr-pendente">
+  <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px;text-align:center">
+    <div style="font-size:56px;margin-bottom:16px">⏳</div>
+    <div style="font-family:var(--ff-d);font-size:24px;font-weight:800;margin-bottom:8px">Aguardando aprovação</div>
+    <div style="font-size:13px;color:var(--k4);line-height:1.75;max-width:320px;margin-bottom:24px">
+      Sua conta foi criada com sucesso!<br>
+      Aguarde o administrador aprovar seu acesso.<br>
+      Você receberá um email quando for aprovado.
+    </div>
+    <button class="btn b-gh" onclick="doLogout()" style="max-width:280px">Sair</button>
+  </div>
+</div>
 
 <!-- ══ ONBOARDING ══ -->
 <div class="scr on" id="scr-ob">
@@ -193,6 +250,7 @@ button,input,select{font-family:inherit;outline:none}
   <div id="pn-plan"  class="pn wrap"></div>
   <div id="pn-data"  class="pn wrap"></div>
   <div id="pn-races" class="pn wrap"></div>
+  <div id="pn-admin"  class="pn wrap"></div>
   <nav class="nav" id="main-nav">
     <div class="nav-row">
       <button class="nb on" id="nb-home" onclick="goTab('home')">
@@ -211,11 +269,17 @@ button,input,select{font-family:inherit;outline:none}
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
         <span class="nb-lbl">Corridas</span>
       </button>
+      <button class="nb" id="nb-admin" onclick="goTab('admin')" style="display:none">
+        <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>
+        <span class="nb-lbl">Admin</span>
+      </button>
     </div>
   </nav>
 </div>
 
 <script>
+
+
 
 'use strict';
 
@@ -277,6 +341,318 @@ function renderZones(zones, el) {
     </div>`;
   }).join('');
 }
+
+/* ══════════════════════════════════════
+   SUPABASE + AUTH + ADMIN
+══════════════════════════════════════ */
+const SUPA_URL = 'https://syuqlxygfquhesxoyujx.supabase.co';
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5dXFseHlnZnF1aGVzeG95dWp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NTA0MDgsImV4cCI6MjA5NDEyNjQwOH0.4Ty_zkXt2sYhZhXfr-WFWb9NAyeWglEMdRIVVfQdERw';
+const supa     = supabase.createClient(SUPA_URL, SUPA_KEY);
+
+var _currentUser = null;
+var _isAdmin     = false;
+
+// Email do admin — qualquer conta com este email tem acesso admin
+const ADMIN_EMAILS = [];  // preenchido via Supabase auth.users
+
+// ── Inicialização ──
+async function initAuth() {
+  const { data: { session } } = await supa.auth.getSession();
+  if (session) {
+    await onLogin(session.user);
+  } else {
+    showScreen('scr-login');
+  }
+
+  supa.auth.onAuthStateChange(async (event, session) => {
+    if (event === 'SIGNED_IN' && session) {
+      await onLogin(session.user);
+    } else if (event === 'SIGNED_OUT') {
+      _currentUser = null;
+      _isAdmin     = false;
+      showScreen('scr-login');
+    }
+  });
+}
+
+async function onLogin(user) {
+  _currentUser = user;
+
+  // Verifica/cria perfil do usuario
+  const { data: perfil } = await supa
+    .from('usuarios')
+    .select('*')
+    .eq('id', user.id)
+    .single();
+
+  if (!perfil) {
+    // Primeiro acesso — cria perfil pendente
+    await supa.from('usuarios').insert({
+      id    : user.id,
+      email : user.email,
+      nome  : user.user_metadata?.nome || user.email,
+      status: 'pendente',
+    });
+    showScreen('scr-pendente');
+    return;
+  }
+
+  if (perfil.status === 'pendente') {
+    showScreen('scr-pendente');
+    return;
+  }
+
+  if (perfil.status === 'bloqueado') {
+    showLoginErr('Sua conta foi bloqueada. Entre em contato com o administrador.');
+    await supa.auth.signOut();
+    return;
+  }
+
+  // Verifica se é admin (primeira conta criada = admin)
+  _isAdmin = perfil.status === 'admin';
+  if (_isAdmin) {
+    document.getElementById('nb-admin').style.display = 'flex';
+  }
+
+  // Carrega dados salvos no Supabase
+  await carregarDados();
+
+  // Vai para o app
+  const cfg = S.get('cfg');
+  if (cfg && cfg.testPace) {
+    showScreen('scr-app');
+    document.getElementById('main-nav').classList.add('on');
+    goTab('home');
+  } else {
+    showScreen('scr-ob');
+  }
+}
+
+async function carregarDados() {
+  const { data } = await supa
+    .from('dados_usuario')
+    .select('*')
+    .eq('id', _currentUser.id)
+    .single();
+
+  if (data) {
+    if (data.cfg)   S.set('cfg',   data.cfg);
+    if (data.prog)  S.set('prog',  data.prog);
+    if (data.races) S.set('races', data.races);
+  }
+}
+
+async function salvarDados() {
+  if (!_currentUser) return;
+  const payload = {
+    id            : _currentUser.id,
+    cfg           : S.get('cfg'),
+    prog          : S.get('prog'),
+    races         : S.get('races'),
+    atualizado_em : new Date().toISOString(),
+  };
+  await supa.from('dados_usuario').upsert(payload);
+}
+
+// Auto-salva sempre que localStorage muda
+const _origSet = S.set.bind(S);
+S.set = function(k, v) {
+  _origSet(k, v);
+  clearTimeout(S._saveTimer);
+  S._saveTimer = setTimeout(salvarDados, 1500);
+};
+
+// ── Funções de tela ──
+function showScreen(id) {
+  ['scr-login','scr-ob','scr-app','scr-pendente'].forEach(function(s) {
+    var el = document.getElementById(s);
+    if (el) el.classList.remove('on');
+  });
+  var target = document.getElementById(id);
+  if (target) target.classList.add('on');
+}
+
+function showLogin() {
+  document.getElementById('login-form').style.display    = 'block';
+  document.getElementById('cadastro-form').style.display = 'none';
+  document.getElementById('forgot-form').style.display   = 'none';
+}
+function showCadastro() {
+  document.getElementById('login-form').style.display    = 'none';
+  document.getElementById('cadastro-form').style.display = 'block';
+  document.getElementById('forgot-form').style.display   = 'none';
+}
+function showForgot() {
+  document.getElementById('login-form').style.display    = 'none';
+  document.getElementById('cadastro-form').style.display = 'none';
+  document.getElementById('forgot-form').style.display   = 'block';
+}
+
+function showLoginErr(msg) {
+  var el = document.getElementById('login-err');
+  el.style.display = 'block';
+  el.textContent   = msg;
+}
+
+// ── Auth actions ──
+async function doLogin() {
+  var email = document.getElementById('login-email').value.trim();
+  var senha = document.getElementById('login-senha').value;
+  if (!email || !senha) { showLoginErr('Preencha email e senha.'); return; }
+
+  var btn = document.getElementById('btn-login');
+  btn.textContent = 'Entrando...';
+  btn.disabled    = true;
+
+  var { error } = await supa.auth.signInWithPassword({ email, password: senha });
+
+  btn.textContent = 'Entrar';
+  btn.disabled    = false;
+
+  if (error) {
+    showLoginErr('Email ou senha incorretos.');
+  }
+}
+
+async function doCadastro() {
+  var nome  = document.getElementById('cad-nome').value.trim();
+  var email = document.getElementById('cad-email').value.trim();
+  var senha = document.getElementById('cad-senha').value;
+
+  var errEl = document.getElementById('cad-err');
+  var okEl  = document.getElementById('cad-ok');
+  errEl.style.display = 'none';
+  okEl.style.display  = 'none';
+
+  if (!nome || !email || !senha) { errEl.style.display='block'; errEl.textContent='Preencha todos os campos.'; return; }
+  if (senha.length < 6)           { errEl.style.display='block'; errEl.textContent='Senha deve ter pelo menos 6 caracteres.'; return; }
+
+  var btn = document.getElementById('btn-cad');
+  btn.textContent = 'Criando...';
+  btn.disabled    = true;
+
+  var { error } = await supa.auth.signUp({
+    email,
+    password: senha,
+    options : { data: { nome } }
+  });
+
+  btn.textContent = 'Criar conta';
+  btn.disabled    = false;
+
+  if (error) {
+    errEl.style.display = 'block';
+    errEl.textContent   = error.message.includes('already') ? 'Este email já está cadastrado.' : error.message;
+  } else {
+    okEl.style.display  = 'block';
+    okEl.textContent    = '✓ Conta criada! Aguarde a aprovação do administrador para acessar.';
+  }
+}
+
+async function doForgot() {
+  var email = document.getElementById('forgot-email').value.trim();
+  var el    = document.getElementById('forgot-msg');
+  if (!email) { el.style.display='block'; el.style.background='var(--re2)'; el.style.borderLeft='3px solid var(--re)'; el.style.color='#c40030'; el.textContent='Informe o email.'; return; }
+  await supa.auth.resetPasswordForEmail(email, {
+    redirectTo: window.location.href
+  });
+  el.style.display='block';
+  el.style.background='var(--gr2)';
+  el.style.borderLeft='3px solid var(--gr)';
+  el.style.color='#007A44';
+  el.textContent='✓ Link de recuperação enviado para ' + email;
+}
+
+async function doLogout() {
+  await supa.auth.signOut();
+  S.del('cfg'); S.del('prog'); S.del('races');
+}
+
+// ── ABA ADMIN ──
+async function renderAdmin() {
+  var el = document.getElementById('pn-admin');
+  if (!el || !_isAdmin) return;
+
+  el.innerHTML = '<div style="padding-top:14px"><div style="font-family:var(--ff-d);font-size:26px;font-weight:800;margin-bottom:14px">👥 ADMIN</div>'
+    + '<div id="admin-loading" style="text-align:center;padding:30px;color:#6B6B6B">Carregando usuários...</div></div>';
+
+  // Busca todos os usuários (admin usa service key via RPC — aqui usamos select normal)
+  var { data: usuarios, error } = await supa
+    .from('usuarios')
+    .select('*')
+    .order('criado_em', { ascending: false });
+
+  if (error || !usuarios) {
+    document.getElementById('admin-loading').textContent = 'Erro ao carregar usuários.';
+    return;
+  }
+
+  var pendentes  = usuarios.filter(function(u){ return u.status==='pendente'; });
+  var aprovados  = usuarios.filter(function(u){ return u.status==='aprovado'||u.status==='admin'; });
+  var bloqueados = usuarios.filter(function(u){ return u.status==='bloqueado'; });
+
+  function userCard(u) {
+    var cor = u.status==='aprovado'||u.status==='admin' ? 'var(--gr)' : u.status==='pendente' ? 'var(--ye)' : 'var(--re)';
+    var h = '<div style="background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:12px;padding:13px 14px;margin-bottom:8px">';
+    h += '<div style="display:flex;justify-content:space-between;align-items:flex-start;gap:10px">';
+    h += '<div style="flex:1;min-width:0">';
+    h += '<div style="font-size:13px;font-weight:700;margin-bottom:2px">' + (u.nome||'—') + '</div>';
+    h += '<div style="font-size:11px;color:#6B6B6B;margin-bottom:6px">' + u.email + '</div>';
+    h += '<div style="display:inline-block;padding:2px 10px;border-radius:20px;font-size:9px;font-weight:700;text-transform:uppercase;background:' + cor + '20;color:' + cor + '">' + u.status + '</div>';
+    h += '</div><div style="display:flex;flex-direction:column;gap:5px;flex-shrink:0">';
+    var btnSt = 'padding:6px 12px;border:none;border-radius:8px;font-family:var(--ff-d);font-size:11px;font-weight:700;cursor:pointer;color:#fff';
+    if (u.status === 'pendente') {
+      h += '<button data-id="'+u.id+'" data-status="aprovado" onclick="adminAcaoBtn(this)" style="'+btnSt+';background:var(--gr);margin-bottom:4px">&#x2713; Aprovar</button>';
+      h += '<button data-id="'+u.id+'" data-status="bloqueado" onclick="adminAcaoBtn(this)" style="'+btnSt+';background:var(--re)">&#x2715; Recusar</button>';
+    } else if (u.status === 'aprovado') {
+      h += '<button data-id="'+u.id+'" data-status="bloqueado" onclick="adminAcaoBtn(this)" style="'+btnSt+';background:var(--re)">Bloquear</button>';
+    } else if (u.status === 'bloqueado') {
+      h += '<button data-id="'+u.id+'" data-status="aprovado" onclick="adminAcaoBtn(this)" style="'+btnSt+';background:var(--gr)">Reativar</button>';
+    }
+    h += '</div></div></div>';
+    return h;
+  }
+
+  var h = '<div style="padding-top:14px">';
+  h += '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">';
+  h += '<div style="font-family:var(--ff-d);font-size:26px;font-weight:800">👥 ADMIN</div>';
+  h += '<button onclick="doLogout()" style="border:none;background:var(--re2);color:var(--re);border-radius:8px;padding:6px 12px;font-size:11px;font-weight:700;cursor:pointer;font-family:var(--ff-d)">Sair</button>';
+  h += '</div>';
+
+  if (pendentes.length) {
+    h += '<div style="font-family:var(--ff-d);font-size:14px;font-weight:800;margin-bottom:8px;color:var(--or)">⏳ Aguardando aprovação (' + pendentes.length + ')</div>';
+    pendentes.forEach(function(u){ h += userCard(u); });
+  }
+
+  if (aprovados.length) {
+    h += '<div style="font-family:var(--ff-d);font-size:14px;font-weight:800;margin:16px 0 8px;color:var(--gr)">✓ Aprovados (' + aprovados.length + ')</div>';
+    aprovados.forEach(function(u){ h += userCard(u); });
+  }
+
+  if (bloqueados.length) {
+    h += '<div style="font-family:var(--ff-d);font-size:14px;font-weight:800;margin:16px 0 8px;color:var(--re)">✕ Bloqueados (' + bloqueados.length + ')</div>';
+    bloqueados.forEach(function(u){ h += userCard(u); });
+  }
+
+  if (!usuarios.length) {
+    h += '<div style="text-align:center;padding:40px 20px;color:#6B6B6B;font-size:13px">Nenhum usuário cadastrado ainda.</div>';
+  }
+
+  h += '</div>';
+  el.innerHTML = h;
+}
+
+function adminAcaoBtn(btn) {
+  var id     = btn.getAttribute('data-id');
+  var status = btn.getAttribute('data-status');
+  adminAcao(id, status);
+}
+
+async function adminAcao(userId, novoStatus) {
+  await supa.from('usuarios').update({ status: novoStatus }).eq('id', userId);
+  renderAdmin();
+}
+
 
 /* ══════════════════════════════════════
 
@@ -1150,8 +1526,7 @@ function haversine(la1, lo1, la2, lo2) {
    APP — NAVEGAÇÃO
 ══════════════════════════════════════ */
 function launchApp(cfg) {
-  document.getElementById('scr-ob').classList.remove('on');
-  document.getElementById('scr-app').classList.add('on');
+  showScreen('scr-app');
   document.getElementById('main-nav').classList.add('on');
 
   const objLabel = CATALOG[cfg.obj]?.label || '';
@@ -1161,7 +1536,7 @@ function launchApp(cfg) {
 }
 
 function goTab(t) {
-  ['home','plan','data','races'].forEach(x => {
+  ['home','plan','data','races','admin'].forEach(x => {
     document.getElementById('pn-' + x).classList.toggle('on', x === t);
     document.getElementById('nb-' + x).classList.toggle('on', x === t);
   });
@@ -1169,6 +1544,7 @@ function goTab(t) {
   if(t==='plan')renderPlan();
   if(t==='data')renderData();
   if(t==='races')renderRaces();
+  if(t==='admin')renderAdmin();
 }
 
 // ═══════════════════════════════════════════
@@ -2810,9 +3186,8 @@ function renderAppPlaceholders(){}
 function resetOB() {
   S.del('cfg'); S.del('prog');
   OB = { step:1, obj:null, nivel:null, pace:null, sched:{}, testPace:null };
-  document.getElementById('scr-app').classList.remove('on');
+  showScreen('scr-ob');
   document.getElementById('main-nav').classList.remove('on');
-  document.getElementById('scr-ob').classList.add('on');
   obRender();
 }
 
@@ -2820,13 +3195,8 @@ function resetOB() {
    INIT
 ══════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
-  const cfg = S.get('cfg');
-  if (cfg && cfg.testPace) {
-    // Já fez onboarding antes — vai direto pro app
-    launchApp(cfg);
-  } else {
-    obRender();
-  }
+  // Inicializa autenticação Supabase
+  initAuth();
 });
 
 </script>
