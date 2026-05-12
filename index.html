@@ -188,12 +188,21 @@ button,input,select{font-family:inherit;outline:none}
         <div style="font-family:var(--ff-d);font-size:28px;font-weight:800;margin-bottom:6px;text-align:center">Bem-vindo!</div>
         <div style="font-size:13px;color:var(--k4);text-align:center;margin-bottom:28px;line-height:1.6">Acesse sua conta para continuar</div>
         <div class="fld"><label>Email</label><input id="login-email" type="email" placeholder="seu@email.com"></div>
-        <div class="fld"><label>Senha</label><input id="login-senha" type="password" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()"></div>
+        <div class="fld">
+          <label>Senha</label>
+          <div style="position:relative">
+            <input id="login-senha" type="password" placeholder="••••••••"
+              onkeydown="if(event.key==='Enter')doLogin()"
+              style="width:100%;padding:11px 42px 11px 13px;border:1.5px solid var(--bg3);border-radius:var(--r);background:var(--bg);font-size:14px;outline:none;box-sizing:border-box">
+            <button type="button" onclick="togglePwVis('login-senha','eye-login')"
+              style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:0;cursor:pointer;color:var(--k4);font-size:16px;padding:4px" id="eye-login">👁</button>
+          </div>
+        </div>
         <div id="login-err" style="display:none;padding:10px 13px;border-radius:10px;background:var(--re2);border-left:3px solid var(--re);color:#c40030;font-size:12px;margin-bottom:12px"></div>
         <button class="btn b-or" onclick="doLogin()" id="btn-login">Entrar</button>
         <button class="btn b-gh" onclick="showCadastro()" style="margin-top:8px;font-size:13px">Criar conta</button>
-        <div style="text-align:center;margin-top:12px">
-          <button onclick="showForgot()" style="border:none;background:0;color:var(--k4);font-size:12px;cursor:pointer;text-decoration:underline">Esqueci minha senha</button>
+        <div style="text-align:right;margin-top:-6px;margin-bottom:14px">
+          <button onclick="showForgot()" style="border:none;background:0;color:var(--or);font-size:12px;cursor:pointer;font-weight:600">Esqueci minha senha →</button>
         </div>
       </div>
       <div id="cadastro-form" style="display:none">
@@ -201,7 +210,15 @@ button,input,select{font-family:inherit;outline:none}
         <div style="font-size:12px;color:var(--k4);text-align:center;margin-bottom:24px;line-height:1.6">Crie sua conta e aguarde a aprovação para acessar o app.</div>
         <div class="fld"><label>Nome</label><input id="cad-nome" type="text" placeholder="Seu nome completo"></div>
         <div class="fld"><label>Email</label><input id="cad-email" type="email" placeholder="seu@email.com"></div>
-        <div class="fld"><label>Senha</label><input id="cad-senha" type="password" placeholder="Mínimo 6 caracteres"></div>
+        <div class="fld">
+          <label>Senha</label>
+          <div style="position:relative">
+            <input id="cad-senha" type="password" placeholder="Mínimo 6 caracteres"
+              style="width:100%;padding:11px 42px 11px 13px;border:1.5px solid var(--bg3);border-radius:var(--r);background:var(--bg);font-size:14px;outline:none;box-sizing:border-box">
+            <button type="button" onclick="togglePwVis('cad-senha','eye-cad')"
+              style="position:absolute;right:10px;top:50%;transform:translateY(-50%);border:none;background:0;cursor:pointer;color:var(--k4);font-size:16px;padding:4px" id="eye-cad">👁</button>
+          </div>
+        </div>
         <div id="cad-err" style="display:none;padding:10px 13px;border-radius:10px;background:var(--re2);border-left:3px solid var(--re);color:#c40030;font-size:12px;margin-bottom:12px"></div>
         <div id="cad-ok" style="display:none;padding:10px 13px;border-radius:10px;background:var(--gr2);border-left:3px solid var(--gr);color:#007A44;font-size:12px;margin-bottom:12px"></div>
         <button class="btn b-or" onclick="doCadastro()" id="btn-cad">Criar conta</button>
@@ -470,6 +487,19 @@ function showScreen(id) {
   });
   var target = document.getElementById(id);
   if (target) target.classList.add('on');
+}
+
+function togglePwVis(inputId, btnId) {
+  var inp = document.getElementById(inputId);
+  var btn = document.getElementById(btnId);
+  if (!inp) return;
+  if (inp.type === 'password') {
+    inp.type = 'text';
+    if (btn) btn.textContent = '🙈';
+  } else {
+    inp.type = 'password';
+    if (btn) btn.textContent = '👁';
+  }
 }
 
 function showLogin() {
@@ -2233,7 +2263,9 @@ function renderHome(){
   }
   // Zonas
   h+='<div style="background:#fff;border:1px solid rgba(0,0,0,.07);border-radius:14px;padding:14px;margin-bottom:10px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px"><div style="font-size:9px;font-weight:700;color:#6B6B6B;text-transform:uppercase;letter-spacing:.8px">Zonas de treino</div><div style="font-family:var(--ff-m);font-size:10px;color:#aaa">Base: '+sp(cfg.testPace)+'/km</div></div><div id="home-zones"></div></div>';
-  h+='<button class="btn b-gh" onclick="resetOB()" style="margin-top:4px;font-size:12px">&#x2699; Trocar objetivo / plano</button></div>';
+  h+='<button class="btn b-gh" onclick="resetOB()" style="margin-top:4px;font-size:12px">&#x2699; Trocar objetivo / plano</button>';
+  h+='<button onclick="doLogout()" style="width:100%;margin-top:8px;padding:11px;border:1.5px solid rgba(255,45,85,.3);border-radius:10px;background:rgba(255,45,85,.06);color:#c40030;font-family:var(--ff-d);font-size:13px;font-weight:700;cursor:pointer">&#x2192; Sair da conta</button>';
+  h+='</div>';
   el.innerHTML=h;
   renderZones(buildZones(cfg.testPace),'home-zones');
 }
