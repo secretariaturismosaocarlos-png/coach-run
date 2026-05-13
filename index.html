@@ -1387,7 +1387,7 @@ function schedRow(d, min, max, step, isWknd) {
     <div class="sched-row">
       <span class="sched-day ${isWknd ? 'wk' : ''}">${DAYS_FULL[d]}</span>
       <input type="checkbox" class="sched-chk" id="${ckId}"
-        ${on ? 'checked' : ''} onchange="schedChk(${d},${min})">
+        ${on ? 'checked' : ''} onclick="schedChk(${d},${min})">
       <input type="range" class="sched-sl" id="${slId}"
         min="${min}" max="${max}" step="${step}" value="${on ? val : min}"
         style="opacity:${on ? 1 : .3};pointer-events:${on ? 'auto' : 'none'}"
