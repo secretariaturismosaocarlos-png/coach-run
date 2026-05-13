@@ -409,7 +409,12 @@ function renderZones(zones, el) {
 ══════════════════════════════════════ */
 const SUPA_URL = 'https://syuqlxygfquhesxoyujx.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5dXFseHlnZnF1aGVzeG95dWp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NTA0MDgsImV4cCI6MjA5NDEyNjQwOH0.4Ty_zkXt2sYhZhXfr-WFWb9NAyeWglEMdRIVVfQdERw';
-const supa     = supabase.createClient(SUPA_URL, SUPA_KEY);
+var supa = null;
+try {
+  supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+} catch(e) {
+  console.warn('Supabase SDK not loaded:', e);
+}
 
 var _currentUser = null;
 var _isAdmin     = false;
@@ -419,6 +424,13 @@ const ADMIN_EMAILS = [];  // preenchido via Supabase auth.users
 
 // ── Inicialização ──
 async function initAuth() {
+  if (!supa) {
+    showScreen('scr-login');
+    setTimeout(function(){
+      showLoginErr('⚠️ Erro ao conectar. Verifique sua internet e recarregue a página.');
+    }, 300);
+    return;
+  }
   try {
     const { data: { session } } = await supa.auth.getSession();
     if (session) {
@@ -536,10 +548,15 @@ S.set = function(k, v) {
 function showScreen(id) {
   ['scr-login','scr-ob','scr-app','scr-pendente'].forEach(function(s) {
     var el = document.getElementById(s);
-    if (el) el.classList.remove('on');
+    if (el) { el.classList.remove('on'); el.style.display = ''; }
   });
   var target = document.getElementById(id);
-  if (target) target.classList.add('on');
+  if (target) {
+    target.classList.add('on');
+    if (id === 'scr-app') {
+      target.style.display = 'block';
+    }
+  }
 }
 
 function togglePwVis(inputId, btnId) {
@@ -3291,6 +3308,17 @@ function resetOB() {
    INIT
 ══════════════════════════════════════ */
 document.addEventListener('DOMContentLoaded', () => {
+  // Fallback: se nada aparecer em 3s, força tela de login
+  setTimeout(function() {
+    var anyVisible = ['scr-login','scr-ob','scr-app','scr-pendente'].some(function(id) {
+      var el = document.getElementById(id);
+      return el && el.classList.contains('on');
+    });
+    if (!anyVisible) {
+      document.getElementById('scr-login').classList.add('on');
+    }
+  }, 3000);
+
   // Inicializa autenticação Supabase
   initAuth();
 });
