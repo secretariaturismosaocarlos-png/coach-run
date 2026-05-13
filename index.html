@@ -512,6 +512,7 @@ async function onLogin(user) {
       goTab('home');
     } else {
       showScreen('scr-ob');
+      obRender();
     }
   } catch(e) {
     console.error('onLogin error:', e);
