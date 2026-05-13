@@ -408,12 +408,7 @@ function renderZones(zones, el) {
 ══════════════════════════════════════ */
 const SUPA_URL = 'https://syuqlxygfquhesxoyujx.supabase.co';
 const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN5dXFseHlnZnF1aGVzeG95dWp4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1NTA0MDgsImV4cCI6MjA5NDEyNjQwOH0.4Ty_zkXt2sYhZhXfr-WFWb9NAyeWglEMdRIVVfQdERw';
-var supa = null;
-try {
-  supa = supabase.createClient(SUPA_URL, SUPA_KEY);
-} catch(e) {
-  console.warn('Supabase SDK not loaded:', e);
-}
+var supa = null; // será inicializado após SDK carregar
 
 var _currentUser = null;
 var _isAdmin     = false;
@@ -3324,12 +3319,19 @@ function resetOB() {
 ══════════════════════════════════════ */
 // Carrega Supabase SDK dinamicamente
 function loadSupabaseSDK(callback) {
-  if (typeof supabase !== 'undefined') { callback(); return; }
   var s = document.createElement('script');
   s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
-  s.onload = callback;
+  s.onload = function() {
+    try {
+      supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+      console.log('Supabase ready');
+    } catch(e) {
+      console.warn('Supabase createClient failed:', e);
+    }
+    callback();
+  };
   s.onerror = function() {
-    console.warn('Supabase SDK failed to load');
+    console.warn('Supabase SDK failed to load from CDN');
     callback();
   };
   document.head.appendChild(s);
@@ -3352,11 +3354,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Carrega SDK e inicia auth
   loadSupabaseSDK(function() {
-    try {
-      if (typeof supabase !== 'undefined' && !supa) {
-        supa = supabase.createClient(SUPA_URL, SUPA_KEY);
-      }
-    } catch(e) {}
     initAuth();
   });
 });
