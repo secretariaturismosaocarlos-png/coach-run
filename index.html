@@ -203,7 +203,6 @@ input[type=range]{-webkit-appearance:none;width:100%;height:4px;
 input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;
   border-radius:50%;background:var(--or);cursor:pointer;box-shadow:var(--shadow)}
 </style>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 
@@ -3323,20 +3322,43 @@ function resetOB() {
 /* ══════════════════════════════════════
    INIT
 ══════════════════════════════════════ */
+// Carrega Supabase SDK dinamicamente
+function loadSupabaseSDK(callback) {
+  if (typeof supabase !== 'undefined') { callback(); return; }
+  var s = document.createElement('script');
+  s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
+  s.onload = callback;
+  s.onerror = function() {
+    console.warn('Supabase SDK failed to load');
+    callback();
+  };
+  document.head.appendChild(s);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
-  // Fallback: se nada aparecer em 3s, força tela de login
+  // Mostra login imediatamente enquanto carrega SDK
+  document.getElementById('scr-login').classList.add('on');
+
+  // Fallback: garante que login aparece
   setTimeout(function() {
     var anyVisible = ['scr-login','scr-ob','scr-app','scr-pendente'].some(function(id) {
       var el = document.getElementById(id);
-      return el && el.classList.contains('on');
+      return el && el.classList.contains('on') && el.style.display !== 'none';
     });
     if (!anyVisible) {
       document.getElementById('scr-login').classList.add('on');
     }
-  }, 3000);
+  }, 2000);
 
-  // Inicializa autenticação Supabase
-  initAuth();
+  // Carrega SDK e inicia auth
+  loadSupabaseSDK(function() {
+    try {
+      if (typeof supabase !== 'undefined' && !supa) {
+        supa = supabase.createClient(SUPA_URL, SUPA_KEY);
+      }
+    } catch(e) {}
+    initAuth();
+  });
 });
 
 </script>
