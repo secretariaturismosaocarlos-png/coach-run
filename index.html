@@ -458,55 +458,71 @@ async function initAuth() {
 }
 
 async function onLogin(user) {
-  _currentUser = user;
+  try {
+    _currentUser = user;
 
-  // Verifica/cria perfil do usuario
-  const { data: perfil } = await supa
-    .from('usuarios')
-    .select('*')
-    .eq('id', user.id)
-    .single();
+    // Verifica/cria perfil do usuario
+    const { data: perfil, error: perfilErr } = await supa
+      .from('usuarios')
+      .select('*')
+      .eq('id', user.id)
+      .single();
 
-  if (!perfil) {
-    // Primeiro acesso — cria perfil pendente
-    await supa.from('usuarios').insert({
-      id    : user.id,
-      email : user.email,
-      nome  : user.user_metadata?.nome || user.email,
-      status: 'pendente',
-    });
-    showScreen('scr-pendente');
-    return;
-  }
+    if (perfilErr && perfilErr.code !== 'PGRST116') {
+      // Erro real (não é "not found")
+      showScreen('scr-login');
+      showLoginErr('Erro ao carregar perfil. Tente novamente.');
+      return;
+    }
 
-  if (perfil.status === 'pendente') {
-    showScreen('scr-pendente');
-    return;
-  }
+    if (!perfil) {
+      // Primeiro acesso — cria perfil pendente
+      await supa.from('usuarios').insert({
+        id    : user.id,
+        email : user.email,
+        nome  : user.user_metadata?.nome || user.email,
+        status: 'pendente',
+      });
+      showScreen('scr-pendente');
+      return;
+    }
 
-  if (perfil.status === 'bloqueado') {
-    showLoginErr('Sua conta foi bloqueada. Entre em contato com o administrador.');
-    await supa.auth.signOut();
-    return;
-  }
+    if (perfil.status === 'pendente') {
+      showScreen('scr-pendente');
+      return;
+    }
 
-  // Verifica se é admin (primeira conta criada = admin)
-  _isAdmin = perfil.status === 'admin';
-  if (_isAdmin) {
-    document.getElementById('nb-admin').style.display = 'flex';
-  }
+    if (perfil.status === 'bloqueado') {
+      showLoginErr('Sua conta foi bloqueada. Entre em contato com o administrador.');
+      await supa.auth.signOut();
+      showScreen('scr-login');
+      return;
+    }
 
-  // Carrega dados salvos no Supabase
-  await carregarDados();
+    // Verifica se é admin
+    _isAdmin = perfil.status === 'admin';
+    if (_isAdmin) {
+      var nbAdmin = document.getElementById('nb-admin');
+      if (nbAdmin) nbAdmin.style.display = 'flex';
+    }
 
-  // Vai para o app
-  const cfg = S.get('cfg');
-  if (cfg && cfg.testPace) {
-    showScreen('scr-app');
-    document.getElementById('main-nav').classList.add('on');
-    goTab('home');
-  } else {
-    showScreen('scr-ob');
+    // Carrega dados salvos no Supabase
+    await carregarDados();
+
+    // Vai para o app
+    const cfg = S.get('cfg');
+    if (cfg && cfg.testPace) {
+      showScreen('scr-app');
+      var nav = document.getElementById('main-nav');
+      if (nav) nav.classList.add('on');
+      goTab('home');
+    } else {
+      showScreen('scr-ob');
+    }
+  } catch(e) {
+    console.error('onLogin error:', e);
+    showScreen('scr-login');
+    showLoginErr('Erro inesperado ao entrar. Tente novamente.');
   }
 }
 
