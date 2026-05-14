@@ -1409,11 +1409,14 @@ function schedUpdateBtn() {
 }
 
 function schedChk(d, minVal) {
-  d = parseInt(d); // garante que a chave é número
+  d = parseInt(d);
   const chk = document.getElementById('ck' + d);
   const sl  = document.getElementById('sl' + d);
   const sv  = document.getElementById('sv' + d);
-  if (chk.checked) {
+  // onclick fires before browser updates checked state — toggle manually
+  const isChecked = !chk.checked; // invert because onclick fires before toggle
+  chk.checked = isChecked;
+  if (isChecked) {
     const v = parseInt(sl.value) || minVal;
     OB.sched[d] = v;
     sl.style.opacity = '1';
