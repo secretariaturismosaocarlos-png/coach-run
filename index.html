@@ -3274,11 +3274,21 @@ function salvarRace(forcar) {
 
 function renderAppPlaceholders(){}
 
-function resetOB() {
+async function resetOB() {
   S.del('cfg'); S.del('prog');
   // Invalida cache do plano anterior
   buildWorkoutList._cache    = null;
   buildWorkoutList._cacheKey = null;
+  // Limpa dados no Supabase também
+  if (supa && _currentUser) {
+    await supa.from('dados_usuario').upsert({
+      id            : _currentUser.id,
+      cfg           : null,
+      prog          : null,
+      races         : null,
+      atualizado_em : new Date().toISOString(),
+    });
+  }
   OB = { step:1, obj:null, nivel:null, pace:null, sched:{}, testPace:null };
   showScreen('scr-ob');
   document.getElementById('main-nav').classList.remove('on');
