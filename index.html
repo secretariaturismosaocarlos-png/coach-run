@@ -3276,6 +3276,9 @@ function renderAppPlaceholders(){}
 
 function resetOB() {
   S.del('cfg'); S.del('prog');
+  // Invalida cache do plano anterior
+  buildWorkoutList._cache    = null;
+  buildWorkoutList._cacheKey = null;
   OB = { step:1, obj:null, nivel:null, pace:null, sched:{}, testPace:null };
   showScreen('scr-ob');
   document.getElementById('main-nav').classList.remove('on');
