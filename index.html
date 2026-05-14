@@ -1387,14 +1387,16 @@ function stepTeste() {
     <div class="ob-sub">
       O teste é a base para calcular suas <strong>zonas de treino</strong> de forma personalizada.
       <br><br>
-      🏃 Corra 3,2km (2 milhas) no máximo esforço sustentável. Depois faça upload do arquivo ou informe o tempo manualmente.
+      🏃 Corra 3,2km no máximo esforço sustentável e faça o upload do arquivo do seu relógio ou app de corrida.
+      <br><br>
+      <strong>Por que não aceito tempo manual?</strong> Para garantir que as zonas sejam calculadas com dados reais do seu desempenho — um tempo estimado comprometeria todo o seu plano.
     </div>
 
     <div class="upz" id="upz">
       <input type="file" accept=".gpx,.tcx,.csv,.json" onchange="testeFile(this.files[0])">
       <div style="font-size:28px;margin-bottom:8px">📂</div>
       <div style="font-size:13px;font-weight:700;color:var(--or);margin-bottom:3px">
-        Upload do arquivo do teste de 3,2km
+        Selecionar arquivo do teste
       </div>
       <div style="font-size:11px;color:var(--k4);margin-bottom:4px">GPX · TCX · CSV · JSON</div>
       <div style="font-size:10px;color:#c44000;background:rgba(255,69,0,.08);padding:4px 10px;border-radius:6px">
@@ -1404,22 +1406,7 @@ function stepTeste() {
 
     <div id="teste-err" class="al al-re" style="display:none"></div>
 
-    <div style="text-align:center;margin:10px 0 12px;font-size:11px;color:var(--k4)">
-      — ou informe o tempo manualmente —
-    </div>
-
-    <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:16px">
-      <div class="fld" style="flex:1;margin:0">
-        <label>Tempo total (mm:ss)</label>
-        <input id="manual-t" type="text" placeholder="ex: 16:30" maxlength="5"
-          oninput="this.value=this.value.replace(/[^0-9:]/g,'')">
-      </div>
-      <button class="btn b-or b-sm" style="margin-bottom:0" onclick="calcManual()">
-        Calcular
-      </button>
-    </div>
-
-    <button class="btn b-gh" onclick="OB.step=3;obRender()">← Voltar</button>`;
+    <button class="btn b-gh" style="margin-top:8px" onclick="OB.step=3;obRender()">← Voltar</button>`;
 }
 
 function stepTesteResult() {
@@ -1470,7 +1457,7 @@ function testeFile(f) {
     try {
       const data = parseFile(e.target.result, f.name);
       if (!data || !data.paceSec || data.paceSec <= 0) {
-        showTesteErr('Não consegui extrair o pace. Tente inserir o tempo manualmente.');
+        showTesteErr('Não consegui extrair o pace do arquivo. Verifique se o arquivo é válido e tente novamente.');
         return;
       }
 
@@ -1482,7 +1469,7 @@ function testeFile(f) {
           showTesteErr(
             '❌ Arquivo rejeitado: distância de ' + dist + 'km é muito curta. '
             + 'O teste deve ter entre 3,0km e 3,5km. '
-            + 'Faça o teste de 3,2km corretamente e suba o arquivo, ou informe o tempo manualmente.'
+            + 'Faça o teste de 3,2km corretamente e suba o arquivo GPX, TCX, CSV ou JSON.'
           );
           return;
         }
