@@ -1221,6 +1221,9 @@ function obRender() {
 </svg></div>
       <span class="logo-name" style="margin-left:8px">COACH RUN</span>
     </div>
+    <div style="display:flex;justify-content:flex-end;margin-bottom:8px">
+      <button onclick="doLogout()" style="border:none;background:rgba(255,69,0,.1);color:var(--or);border-radius:8px;padding:7px 13px;font-family:var(--ff-d);font-size:12px;font-weight:700;cursor:pointer">Sair &#x2192;</button>
+    </div>
     <div class="pips">${pips}</div>`;
 
   if (OB.step === 1) h += stepObj();
