@@ -8,7 +8,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <!-- v20260515-21k -->
+  <!-- v20260515-mar -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Coach Run</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -857,44 +857,20 @@ const CATALOG = {
     label:'Maratona', icon:'🏅',
     levels: [
       { id:'iniciante',    planId:'mar/1', name:'Iniciante',
-        desc:'Primeira maratona — foco em chegar na linha de chegada',
+        desc:'Primeira maratona — foco em sub 4h',
         color:'#22c55e',
-        paces:['1ª Maratona F1','1ª Maratona F2','1ª Maratona F3'] },
+        paces:['sub4h'] },
       { id:'intermediario',planId:'mar/1', name:'Intermediário',
-        desc:'Já completou uma maratona, quer melhorar',
+        desc:'Já completou uma maratona, quer sub 3h30',
         color:'#3b82f6',
-        paces:['sub4h','sub3h30'] },
+        paces:['sub3h30'] },
       { id:'avancado',     planId:'mar/2', name:'Avançado',
-        desc:'Maratonista experiente, foco em sub 3h30',
+        desc:'Maratonista experiente, foco em sub 3h',
         color:'#f97316',
-        paces:['sub4h','sub3h30','sub3h'] },
-      { id:'competidor',   planId:'mar/3', name:'Competidor',
-        desc:'Alto rendimento, volume elevado, sub 3h',
-        color:'#ef4444',
-        paces:['sub4h','sub3h30','sub3h'] },
+        paces:['sub3h'] },
     ]
   },
-  'ultra': {
-    label:'Ultramaratona', icon:'🦅',
-    levels: [
-      { id:'iniciante',    planId:'ultra/1', name:'Iniciante',
-        desc:'Primeira ultra — foco em completar a prova',
-        color:'#22c55e',
-        paces:['Completar F1'] },
-      { id:'intermediario',planId:'ultra/1', name:'Intermediário',
-        desc:'Já fez maratonas, partindo para a ultra',
-        color:'#3b82f6',
-        paces:['Completar F1','Completar F2'] },
-      { id:'avancado',     planId:'ultra/1', name:'Avançado',
-        desc:'Já completou ultras, quer melhorar o tempo',
-        color:'#f97316',
-        paces:['Completar F2'] },
-      { id:'competidor',   planId:'ultra/1', name:'Competidor',
-        desc:'Performance e resultado em provas de ultra',
-        color:'#ef4444',
-        paces:['Completar F2'] },
-    ]
-  },
+
 };
 
 const DAYS_FULL  = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
@@ -1601,6 +1577,127 @@ const PLANS = {
     {d:'2km aquecimento ritmo 5:00 + 15x200m ritmo 2:50 intervalo 1min caminhando + 1km leve 5:00 + alongamento',t:'interval_curto',m:54},
     null,
     {d:'1km aquecimento ritmo 5:00 + 18km ritmo de 3:45',t:'longao',m:98}
+  ],
+]},
+
+
+// ─── MARATONA SUB 4H ───
+'mar/1/sub4h': { weeks: [
+  [
+    {d:'2km aquecimento ritmo 7:00 + 10x80m velocidade máxima em subida intervalo 1:30 caminhando + 1km ritmo 7:00 + alongamento',t:'subida',m:42},
+    null,
+    {d:'2km aquecimento ritmo 7:00 + alongamento 5km ritmo de 5:15 + 1km ritmo 7:00 + alongamento',t:'ritmo',m:50},
+    {d:'Fortalecimento + 35min leves para quem corre todos os dias',t:'forca',m:35},
+    {d:'2km aquecimento ritmo 7:00 + 15x200m ritmo 5:00 intervalo 1:30 trote leve + 1km ritmo 7:00 + alongamento',t:'interval_curto',m:54},
+    null,
+    {d:'2km aquecimento ritmo 7:00 leve + 15km ritmo 5:45 + 1km ritmo 7:00 + alongamento',t:'longao',m:114}
+  ],
+  [
+    {d:'7km ritmo 6:45 + alongamento',t:'leve',m:47},
+    null,
+    {d:'2km aquecimento ritmo 7:00 + 12x400m ritmo 5:00 intervalo 1:30 trote leve + 1km ritmo 7:00 + alongamento',t:'interval_curto',m:54},
+    {d:'Fortalecimento + 35min leves para quem corre todos os dias',t:'forca',m:35},
+    {d:'50min leves',t:'leve',m:50},
+    null,
+    {d:'1km aquecimento ritmo 7:00 + 18km confortável + 1km leve',t:'longao',m:132}
+  ],
+  [
+    {d:'50min leves',t:'leve',m:50},
+    null,
+    {d:'2km aquecimento ritmo 7:00 + 7x1000m ritmo 5:30 intervalo 2:00min trotando leve + 1km ritmo 7:00 + alongamento',t:'interval_longo',m:62},
+    {d:'Fortalecimento + 35min leves para quem corre todos os dias',t:'forca',m:35},
+    {d:'2km aquecimento ritmo 7:00 + 15x80m velocidade máxima em subida intervalo 1:30 caminhando + 1km ritmo 7:00 + alongamento',t:'subida',m:44},
+    null,
+    {d:'1km aquecimento ritmo 7:00 + 18km ritmo moderado + 1km ritmo 7:00',t:'longao',m:132}
+  ],
+  [
+    {d:'7km ritmo 6:45 + alongamento',t:'leve',m:47},
+    null,
+    {d:'2km aquecimento ritmo 7:00 + 7km ritmo 5:15 a 5:20 + 1km ritmo 7:00 + alongamento',t:'ritmo',m:60},
+    {d:'Fortalecimento + 8km ritmo 6:30 para quem corre todos os dias',t:'forca',m:48},
+    {d:'2km aquecimento ritmo 7:00 + 15x200m ritmo 5:00 intervalo 1:30 trotando leve + 1km leve + alongamento',t:'interval_curto',m:54},
+    null,
+    {d:'1km aquecimento ritmo 7:00 + 20km confortável',t:'longao',m:146}
+  ],
+]},
+
+// ─── MARATONA SUB 3H30 ───
+'mar/1/sub3h30': { weeks: [
+  [
+    {d:'3km aquecimento ritmo 6:00 + 10x200m velocidade máxima em subida intervalo 1:30 caminhando + 2km ritmo 6:00 + alongamento',t:'subida',m:46},
+    null,
+    {d:'3km aquecimento ritmo 6:00 + alongamento 8km ritmo de 4:40 + 2km ritmo 6:00 + alongamento',t:'ritmo',m:62},
+    {d:'Fortalecimento + 35min leves para quem corre todos os dias',t:'forca',m:35},
+    {d:'3km aquecimento ritmo 6:00 + 12x400m ritmo 4:15 intervalo 1:30 trote leve + 1km ritmo 6:00 + alongamento',t:'interval_curto',m:56},
+    null,
+    {d:'2km aquecimento ritmo 6:00 leve + 15km ritmo 5:35 + 1km ritmo 6:00 + alongamento',t:'longao',m:114}
+  ],
+  [
+    {d:'8km ritmo 6:00 + alongamento',t:'leve',m:48},
+    null,
+    {d:'3km aquecimento ritmo 6:00 + 10x500m ritmo 4:15 intervalo 1:30 trote leve + 2km ritmo 6:00 + alongamento',t:'interval_curto',m:58},
+    {d:'Fortalecimento + 35min leves para quem corre todos os dias',t:'forca',m:35},
+    {d:'50min leves',t:'leve',m:50},
+    null,
+    {d:'2km aquecimento ritmo 6:00 + 18km confortável + 1km leve',t:'longao',m:130}
+  ],
+  [
+    {d:'50min leves',t:'leve',m:50},
+    null,
+    {d:'3km aquecimento ritmo 6:00 + 7x1000m ritmo 4:30 intervalo 2:00min trotando leve + 3km ritmo 6:00 + alongamento',t:'interval_longo',m:64},
+    {d:'Fortalecimento + 35min leves para quem corre todos os dias',t:'forca',m:35},
+    {d:'3km aquecimento ritmo 6:00 + 15x80m velocidade máxima em subida intervalo 1:30 caminhando + 1km ritmo 6:00 + alongamento',t:'subida',m:46},
+    null,
+    {d:'2km aquecimento ritmo 6:00 + 20km ritmo 5:45 + 1km ritmo 6:00',t:'longao',m:142}
+  ],
+  [
+    {d:'7km ritmo 6:00 + alongamento',t:'leve',m:42},
+    null,
+    {d:'3km aquecimento ritmo 6:00 + 8km ritmo 4:40 + 2km ritmo 6:00 + alongamento',t:'ritmo',m:62},
+    {d:'Fortalecimento + 8km ritmo 5:45 para quem corre todos os dias',t:'forca',m:46},
+    {d:'3km aquecimento ritmo 6:00 + 15x200m ritmo 4:05 intervalo 1:30 trotando leve + 2km leve + alongamento',t:'interval_curto',m:56},
+    null,
+    {d:'1km aquecimento ritmo 5:45 a 6:00 + 20km confortável',t:'longao',m:142}
+  ],
+]},
+
+// ─── MARATONA SUB 3H ───
+'mar/2/sub3h': { weeks: [
+  [
+    {d:'3km aquecimento ritmo 5:30 + 8km ritmo de 3:50 + 2km ritmo 5:30 + alongamento',t:'ritmo',m:62},
+    {d:'40min a 50min leves para quem corre todos os dias',t:'leve',m:45},
+    {d:'4km aquecimento ritmo 5:30 + 8x300m velocidade máxima em subida intervalo 1:30 caminhando + 4km ritmo 5:30 + alongamento',t:'subida',m:56},
+    {d:'OFF ou 10km ritmo de 5:15 + Fortalecimento',t:'forca',m:50},
+    {d:'3km aquecimento ritmo 5:30 + 12x500m ritmo 3:25 intervalo 1:30 trote leve + 2km ritmo 5:30 + alongamento',t:'interval_curto',m:60},
+    null,
+    {d:'2km aquecimento ritmo 5:30 leve + 18km ritmo 4:15 + 1km ritmo 5:30 + alongamento',t:'longao',m:120}
+  ],
+  [
+    {d:'10km ritmo 5:15 + alongamento',t:'leve',m:52},
+    {d:'50min leves para quem corre todos os dias',t:'leve',m:50},
+    {d:'3km aquecimento ritmo 5:30 + 15x400m ritmo 3:30 intervalo 1:30 trote leve + 2km ritmo 5:30 + alongamento',t:'interval_curto',m:62},
+    {d:'OFF ou 10km ritmo de 5:15 + Fortalecimento',t:'forca',m:50},
+    {d:'50min leves',t:'leve',m:50},
+    null,
+    {d:'2km aquecimento ritmo 5:30 + 20km confortável + 1km leve',t:'longao',m:138}
+  ],
+  [
+    {d:'50min leves',t:'leve',m:50},
+    {d:'40min a 50min leves para quem corre todos os dias',t:'leve',m:45},
+    {d:'3km aquecimento ritmo 5:30 + 7x1000m ritmo 3:40 intervalo 2:00min trotando leve + 1km ritmo 5:30 + alongamento',t:'interval_longo',m:60},
+    {d:'OFF ou 10km ritmo de 5:15 + Fortalecimento',t:'forca',m:50},
+    {d:'2km aquecimento ritmo 5:30 + 15x80m velocidade máxima em subida intervalo 1:30 caminhando + 1km ritmo 5:30 + alongamento',t:'subida',m:44},
+    null,
+    {d:'1km aquecimento ritmo 5:30 + 25km a vontade confortável',t:'longao',m:168}
+  ],
+  [
+    {d:'7km ritmo 5:15 + alongamento',t:'leve',m:37},
+    {d:'40min a 50min leves para quem corre todos os dias',t:'leve',m:45},
+    {d:'3km aquecimento ritmo 5:30 + 10km ritmo 3:50 + 2km ritmo 5:30 + alongamento',t:'ritmo',m:68},
+    {d:'OFF ou 10km ritmo de 5:15 + Fortalecimento',t:'forca',m:50},
+    {d:'3km aquecimento ritmo 5:30 + 15x200m ritmo 3:25 intervalo 200m trotando leve + 2km leve + alongamento',t:'interval_curto',m:60},
+    null,
+    {d:'2km aquecimento ritmo 5:30 + 20km ritmo 4:15 por km',t:'longao',m:132}
   ],
 ]},
 
