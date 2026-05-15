@@ -698,7 +698,8 @@ async function renderAdmin() {
     } else if (u.status === 'aprovado') {
       h += '<button data-id="'+u.id+'" data-status="bloqueado" onclick="adminAcaoBtn(this)" style="'+btnSt+';background:var(--re)">Bloquear</button>';
     } else if (u.status === 'bloqueado') {
-      h += '<button data-id="'+u.id+'" data-status="aprovado" onclick="adminAcaoBtn(this)" style="'+btnSt+';background:var(--gr)">Reativar</button>';
+      h += '<button data-id="'+u.id+'" data-status="aprovado" onclick="adminAcaoBtn(this)" style="'+btnSt+';background:var(--gr);margin-bottom:4px">Reativar</button>';
+      h += '<button data-id="'+u.id+'" onclick="adminExcluir(this)" style="'+btnSt+';background:#888">Excluir</button>';
     }
     h += '</div></div></div>';
     return h;
@@ -741,6 +742,17 @@ function adminAcaoBtn(btn) {
 
 async function adminAcao(userId, novoStatus) {
   await supa.from('usuarios').update({ status: novoStatus }).eq('id', userId);
+  renderAdmin();
+}
+
+function adminExcluir(btn) {
+  var id = btn.getAttribute('data-id');
+  if (!confirm('Excluir este usuário permanentemente? Ele precisará criar uma nova conta para acessar.')) return;
+  adminExcluirConfirm(id);
+}
+
+async function adminExcluirConfirm(userId) {
+  await supa.from('usuarios').delete().eq('id', userId);
   renderAdmin();
 }
 
