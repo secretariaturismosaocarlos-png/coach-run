@@ -3098,9 +3098,9 @@ function renderPlan() {
         h += '</div>';
         h += '<div style="font-size:11px;color:var(--k4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+t.desc+'</div>';
         h += '</div>';
-        var km0 = extractKm(t.desc);
+        var km0 = calcDistTotal(t.desc) || extractKm(t.desc);
         h += '<div style="font-family:Space Mono,monospace;font-size:12px;font-weight:700;color:var(--k4);flex-shrink:0">'
-          +(mode==='dist'?(km0?km0+'km':t.min+'min'):'~'+t.min+'min')+'</div>';
+          +(mode==='dist'?(km0>0?km0+'km':t.min+'min'):'~'+t.min+'min')+'</div>';
         h += '</div>';
         return;
       }
@@ -3118,10 +3118,10 @@ function renderPlan() {
         h += '<div style="font-family:var(--ff-d);font-size:14px;font-weight:800;color:#fff">'+t.dayShort+' · '+tc.label+'</div>';
         h += '<div style="font-size:10px;color:rgba(255,255,255,.8);margin-top:1px">TREINO ATUAL</div>';
         h += '</div></div>';
-        var km1 = extractKm(t.desc);
+        var km1 = calcDistTotal(t.desc) || extractKm(t.desc);
         h += '<div style="text-align:right">';
         h += '<div style="font-family:Space Mono,monospace;font-size:16px;font-weight:700;color:#fff">'
-          +(mode==='dist'?(km1?km1+'km':t.min+'min'):'~'+t.min+'min')+'</div>';
+          +(mode==='dist'?(km1>0?km1+'km':t.min+'min'):'~'+t.min+'min')+'</div>';
         h += '</div>';
         h += '</div>'; // banner
 
@@ -3194,9 +3194,9 @@ function renderPlan() {
       h += '</div>';
       h += '<div style="font-size:11px;color:var(--k4);white-space:nowrap;overflow:hidden;text-overflow:ellipsis">'+t.desc+'</div>';
       h += '</div>';
-      var km3 = extractKm(t.desc);
+      var km3 = calcDistTotal(t.desc) || extractKm(t.desc);
       h += '<div style="font-family:Space Mono,monospace;font-size:12px;font-weight:700;color:#C4C4C4;flex-shrink:0">'
-        +(mode==='dist'?(km3?km3+'km':t.min+'min'):'~'+t.min+'min')+'</div>';
+        +(mode==='dist'?(km3>0?km3+'km':t.min+'min'):'~'+t.min+'min')+'</div>';
       h += '</div>';
     });
 
