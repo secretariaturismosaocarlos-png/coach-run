@@ -8,7 +8,7 @@
   <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
   <meta http-equiv="Pragma" content="no-cache">
   <meta http-equiv="Expires" content="0">
-  <!-- v20260513180834 -->
+  <!-- v20260515-10k -->
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Coach Run</title>
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
@@ -800,7 +800,7 @@ const CATALOG = {
       { id:'intermediario',planId:'5k/1', name:'Intermediário',
         desc:'Já corre com regularidade, quer melhorar o tempo',
         color:'#3b82f6',
-        paces:['8:00','7:30','7:00','6:30','6:00'] },
+        paces:['4:30','4:00'] },
       { id:'avancado',     planId:'5k/2', name:'Avançado',
         desc:'Corre 5km abaixo de 25min, busca performance',
         color:'#f97316',
@@ -817,19 +817,19 @@ const CATALOG = {
       { id:'iniciante',    planId:'10k/1', name:'Iniciante',
         desc:'Primeiro ciclo de 10km ou vindo do 5km',
         color:'#22c55e',
-        paces:['9:00','8:30','8:00','7:30'] },
+        paces:['7:00','6:30'] },
       { id:'intermediario',planId:'10k/1', name:'Intermediário',
         desc:'Já completou 10km, quer baixar o tempo',
         color:'#3b82f6',
-        paces:['7:30','7:00','6:30','6:00'] },
+        paces:['5:30','5:00'] },
       { id:'avancado',     planId:'10k/2', name:'Avançado',
         desc:'Corre 10km abaixo de 50min, busca performance',
         color:'#f97316',
-        paces:['8:00','7:30','7:00','6:30','6:00'] },
+        paces:['4:30','4:00'] },
       { id:'competidor',   planId:'10k/2', name:'Competidor',
         desc:'Atleta competitivo, sub 40min nos planos',
         color:'#ef4444',
-        paces:['4:00','3:30','3:00'] },
+        paces:['3:30','3:00'] },
     ]
   },
   '21k': {
@@ -1037,6 +1037,330 @@ const PLANS = {
   [_L('5km ritmo 8:00',40), _L('6km ritmo 8:00',48), _R('2km aq 8:00 + 6km ritmo 7:30 + 1km leve',58), _L('6km ritmo 8:00',48), _SB('2km aq 8:00 + 12×80m veloc subida',42), null, _LG('1km aq + 14km ritmo 7:45',83)],
   [_L('5km ritmo 8:00',40), _L('6km ritmo 8:00',48), _IV('2km aq 8:00 + 10×400m ritmo 6:45 interv 1min',52), _L('6km ritmo 8:00',48), _L('35min leves',35), null, _LG('1km aq + 14km a vontade',77)],
   [_L('5km ritmo 8:00',40), _L('6km ritmo 8:00',48), _IV('2km aq 8:00 + 8×200m ritmo 6:30 interv 1min',44), null, _L('15min trote leve',15), null, _TE('2km aq + TESTE DE 5K',25)],
+]},
+
+
+// ─── 10K/1/7:00 ───
+// seg, ter(OFF), qua, qui(FORT), sex, sab(OFF), dom
+'10k/1/7:00': { weeks: [
+  [
+    {d:'2km aquecimento ritmo 8:00 + 4km ritmo de 7:35 + 1km leve 8:00 + alongamento',t:'ritmo',m:48},
+    null,
+    {d:'2km aquecimento ritmo 8:00 + 12x60m velocidade máxima em subida intervalo 1:30 caminhando + 1km leve 8:00 + alongamento',t:'subida',m:42},
+    {d:'Fortalecimento + 6km ritmo de 8:00 para quem corre todos os dias',t:'forca',m:40},
+    {d:'2km aquecimento ritmo 8:00 + 12x200m ritmo 6:45 intervalo 1min caminhando + 1km leve 8:00 + alongamento',t:'interval_curto',m:50},
+    null,
+    {d:'1km aquecimento ritmo 8:00 + 8km ritmo de 7:45 a 7:55',t:'longao',m:72}
+  ],
+  [
+    {d:'5km ritmo de 8:00 + alongamento',t:'leve',m:40},
+    null,
+    {d:'2km aquecimento ritmo 8:00 + 5km ritmo de 7:35 + 1km leve 8:00 + alongamento',t:'ritmo',m:52},
+    {d:'Fortalecimento + 6km ritmo de 8:00 para quem corre todos os dias',t:'forca',m:40},
+    {d:'2km aquecimento ritmo 8:00 + 8x400m ritmo 6:45 intervalo 1min caminhando + 1km leve 8:00 + alongamento',t:'interval_curto',m:50},
+    null,
+    {d:'1km aquecimento ritmo 8:00 + 12km ritmo de 7:45 a 7:55',t:'longao',m:100}
+  ],
+  [
+    {d:'2km aquecimento ritmo 8:00 + 12x80m velocidade máxima em subida intervalo 1:30 caminhando + 1km leve 8:00 + alongamento',t:'subida',m:42},
+    null,
+    {d:'2km aquecimento ritmo 8:00 + 6x1000m ritmo 6:55 intervalo 2:30min caminhando + 1km leve 8:00 + alongamento',t:'interval_longo',m:58},
+    {d:'Fortalecimento + 6km ritmo de 8:00 para quem corre todos os dias',t:'forca',m:40},
+    {d:'2km aquecimento ritmo 8:00 + 5km ritmo de 7:30 + 1km leve 8:00 + alongamento',t:'ritmo',m:52},
+    null,
+    {d:'1km aquecimento ritmo 8:00 + 12km ritmo de 7:45 a 7:55',t:'longao',m:100}
+  ],
+  [
+    {d:'6km ritmo de 8:00 + alongamento',t:'leve',m:48},
+    null,
+    {d:'2km aquecimento ritmo 8:00 + 6km ritmo de 7:35 + 1km leve 8:00 + alongamento',t:'ritmo',m:58},
+    {d:'Fortalecimento + 6km ritmo de 8:00 para quem corre todos os dias',t:'forca',m:40},
+    {d:'2km aquecimento ritmo 8:00 + 15x200m ritmo 6:30 intervalo 1min caminhando + 1km leve 8:00 + alongamento',t:'interval_curto',m:54},
+    null,
+    {d:'1km aquecimento ritmo 8:00 + 13km ritmo de 7:45 a 7:55',t:'longao',m:108}
+  ],
+]},
+
+// ─── 10K/1/6:30 ───
+'10k/1/6:30': { weeks: [
+  [
+    {d:'2km aquecimento ritmo 7:35 + 5km ritmo de 6:45 + 1km leve 7:30 + alongamento',t:'ritmo',m:52},
+    null,
+    {d:'2km aquecimento ritmo 7:35 + 10x80m velocidade máxima em subida intervalo 1:30 caminhando + 1km leve 7:35 + alongamento',t:'subida',m:40},
+    {d:'Fortalecimento + 6km ritmo de 7:15 para quem corre todos os dias',t:'forca',m:40},
+    {d:'2km aquecimento ritmo 7:35 + 12x200m ritmo 6:00 intervalo 1min caminhando + 1km leve 7:35 + alongamento',t:'interval_curto',m:50},
+    null,
+    {d:'1km aquecimento ritmo 7:35 + 10km ritmo de 6:55 a 7:15',t:'longao',m:82}
+  ],
+  [
+    {d:'5km ritmo de 7:15 + alongamento',t:'leve',m:36},
+    null,
+    {d:'2km aquecimento ritmo 7:35 + 6km ritmo de 6:45 + 1km leve 7:35 + alongamento',t:'ritmo',m:56},
+    {d:'Fortalecimento + 6km ritmo de 7:15 para quem corre todos os dias',t:'forca',m:40},
+    {d:'2km aquecimento ritmo 7:35 + 10x400m ritmo 6:15 intervalo 1min caminhando + 1km leve 7:35 + alongamento',t:'interval_curto',m:52},
+    null,
+    {d:'1km aquecimento ritmo 7:35 + 12km ritmo de 6:55 a 7:00',t:'longao',m:96}
+  ],
+  [
+    {d:'2km aquecimento ritmo 7:35 + 12x80m velocidade máxima em subida intervalo 1:30 caminhando + 1km leve 7:35 + alongamento',t:'subida',m:42},
+    null,
+    {d:'2km aquecimento ritmo 7:35 + 6x1000m ritmo 6:25 intervalo 2:30min caminhando + 1km leve 7:35 + alongamento',t:'interval_longo',m:56},
+    {d:'Fortalecimento + 6km ritmo de 7:15 para quem corre todos os dias',t:'forca',m:40},
+    {d:'2km aquecimento ritmo 7:35 + 6km ritmo de 6:45 + 1km leve 7:35 + alongamento',t:'ritmo',m:56},
+    null,
+    {d:'1km aquecimento ritmo 7:35 + 12km ritmo de 6:55 a 7:00',t:'longao',m:96}
+  ],
+  [
+    {d:'6km ritmo de 7:15 + alongamento',t:'leve',m:43},
+    null,
+    {d:'2km aquecimento ritmo 7:35 + 6km ritmo de 6:45 + 1km leve 7:35 + alongamento',t:'ritmo',m:56},
+    {d:'Fortalecimento + 6km ritmo de 7:15 para quem corre todos os dias',t:'forca',m:40},
+    {d:'2km aquecimento ritmo 7:35 + 15x200m ritmo 6:00 intervalo 1min caminhando + 1km leve 7:35 + alongamento',t:'interval_curto',m:54},
+    null,
+    {d:'1km aquecimento ritmo 7:35 + 13km ritmo de 6:55 a 7:00',t:'longao',m:104}
+  ],
+]},
+
+// ─── 10K/1/5:30 ───
+'10k/1/5:30': { weeks: [
+  [
+    {d:'2km aquecimento ritmo 6:45 + 5km ritmo de 5:50 + 1km leve 6:45 + alongamento',t:'ritmo',m:52},
+    null,
+    {d:'2km aquecimento ritmo 6:45 + 12x60m velocidade máxima em subida intervalo 1:30 caminhando + 1km leve 6:45 + alongamento',t:'subida',m:40},
+    {d:'Fortalecimento + 6km ritmo de 6:30 para quem corre todos os dias',t:'forca',m:40},
+    {d:'2km aquecimento ritmo 6:45 + 12x200m ritmo 5:00 intervalo 1min caminhando + 1km leve 6:45 + alongamento',t:'interval_curto',m:50},
+    null,
+    {d:'12km a vontade',t:'longao',m:78}
+  ],
+  [
+    {d:'5km ritmo de 6:30 + alongamento',t:'leve',m:33},
+    null,
+    {d:'2km aquecimento ritmo 6:45 + 6km ritmo de 5:50 + 1km leve 6:45 + alongamento',t:'ritmo',m:56},
+    {d:'Fortalecimento + 6km ritmo de 6:30 para quem corre todos os dias',t:'forca',m:40},
+    {d:'2km aquecimento ritmo 6:45 + 10x400m ritmo 5:10 intervalo 1min caminhando + 1km leve 6:45 + alongamento',t:'interval_curto',m:52},
+    null,
+    {d:'1km aquecimento ritmo 6:45 + 12km ritmo de 6:05 a 6:15',t:'longao',m:86}
+  ],
+  [
+    {d:'2km aquecimento ritmo 6:45 + 12x80m velocidade máxima em subida intervalo 1:30 caminhando + 1km leve 6:55 + alongamento',t:'subida',m:42},
+    null,
+    {d:'2km aquecimento ritmo 6:55 + 6x1000m ritmo 5:20 intervalo 2:30min caminhando + 1km leve 6:45 + alongamento',t:'interval_longo',m:56},
+    {d:'Fortalecimento + 6km ritmo de 6:30 para quem corre todos os dias',t:'forca',m:40},
+    {d:'2km aquecimento ritmo 6:45 + 6km ritmo de 5:50 + 1km leve 6:45 + alongamento',t:'ritmo',m:56},
+    null,
+    {d:'1km aquecimento ritmo 6:45 + 12km ritmo de 6:05 a 6:15',t:'longao',m:86}
+  ],
+  [
+    {d:'6km ritmo de 6:45 + alongamento',t:'leve',m:41},
+    null,
+    {d:'2km aquecimento ritmo 6:45 + 7km ritmo de 5:50 + 1km leve 6:45 + alongamento',t:'ritmo',m:60},
+    {d:'Fortalecimento + 6km ritmo de 6:30 para quem corre todos os dias',t:'forca',m:40},
+    {d:'2km aquecimento ritmo 6:45 + 15x200m ritmo 5:00 intervalo 1min caminhando + 1km leve 6:45 + alongamento',t:'interval_curto',m:54},
+    null,
+    {d:'1km aquecimento ritmo 6:45 + 13km ritmo de 6:05 a 6:15',t:'longao',m:92}
+  ],
+]},
+
+// ─── 10K/1/5:00 ───
+'10k/1/5:00': { weeks: [
+  [
+    {d:'2km aquecimento ritmo 6:00 + 4km ritmo de 5:20 + 1km leve 6:00 + alongamento',t:'ritmo',m:46},
+    null,
+    {d:'2km aquecimento ritmo 6:00 + 12x60m velocidade máxima em subida intervalo 1:30 caminhando + 1km leve 6:00 + alongamento',t:'subida',m:40},
+    {d:'Fortalecimento ou 6km ritmo de 6:00',t:'forca',m:40},
+    {d:'2km aquecimento ritmo 6:00 + 14x200m ritmo 4:45 intervalo 1min caminhando + 1km leve 6:00 + alongamento',t:'interval_curto',m:52},
+    null,
+    {d:'1km aquecimento ritmo 6:00 + 12km ritmo de 5:45 a 5:55',t:'longao',m:80}
+  ],
+  [
+    {d:'5km ritmo de 6:00 + alongamento',t:'leve',m:30},
+    null,
+    {d:'2km aquecimento ritmo 6:00 + 5km ritmo de 5:20 + 1km leve 6:00 + alongamento',t:'ritmo',m:50},
+    {d:'Fortalecimento ou 6km ritmo de 6:00',t:'forca',m:40},
+    {d:'2km aquecimento ritmo 6:00 + 10x400m ritmo 4:45 intervalo 1min caminhando + 1km leve 6:00 + alongamento',t:'interval_curto',m:52},
+    null,
+    {d:'1km aquecimento ritmo 6:00 + 12km ritmo de 5:45 a 5:55',t:'longao',m:80}
+  ],
+  [
+    {d:'2km aquecimento ritmo 6:00 + 12x80m velocidade máxima em subida intervalo 1:30 caminhando + 1km leve 6:00 + alongamento',t:'subida',m:42},
+    null,
+    {d:'2km aquecimento ritmo 6:00 + 6x1000m ritmo 5:00 intervalo 2:30min caminhando + 1km leve 6:00 + alongamento',t:'interval_longo',m:56},
+    {d:'Fortalecimento ou 6km ritmo de 6:00',t:'forca',m:40},
+    {d:'50min trote leve',t:'leve',m:50},
+    null,
+    {d:'1km aquecimento ritmo 6:00 + 14km ritmo de 5:45 a 5:55',t:'longao',m:92}
+  ],
+  [
+    {d:'6km ritmo de 6:00 + alongamento',t:'leve',m:36},
+    null,
+    {d:'2km aquecimento ritmo 6:00 + 6km ritmo de 5:20 + 1km leve 6:00 + alongamento',t:'ritmo',m:54},
+    {d:'Fortalecimento ou 6km ritmo de 6:00',t:'forca',m:40},
+    {d:'2km aquecimento ritmo 6:00 + 14x200m ritmo 4:30 intervalo 1min caminhando + 1km leve 6:00 + alongamento',t:'interval_curto',m:52},
+    null,
+    {d:'1km aquecimento ritmo 6:00 + 14km ritmo de 5:45 a 5:55',t:'longao',m:92}
+  ],
+]},
+
+// ─── 10K/2/4:30 ───
+'10k/2/4:30': { weeks: [
+  [
+    {d:'2km aquecimento ritmo 5:45 + 5km ritmo de 4:45 + 1km leve 5:45 + alongamento',t:'ritmo',m:50},
+    null,
+    {d:'2km aquecimento ritmo 5:45 + 12x80m velocidade máxima em subida intervalo 1:30 caminhando + 1km leve 5:45 + alongamento',t:'subida',m:42},
+    {d:'Fortalecimento + 7km ritmo de 5:30 para quem corre todos os dias',t:'forca',m:42},
+    {d:'2km aquecimento ritmo 5:45 + 15x200m ritmo 4:10 intervalo 1min caminhando + 1km leve 5:45 + alongamento',t:'interval_curto',m:54},
+    null,
+    {d:'1km aquecimento ritmo 5:45 + 12km ritmo de 4:55 a 5:10',t:'longao',m:78}
+  ],
+  [
+    {d:'7km ritmo de 5:30 + alongamento',t:'leve',m:39},
+    null,
+    {d:'2km aquecimento ritmo 5:45 + 6km ritmo de 4:45 + 1km leve 5:45 + alongamento',t:'ritmo',m:54},
+    {d:'Fortalecimento + 7km ritmo de 5:30 para quem corre todos os dias',t:'forca',m:42},
+    {d:'2km aquecimento ritmo 5:45 + 10x400m ritmo 4:15 intervalo 1min caminhando + 1km leve 5:45 + alongamento',t:'interval_curto',m:52},
+    null,
+    {d:'1km aquecimento ritmo 5:45 + 14km ritmo de 4:55 a 5:10',t:'longao',m:90}
+  ],
+  [
+    {d:'2km aquecimento ritmo 5:45 + 12x80m velocidade máxima em subida intervalo 1:30 caminhando + 1km leve 5:45 + alongamento',t:'subida',m:42},
+    null,
+    {d:'2km aquecimento ritmo 5:45 + 6x1000m ritmo 4:30 intervalo 2:00min caminhando + 1km leve 5:45 + alongamento',t:'interval_longo',m:54},
+    {d:'Fortalecimento + 8km ritmo de 5:30 para quem corre todos os dias',t:'forca',m:46},
+    {d:'2km aquecimento ritmo 5:45 + 5km ritmo de 4:45 + 1km leve 5:45 + alongamento',t:'ritmo',m:50},
+    null,
+    {d:'1km aquecimento ritmo 5:45 + 15km ritmo de 4:55 a 5:10',t:'longao',m:96}
+  ],
+  [
+    {d:'8km ritmo de 5:45 + alongamento',t:'leve',m:46},
+    null,
+    {d:'2km aquecimento ritmo 5:45 + 6km ritmo de 4:45 + 1km leve 5:45 + alongamento',t:'ritmo',m:54},
+    {d:'Fortalecimento + 8km ritmo de 5:30 para quem corre todos os dias',t:'forca',m:46},
+    {d:'2km aquecimento ritmo 5:45 + 15x200m ritmo 4:05 intervalo 1min caminhando + 1km leve 5:45 + alongamento',t:'interval_curto',m:54},
+    null,
+    {d:'1km aquecimento ritmo 5:45 + 15km ritmo de 4:55 a 5:10',t:'longao',m:96}
+  ],
+]},
+
+// ─── 10K/2/4:00 ───
+'10k/2/4:00': { weeks: [
+  [
+    {d:'2km aquecimento ritmo 5:00 + 5km ritmo de 4:20 + 1km leve 5:00 + alongamento',t:'ritmo',m:48},
+    null,
+    {d:'2km aquecimento ritmo 5:00 + 12x80m velocidade máxima em subida intervalo 1:30 caminhando + 1km leve 5:00 + alongamento',t:'subida',m:42},
+    {d:'Fortalecimento ou 7km ritmo de 5:00',t:'forca',m:42},
+    {d:'2km aquecimento ritmo 5:00 + 14x200m ritmo 3:45 intervalo 1min caminhando + 1km leve 5:00 + alongamento',t:'interval_curto',m:52},
+    null,
+    {d:'1km aquecimento ritmo 5:00 + 12km ritmo de 4:40 a 4:55',t:'longao',m:74}
+  ],
+  [
+    {d:'7km ritmo de 5:00 + alongamento',t:'leve',m:35},
+    null,
+    {d:'2km aquecimento ritmo 5:00 + 5km ritmo de 4:20 + 1km leve 5:00 + alongamento',t:'ritmo',m:48},
+    {d:'Fortalecimento ou 7km ritmo de 5:00',t:'forca',m:42},
+    {d:'2km aquecimento ritmo 5:00 + 10x400m ritmo 3:45 intervalo 1min caminhando + 1km leve 5:00 + alongamento',t:'interval_curto',m:50},
+    null,
+    {d:'1km aquecimento ritmo 5:00 + 12km ritmo de 4:45 a 4:55',t:'longao',m:74}
+  ],
+  [
+    {d:'50min leves',t:'leve',m:50},
+    null,
+    {d:'2km aquecimento ritmo 5:00 + 6x1000m ritmo 4:00 intervalo 2:30min caminhando + 1km leve 5:00 + alongamento',t:'interval_longo',m:54},
+    {d:'Fortalecimento ou 7km ritmo de 5:00',t:'forca',m:42},
+    {d:'2km aquecimento ritmo 5:00 + 12x80m velocidade máxima em subida intervalo 1:30 caminhando + 1km leve 5:00 + alongamento',t:'subida',m:42},
+    null,
+    {d:'1km aquecimento ritmo 5:00 + 15km ritmo de 4:45 a 4:55',t:'longao',m:92}
+  ],
+  [
+    {d:'8km ritmo de 5:00 + alongamento',t:'leve',m:40},
+    null,
+    {d:'2km aquecimento ritmo 5:00 + 6km ritmo de 4:20 + 1km leve 5:00 + alongamento',t:'ritmo',m:52},
+    {d:'Fortalecimento ou 7km ritmo de 5:00',t:'forca',m:42},
+    {d:'2km aquecimento ritmo 5:00 + 15x200m ritmo 3:30 intervalo 1min caminhando + 1km leve 5:00 + alongamento',t:'interval_curto',m:52},
+    null,
+    {d:'1km aquecimento ritmo 6:00 + 15km ritmo de 4:45 a 4:55',t:'longao',m:92}
+  ],
+]},
+
+// ─── 10K/2/3:30 ───
+// Estrutura diferente: qui também é treino (não fortalecimento)
+'10k/2/3:30': { weeks: [
+  [
+    {d:'3km aquecimento ritmo 5:15 + 12x80m velocidade máxima em subida intervalo 1:30 caminhando + 1km leve 5:15 + alongamento',t:'subida',m:44},
+    null,
+    {d:'3km aquecimento ritmo 5:15 + 5km ritmo de 3:50 + 2km leve 5:15 + alongamento',t:'ritmo',m:56},
+    {d:'8km ritmo de 5:15 para quem corre todos os dias',t:'leve',m:46},
+    {d:'3km aquecimento ritmo 5:15 + 14x200m ritmo 3:25 intervalo 1min caminhando + 1km leve 5:15 + alongamento',t:'interval_curto',m:54},
+    null,
+    {d:'2km aquecimento ritmo 5:25 + 14km ritmo de 4:05 a 4:15',t:'longao',m:78}
+  ],
+  [
+    {d:'10km ritmo de 5:15 + alongamento',t:'leve',m:52},
+    null,
+    {d:'3km aquecimento ritmo 5:15 + 6km ritmo de 3:50 + 2km leve 5:15 + alongamento',t:'ritmo',m:60},
+    {d:'10km ritmo de 5:15 para quem corre todos os dias',t:'leve',m:52},
+    {d:'3km aquecimento ritmo 5:15 + 10x400m ritmo 3:30 intervalo 1min caminhando + 2km leve 5:15 + alongamento',t:'interval_curto',m:54},
+    null,
+    {d:'2km aquecimento ritmo 5:20 + 15km ritmo de 4:05 a 4:15',t:'longao',m:82}
+  ],
+  [
+    {d:'50min a vontade',t:'leve',m:50},
+    null,
+    {d:'3km aquecimento ritmo 5:15 + 6x1000m ritmo 3:35 intervalo 2:30min caminhando + 2km leve 5:15 + alongamento',t:'interval_longo',m:58},
+    {d:'8km ritmo de 5:15 para quem corre todos os dias',t:'leve',m:46},
+    {d:'3km aquecimento ritmo 5:15 + 14x80m velocidade máxima em subida intervalo 1:30 caminhando + 2km leve 5:15 + alongamento',t:'subida',m:46},
+    null,
+    {d:'2km aquecimento ritmo 5:20 + 16km ritmo de 4:05 a 4:15',t:'longao',m:86}
+  ],
+  [
+    {d:'10km ritmo de 5:15 + alongamento',t:'leve',m:52},
+    null,
+    {d:'3km aquecimento ritmo 5:15 + 6km ritmo de 3:50 + 2km leve 5:15 + alongamento',t:'ritmo',m:60},
+    {d:'8km ritmo de 5:15 para quem corre todos os dias',t:'leve',m:46},
+    {d:'3km aquecimento ritmo 5:15 + 15x200m ritmo 3:25 intervalo 1min caminhando + 2km leve 5:15 + alongamento',t:'interval_curto',m:54},
+    null,
+    {d:'20km a vontade',t:'longao',m:108}
+  ],
+]},
+
+// ─── 10K/2/3:00 ───
+// Estrutura diferente: qui também é treino (não fortalecimento)
+'10k/2/3:00': { weeks: [
+  [
+    {d:'3km aquecimento ritmo 5:00 + 12x80m velocidade máxima em subida intervalo 1:30 caminhando + 1km leve 5:00 + alongamento',t:'subida',m:44},
+    null,
+    {d:'3km aquecimento ritmo 5:00 + 4km ritmo de 3:20 + 1km leve 5:00 + alongamento',t:'ritmo',m:50},
+    {d:'10km ritmo de 4:55 para quem corre todos os dias',t:'leve',m:50},
+    {d:'3km aquecimento ritmo 5:00 + 15x200m ritmo 3:00 intervalo 1min trotando + 1km leve 5:00 + alongamento',t:'interval_curto',m:54},
+    null,
+    {d:'2km aquecimento ritmo 5:00 + 15km ritmo de 3:40 a 3:50',t:'longao',m:80}
+  ],
+  [
+    {d:'8km ritmo de 5:00 + alongamento',t:'leve',m:40},
+    null,
+    {d:'3km aquecimento ritmo 5:00 + 5km ritmo de 3:20 + 1km leve 5:00 + alongamento',t:'ritmo',m:54},
+    {d:'10km ritmo de 4:55 para quem corre todos os dias',t:'leve',m:50},
+    {d:'3km aquecimento ritmo 5:00 + 10x400m ritmo 3:10 intervalo 1min caminhando + 1km leve 5:00 + alongamento',t:'interval_curto',m:54},
+    null,
+    {d:'2km aquecimento ritmo 5:00 + 15km ritmo de 3:40 a 3:55',t:'longao',m:80}
+  ],
+  [
+    {d:'50min leves',t:'leve',m:50},
+    null,
+    {d:'3km aquecimento ritmo 5:00 + 6x1000m ritmo 3:05 intervalo 2:00min trotando + 1km leve 5:00 + alongamento',t:'interval_longo',m:56},
+    {d:'10km ritmo de 4:55 para quem corre todos os dias',t:'leve',m:50},
+    {d:'3km aquecimento ritmo 5:00 + 5km ritmo de 3:20 + 1km leve 5:00 + alongamento',t:'ritmo',m:54},
+    null,
+    {d:'2km aquecimento ritmo 5:00 + 16km ritmo de 3:40 a 3:55',t:'longao',m:84}
+  ],
+  [
+    {d:'8km ritmo de 5:00 + alongamento',t:'leve',m:40},
+    null,
+    {d:'3km aquecimento ritmo 5:00 + 6km ritmo de 3:20 + 1km leve 5:00 + alongamento',t:'ritmo',m:58},
+    {d:'10km ritmo de 4:55 para quem corre todos os dias',t:'leve',m:50},
+    {d:'3km aquecimento ritmo 5:00 + 15x200m ritmo 3:00 intervalo 1min trotando + 1km leve 5:00 + alongamento',t:'interval_curto',m:54},
+    null,
+    {d:'2km aquecimento ritmo 5:00 + 18km ritmo de 3:40 a 3:50',t:'longao',m:92}
+  ],
 ]},
 
 };
