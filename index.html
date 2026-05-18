@@ -2635,8 +2635,10 @@ function confirmarUpload(){
 
   // Verifica distância — só compara se ambos têm distância
   if (distIndicada > 0 && distRealizada > 0) {
+    // Longão tem tolerância menor (15%) — treino mais importante da semana
+    var thresholdDist = (tipoIndicado === 'longao') ? 0.15 : 0.25;
     var difDist = Math.abs(distRealizada - distIndicada) / distIndicada;
-    if (difDist > 0.30) {
+    if (difDist > thresholdDist) {
       compativel = false;
       motivoIncompat = 'Distância realizada (' + distRealizada + 'km) muito diferente da indicada ('
         + distIndicada + 'km). ';
