@@ -654,7 +654,7 @@ async function doForgot() {
   el.textContent='✓ Link de recuperação enviado para ' + email;
 }
 
-async async function doLogout() {
+async function doLogout() {
   await supa.auth.signOut();
   S.del('cfg'); S.del('prog'); S.del('races');
 }
@@ -740,7 +740,7 @@ function adminAcaoBtn(btn) {
   adminAcao(id, status);
 }
 
-async async function adminAcao(userId, novoStatus) {
+async function adminAcao(userId, novoStatus) {
   await supa.from('usuarios').update({ status: novoStatus }).eq('id', userId);
   renderAdmin();
 }
@@ -751,7 +751,7 @@ function adminExcluir(btn) {
   adminExcluirConfirm(id);
 }
 
-async async function adminExcluirConfirm(userId) {
+async function adminExcluirConfirm(userId) {
   await supa.from('usuarios').delete().eq('id', userId);
   renderAdmin();
 }
@@ -3948,7 +3948,7 @@ function salvarRace(forcar) {
 
 function renderAppPlaceholders(){}
 
-async async function resetOB() {
+async function resetOB() {
   S.del('cfg'); S.del('prog');
   // Invalida cache do plano anterior
   buildWorkoutList._cache    = null;
